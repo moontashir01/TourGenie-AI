@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Compass,
   LayoutGrid,
@@ -8,7 +8,9 @@ import {
   Settings,
   Wallet,
   MessageCircleMore,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
@@ -20,12 +22,27 @@ const links = [
 ];
 
 export default function AppShell({ children, title, subtitle }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const linkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
       isActive
         ? "bg-teal-light text-teal-dark"
         : "text-ink-900/70 hover:bg-paper hover:text-ink-900"
     }`;
+
+  const initials = user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  function handleLogout() {
+    logout();
+    navigate("/");
+  }
 
   return (
     <div className="min-h-screen flex bg-paper">
@@ -43,18 +60,27 @@ export default function AppShell({ children, title, subtitle }) {
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-1">
-          <NavLink to="/admin" className={linkClass}>
-            <Settings className="w-4 h-4" strokeWidth={1.75} />
-            Admin console
-          </NavLink>
+          {user?.role === "admin" && (
+            <NavLink to="/admin" className={linkClass}>
+              <Settings className="w-4 h-4" strokeWidth={1.75} />
+              Admin console
+            </NavLink>
+          )}
           <div className="flex items-center gap-3 px-4 py-3 mt-2 border-t border-sand">
-            <div className="w-8 h-8 rounded-full bg-sunset/20 text-sunset-dark flex items-center justify-center text-xs font-semibold">
-              QS
+            <div className="w-8 h-8 rounded-full bg-sunset/20 text-sunset-dark flex items-center justify-center text-xs font-semibold shrink-0">
+              {initials || "?"}
             </div>
-            <div className="text-xs">
-              <p className="font-medium text-ink-900">Quazi Sadman</p>
-              <p className="text-ink-900/50">Traveler</p>
+            <div className="text-xs flex-1 min-w-0">
+              <p className="font-medium text-ink-900 truncate">{user?.name || "…"}</p>
+              <p className="text-ink-900/50 capitalize">{user?.role || ""}</p>
             </div>
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              className="text-ink-900/40 hover:text-sunset-dark shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>

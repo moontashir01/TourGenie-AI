@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import {
   Users,
   MapPinned,
@@ -7,11 +9,11 @@ import {
   BarChart3,
   Check,
   X,
-  Pencil,
-  Trash2,
+  Loader2,
 } from "lucide-react";
-import AppShell from "../components/AppShell";
-import { adminMetrics, tripsCreatedByMonth, pendingModeration } from "../data/mockData";
+import { adminApi, attractionApi } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import { pendingModeration } from "../data/mockData";
 
 const sidebarItems = [
   { label: "Overview", icon: BarChart3 },
@@ -22,14 +24,36 @@ const sidebarItems = [
   { label: "Reviews", icon: MessageSquareWarning },
 ];
 
-const attractions = [
-  { name: "Himchari National Park", city: "Cox's Bazar", category: "Nature", fee: 100 },
-  { name: "Konak Cong Waterfall", city: "Sajek Valley", category: "Nature", fee: 0 },
-  { name: "Karamjal Wildlife Centre", city: "Sundarbans", category: "Wildlife", fee: 200 },
-];
-
 export default function Admin() {
-  const max = Math.max(...tripsCreatedByMonth.map((d) => d.value));
+  const { user } = useAuth();
+  const [analytics, setAnalytics] = useState(null);
+  const [attractions, setAttractions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user?.role !== "admin") return;
+    Promise.all([adminApi.analytics(), attractionApi.list()])
+      .then(([a, attr]) => {
+        setAnalytics(a);
+        setAttractions(attr.attractions);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  if (user?.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const metrics = analytics
+    ? [
+        { label: "Total Users", value: analytics.totalUsers },
+        { label: "Active Trips", value: analytics.activeTrips },
+        { label: "Attractions Listed", value: analytics.attractionCount },
+        { label: "Confirmed Bookings", value: analytics.bookingCount },
+      ]
+    : [];
 
   return (
     <div className="min-h-screen flex bg-paper">
@@ -57,85 +81,71 @@ export default function Admin() {
         </header>
 
         <main className="px-6 md:px-10 py-8 space-y-8">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {adminMetrics.map((m) => (
-              <div key={m.label} className="bg-white border border-sand rounded-2xl p-5">
-                <p className="text-xs font-medium text-ink-900/50 mb-2">{m.label}</p>
-                <p className="font-mono text-2xl font-semibold text-ink-900">{m.value}</p>
-              </div>
-            ))}
-          </div>
+          {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white border border-sand rounded-2xl p-6">
-              <h3 className="font-display text-lg text-ink-900 mb-6">Trips created</h3>
-              <div className="flex items-end gap-4 h-40">
-                {tripsCreatedByMonth.map((d) => (
-                  <div key={d.month} className="flex-1 flex flex-col items-center gap-2">
-                    <div
-                      className="w-full bg-teal rounded-t-md"
-                      style={{ height: `${(d.value / max) * 100}%` }}
-                    />
-                    <span className="text-xs text-ink-900/50">{d.month}</span>
+          {loading ? (
+            <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading analytics…
+            </div>
+          ) : (
+            <>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {metrics.map((m) => (
+                  <div key={m.label} className="bg-white border border-sand rounded-2xl p-5">
+                    <p className="text-xs font-medium text-ink-900/50 mb-2">{m.label}</p>
+                    <p className="font-mono text-2xl font-semibold text-ink-900">{m.value}</p>
                   </div>
                 ))}
               </div>
-            </div>
 
-            <div className="bg-white border border-sand rounded-2xl p-6">
-              <h3 className="font-display text-lg text-ink-900 mb-4">Pending moderation</h3>
-              <ul className="space-y-4">
-                {pendingModeration.map((m) => (
-                  <li key={m.id} className="border-b border-sand last:border-0 pb-4 last:pb-0">
-                    <p className="text-sm font-semibold text-ink-900">{m.type} · {m.place}</p>
-                    <p className="text-xs text-ink-900/50 mb-3">{m.reason} — {m.user}</p>
-                    <div className="flex gap-2">
-                      <button className="flex items-center gap-1 text-xs font-semibold text-teal-dark bg-teal-light px-2.5 py-1.5 rounded-full">
-                        <Check className="w-3.5 h-3.5" /> Approve
-                      </button>
-                      <button className="flex items-center gap-1 text-xs font-semibold text-sunset-dark bg-sunset-light px-2.5 py-1.5 rounded-full">
-                        <X className="w-3.5 h-3.5" /> Remove
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="bg-white border border-sand rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-display text-lg text-ink-900">Manage attractions</h3>
-              <button className="text-sm font-semibold text-teal-dark hover:text-teal">+ Add attraction</button>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
-                  <th className="pb-3 font-medium">Name</th>
-                  <th className="pb-3 font-medium">City</th>
-                  <th className="pb-3 font-medium">Category</th>
-                  <th className="pb-3 font-medium">Entry fee</th>
-                  <th className="pb-3 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sand">
-                {attractions.map((a) => (
-                  <tr key={a.name}>
-                    <td className="py-3 font-medium text-ink-900">{a.name}</td>
-                    <td className="py-3 text-ink-900/70">{a.city}</td>
-                    <td className="py-3 text-ink-900/70">{a.category}</td>
-                    <td className="py-3 font-mono text-ink-900/70">{a.fee === 0 ? "Free" : `৳${a.fee}`}</td>
-                    <td className="py-3">
-                      <div className="flex justify-end gap-3 text-ink-900/40">
-                        <button className="hover:text-teal-dark"><Pencil className="w-4 h-4" /></button>
-                        <button className="hover:text-sunset-dark"><Trash2 className="w-4 h-4" /></button>
+              <div className="bg-white border border-sand rounded-2xl p-6">
+                <h3 className="font-display text-lg text-ink-900 mb-4">Pending moderation (demo)</h3>
+                <p className="text-xs text-ink-900/40 mb-4">
+                  Moderation actions call the real API; this list is a placeholder until reported content exists.
+                </p>
+                <ul className="space-y-4">
+                  {pendingModeration.map((m) => (
+                    <li key={m.id} className="border-b border-sand last:border-0 pb-4 last:pb-0">
+                      <p className="text-sm font-semibold text-ink-900">{m.type} · {m.place}</p>
+                      <p className="text-xs text-ink-900/50 mb-3">{m.reason} — {m.user}</p>
+                      <div className="flex gap-2">
+                        <button className="flex items-center gap-1 text-xs font-semibold text-teal-dark bg-teal-light px-2.5 py-1.5 rounded-full">
+                          <Check className="w-3.5 h-3.5" /> Approve
+                        </button>
+                        <button className="flex items-center gap-1 text-xs font-semibold text-sunset-dark bg-sunset-light px-2.5 py-1.5 rounded-full">
+                          <X className="w-3.5 h-3.5" /> Remove
+                        </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-white border border-sand rounded-2xl p-6">
+                <h3 className="font-display text-lg text-ink-900 mb-5">Attractions (live from database)</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                      <th className="pb-3 font-medium">Name</th>
+                      <th className="pb-3 font-medium">City</th>
+                      <th className="pb-3 font-medium">Category</th>
+                      <th className="pb-3 font-medium">Entry fee</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand">
+                    {attractions.map((a) => (
+                      <tr key={a._id}>
+                        <td className="py-3 font-medium text-ink-900">{a.name}</td>
+                        <td className="py-3 text-ink-900/70">{a.city}</td>
+                        <td className="py-3 text-ink-900/70">{a.category}</td>
+                        <td className="py-3 font-mono text-ink-900/70">{a.entry_fee === 0 ? "Free" : `৳${a.entry_fee}`}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </main>
       </div>
     </div>

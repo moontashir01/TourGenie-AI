@@ -1,7 +1,10 @@
 import { Link, NavLink } from "react-router-dom";
 import { Compass } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
+  const { user } = useAuth();
+
   const linkClass = ({ isActive }) =>
     `text-sm font-medium transition-colors ${
       isActive ? "text-sunset" : "text-paper/80 hover:text-paper"
@@ -21,18 +24,26 @@ export default function Navbar() {
           <a href="/#about" className="text-sm font-medium text-paper/80 hover:text-paper transition-colors">About</a>
         </nav>
         <div className="flex items-center gap-3">
-          <Link
-            to="/login"
-            className="text-sm font-medium text-paper/90 hover:text-paper px-3 py-2"
-          >
-            Log in
-          </Link>
-          <Link
-            to="/register"
-            className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-900 px-4 py-2 rounded-full transition-colors"
-          >
-            Register
-          </Link>
+          {user ? (
+            <Link
+              to="/dashboard"
+              className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-900 px-4 py-2 rounded-full transition-colors"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="text-sm font-medium text-paper/90 hover:text-paper px-3 py-2">
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-900 px-4 py-2 rounded-full transition-colors"
+              >
+                Register
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -1,13 +1,37 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Compass, Mail, Lock, User } from "lucide-react";
+import { Compass, Mail, Lock, User, AlertCircle } from "lucide-react";
 import RouteLine from "../components/RouteLine";
+import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { register } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    navigate("/dashboard");
+    setError("");
+
+    if (password !== confirm) {
+      setError("Passwords don't match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(name, email, password, "en");
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -25,6 +49,13 @@ export default function Register() {
           <h1 className="font-display text-2xl text-paper mb-1">Create your account</h1>
           <p className="text-sm text-paper/50 mb-6">Start planning your first AI-generated trip.</p>
 
+          {error && (
+            <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset text-sm rounded-lg px-3 py-2.5 mb-4">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form className="space-y-4" onSubmit={handleSubmit}>
             <label className="block">
               <span className="text-xs font-medium text-paper/60 mb-1.5 block">Full name</span>
@@ -33,6 +64,8 @@ export default function Register() {
                 <input
                   type="text"
                   required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
                   className="bg-transparent text-paper text-sm py-2.5 w-full focus:outline-none placeholder:text-paper/30"
                 />
@@ -45,6 +78,8 @@ export default function Register() {
                 <input
                   type="email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="bg-transparent text-paper text-sm py-2.5 w-full focus:outline-none placeholder:text-paper/30"
                 />
@@ -57,6 +92,9 @@ export default function Register() {
                 <input
                   type="password"
                   required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="bg-transparent text-paper text-sm py-2.5 w-full focus:outline-none placeholder:text-paper/30"
                 />
@@ -69,6 +107,8 @@ export default function Register() {
                 <input
                   type="password"
                   required
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
                   placeholder="••••••••"
                   className="bg-transparent text-paper text-sm py-2.5 w-full focus:outline-none placeholder:text-paper/30"
                 />
@@ -82,9 +122,10 @@ export default function Register() {
 
             <button
               type="submit"
-              className="w-full bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm py-3 rounded-lg transition-colors"
+              disabled={loading}
+              className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-900 font-semibold text-sm py-3 rounded-lg transition-colors"
             >
-              Create account
+              {loading ? "Creating account…" : "Create account"}
             </button>
           </form>
 
