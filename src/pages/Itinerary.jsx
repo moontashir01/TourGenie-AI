@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2 } from "lucide-react";
 import AppShell from "../components/AppShell";
 import RouteLine from "../components/RouteLine";
 import { tripsApi, itineraryApi } from "../lib/api";
@@ -263,6 +263,13 @@ export default function Itinerary() {
               />
             </div>
           </div>
+
+          <Link
+            to="/hotels"
+            className="w-full inline-flex items-center justify-center gap-2 bg-white border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-3 rounded-full transition-colors"
+          >
+            <Building2 className="w-4 h-4" /> Browse Hotels
+          </Link>
 
           <Link
             to="/chat"

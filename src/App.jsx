@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import PlanTrip from "./pages/PlanTrip";
 import Itinerary from "./pages/Itinerary";
+import Hotels from "./pages/Hotels";
 import Budget from "./pages/Budget";
 import Chat from "./pages/Chat";
 import Community from "./pages/Community";
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/plan" element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
         <Route path="/itinerary" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
+        <Route path="/hotels" element={<ProtectedRoute><Hotels /></ProtectedRoute>} />
         <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />

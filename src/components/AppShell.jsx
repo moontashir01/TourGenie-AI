@@ -9,12 +9,14 @@ import {
   Wallet,
   MessageCircleMore,
   LogOut,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
   { to: "/plan", label: "Plan New Trip", icon: MapPinned },
+  { to: "/hotels", label: "Hotels", icon: Building2 },
   { to: "/budget", label: "Budget & Expenses", icon: Wallet },
   { to: "/chat", label: "AI Assistant", icon: MessageCircleMore },
   { to: "/community", label: "Community", icon: Users },
