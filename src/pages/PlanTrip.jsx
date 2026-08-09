@@ -150,7 +150,7 @@ export default function PlanTrip() {
             <li><span className="text-sunset font-semibold">4.</span> You can refine anything afterward via the AI chat assistant.</li>
           </ol>
           <p className="text-xs text-paper/40 mt-4 border-t border-ink-700 pt-4">
-            The AI generation step isn't wired up yet — creating a trip here saves it to your dashboard, and you can add itinerary items manually on the next screen.
+            Creating a trip here saves it to your dashboard — you'll generate the actual itinerary with AI on the next screen.
           </p>
         </aside>
       </div>

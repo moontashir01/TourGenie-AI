@@ -48,6 +48,7 @@ export const tripsApi = {
 
 export const itineraryApi = {
   get: (tripId) => request(`/trips/${tripId}/itinerary`),
+  generateAI: (tripId) => request(`/trips/${tripId}/itinerary/generate`, { method: "POST" }),
   generate: (tripId, items) => request(`/trips/${tripId}/itinerary`, { method: "POST", body: { items } }),
   update: (tripId, itemId, payload) =>
     request(`/trips/${tripId}/itinerary/${itemId}`, { method: "PATCH", body: payload }),

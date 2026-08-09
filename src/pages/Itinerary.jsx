@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle } from "lucide-react";
 import AppShell from "../components/AppShell";
 import RouteLine from "../components/RouteLine";
 import { tripsApi, itineraryApi } from "../lib/api";
@@ -15,6 +15,7 @@ export default function Itinerary() {
   const [openDay, setOpenDay] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (!currentTripId) {
@@ -29,6 +30,20 @@ export default function Itinerary() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [currentTripId]);
+
+  async function handleGenerateAI() {
+    setError("");
+    setGenerating(true);
+    try {
+      const { items: generated } = await itineraryApi.generateAI(currentTripId);
+      setItems(generated);
+      setOpenDay(generated[0]?.day || 1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function handleAddItem(e) {
     e.preventDefault();
@@ -87,22 +102,40 @@ export default function Itinerary() {
       subtitle={trip ? `${new Date(trip.start_date).toLocaleDateString()} – ${new Date(trip.end_date).toLocaleDateString()} · ${trip.travelers} travelers` : ""}
     >
       {error && (
-        <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-6">{error}</div>
+        <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-6">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
       )}
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
           {items.length === 0 && !showForm && (
             <div className="bg-white border border-dashed border-sand rounded-2xl p-10 text-center">
-              <p className="text-ink-900/60 mb-4 text-sm">
-                No itinerary items yet. Add activities day by day — the AI-generation step isn't wired up yet, so this is manual for now.
-              </p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Add first activity
-              </button>
+              {generating ? (
+                <div className="flex flex-col items-center gap-3 py-4">
+                  <Loader2 className="w-6 h-6 text-teal animate-spin" />
+                  <p className="text-sm text-ink-900/60">Asking Claude to plan your {trip?.destination} trip…</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-ink-900/60 mb-5 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={handleGenerateAI}
+                      className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
+                    >
+                      <Sparkles className="w-4 h-4" /> Generate Itinerary with AI
+                    </button>
+                    <button
+                      onClick={() => setShowForm(true)}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal px-2"
+                    >
+                      <Plus className="w-4 h-4" /> Add activity manually
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -143,12 +176,22 @@ export default function Itinerary() {
           })}
 
           {items.length > 0 && !showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal"
-            >
-              <Plus className="w-4 h-4" /> Add another activity
-            </button>
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={() => setShowForm(true)}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal"
+              >
+                <Plus className="w-4 h-4" /> Add another activity
+              </button>
+              <button
+                onClick={handleGenerateAI}
+                disabled={generating}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-sunset-dark disabled:opacity-60"
+              >
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {generating ? "Regenerating…" : "Regenerate with AI (replaces current plan)"}
+              </button>
+            </div>
           )}
 
           {showForm && (
