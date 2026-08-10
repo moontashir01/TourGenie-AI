@@ -77,6 +77,13 @@ export const attractionApi = {
   },
 };
 
+export const transportApi = {
+  list: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/transport${qs ? `?${qs}` : ""}`, { auth: false });
+  },
+};
+
 export const communityApi = {
   list: (place) => request(`/community-posts${place && place !== "All places" ? `?place=${encodeURIComponent(place)}` : ""}`, { auth: false }),
   create: (payload) => request("/community-posts", { method: "POST", body: payload }),
@@ -86,6 +93,29 @@ export const communityApi = {
 export const adminApi = {
   analytics: () => request("/admin/analytics"),
   users: () => request("/admin/users"),
+  setUserStatus: (id, is_active) => request(`/admin/users/${id}/status`, { method: "PATCH", body: { is_active } }),
+  deleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+
+  trips: () => request("/admin/trips"),
+
+  createAttraction: (payload) => request("/admin/attractions", { method: "POST", body: payload }),
+  updateAttraction: (id, payload) => request(`/admin/attractions/${id}`, { method: "PATCH", body: payload }),
+  deleteAttraction: (id) => request(`/admin/attractions/${id}`, { method: "DELETE" }),
+
+  createTransport: (payload) => request("/admin/transport", { method: "POST", body: payload }),
+  updateTransport: (id, payload) => request(`/admin/transport/${id}`, { method: "PATCH", body: payload }),
+  deleteTransport: (id) => request(`/admin/transport/${id}`, { method: "DELETE" }),
+
+  hotels: () => request("/admin/hotels"),
+  createHotel: (payload) => request("/admin/hotels", { method: "POST", body: payload }),
+  updateHotel: (id, payload) => request(`/admin/hotels/${id}`, { method: "PATCH", body: payload }),
+  deleteHotel: (id) => request(`/admin/hotels/${id}`, { method: "DELETE" }),
+
+  communityPosts: () => request("/admin/community-posts"),
+  moderatePost: (id, action) => request(`/admin/community-posts/${id}/moderate`, { method: "PATCH", body: { action } }),
+
+  reviews: () => request("/admin/reviews"),
+  moderateReview: (id, action) => request(`/admin/reviews/${id}/moderate`, { method: "PATCH", body: { action } }),
 };
 
 export { getToken };

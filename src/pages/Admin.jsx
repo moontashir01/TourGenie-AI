@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useState } from "react";
+import { Navigate, Link } from "react-router-dom";
 import {
   Users,
   MapPinned,
@@ -7,145 +7,84 @@ import {
   Bus,
   MessageSquareWarning,
   BarChart3,
-  Check,
-  X,
-  Loader2,
+  FileBarChart,
+  Compass,
 } from "lucide-react";
-import { adminApi, attractionApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
-import { pendingModeration } from "../data/mockData";
+import Overview from "./admin/Overview";
+import UsersTab from "./admin/Users";
+import Attractions from "./admin/Attractions";
+import Transport from "./admin/Transport";
+import Hotels from "./admin/Hotels";
+import Reviews from "./admin/Reviews";
+import Reports from "./admin/Reports";
 
-const sidebarItems = [
-  { label: "Overview", icon: BarChart3 },
-  { label: "Users", icon: Users },
-  { label: "Attractions", icon: MapPinned },
-  { label: "Hotels", icon: Building2 },
-  { label: "Transport", icon: Bus },
-  { label: "Reviews", icon: MessageSquareWarning },
+const tabs = [
+  { key: "overview", label: "Overview", icon: BarChart3, component: Overview },
+  { key: "users", label: "Users", icon: Users, component: UsersTab },
+  { key: "attractions", label: "Attractions", icon: MapPinned, component: Attractions },
+  { key: "hotels", label: "Hotels", icon: Building2, component: Hotels },
+  { key: "transport", label: "Transport", icon: Bus, component: Transport },
+  { key: "reviews", label: "Reviews", icon: MessageSquareWarning, component: Reviews },
+  { key: "reports", label: "Reports", icon: FileBarChart, component: Reports },
 ];
 
 export default function Admin() {
   const { user } = useAuth();
-  const [analytics, setAnalytics] = useState(null);
-  const [attractions, setAttractions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (user?.role !== "admin") return;
-    Promise.all([adminApi.analytics(), attractionApi.list()])
-      .then(([a, attr]) => {
-        setAnalytics(a);
-        setAttractions(attr.attractions);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [user]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   if (user?.role !== "admin") {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const metrics = analytics
-    ? [
-        { label: "Total Users", value: analytics.totalUsers },
-        { label: "Active Trips", value: analytics.activeTrips },
-        { label: "Attractions Listed", value: analytics.attractionCount },
-        { label: "Confirmed Bookings", value: analytics.bookingCount },
-      ]
-    : [];
+  const ActiveComponent = tabs.find((t) => t.key === activeTab)?.component || Overview;
+  const activeLabel = tabs.find((t) => t.key === activeTab)?.label || "Overview";
 
   return (
     <div className="min-h-screen flex bg-paper">
       <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sand bg-ink-900 py-6 px-4">
-        <p className="font-display text-lg text-paper px-2 mb-8">Admin console</p>
+        <Link to="/dashboard" className="flex items-center gap-2 px-2 mb-8">
+          <Compass className="w-6 h-6 text-sunset" strokeWidth={1.75} />
+          <span className="font-display text-lg text-paper">Admin console</span>
+        </Link>
         <nav className="flex flex-col gap-1">
-          {sidebarItems.map((item, i) => (
+          {tabs.map((tab) => (
             <button
-              key={item.label}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
-                i === 0 ? "bg-ink-800 text-sunset" : "text-paper/60 hover:bg-ink-800 hover:text-paper"
+                activeTab === tab.key ? "bg-ink-800 text-sunset" : "text-paper/60 hover:bg-ink-800 hover:text-paper"
               }`}
             >
-              <item.icon className="w-4 h-4" strokeWidth={1.75} />
-              {item.label}
+              <tab.icon className="w-4 h-4" strokeWidth={1.75} />
+              {tab.label}
             </button>
           ))}
         </nav>
+        <Link
+          to="/dashboard"
+          className="mt-auto text-xs text-paper/40 hover:text-paper/70 px-4"
+        >
+          ← Back to traveler view
+        </Link>
       </aside>
 
       <div className="flex-1 min-w-0">
         <header className="border-b border-sand bg-white/40 px-6 md:px-10 py-6">
-          <h1 className="font-display text-2xl text-ink-900">Overview</h1>
-          <p className="text-sm text-ink-900/60 mt-1">Platform health at a glance.</p>
+          <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
+          <p className="text-sm text-ink-900/60 mt-1">
+            {activeTab === "overview" && "Platform health at a glance."}
+            {activeTab === "users" && "Manage traveler and admin accounts."}
+            {activeTab === "attractions" && "Manage the curated attractions database."}
+            {activeTab === "hotels" && "Manage the hotel database used for recommendations."}
+            {activeTab === "transport" && "Manage bus, train, and launch options."}
+            {activeTab === "reviews" && "Moderate community posts and attraction reviews."}
+            {activeTab === "reports" && "Platform analytics and exportable reports."}
+          </p>
         </header>
 
-        <main className="px-6 md:px-10 py-8 space-y-8">
-          {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
-
-          {loading ? (
-            <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading analytics…
-            </div>
-          ) : (
-            <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {metrics.map((m) => (
-                  <div key={m.label} className="bg-white border border-sand rounded-2xl p-5">
-                    <p className="text-xs font-medium text-ink-900/50 mb-2">{m.label}</p>
-                    <p className="font-mono text-2xl font-semibold text-ink-900">{m.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-white border border-sand rounded-2xl p-6">
-                <h3 className="font-display text-lg text-ink-900 mb-4">Pending moderation (demo)</h3>
-                <p className="text-xs text-ink-900/40 mb-4">
-                  Moderation actions call the real API; this list is a placeholder until reported content exists.
-                </p>
-                <ul className="space-y-4">
-                  {pendingModeration.map((m) => (
-                    <li key={m.id} className="border-b border-sand last:border-0 pb-4 last:pb-0">
-                      <p className="text-sm font-semibold text-ink-900">{m.type} · {m.place}</p>
-                      <p className="text-xs text-ink-900/50 mb-3">{m.reason} — {m.user}</p>
-                      <div className="flex gap-2">
-                        <button className="flex items-center gap-1 text-xs font-semibold text-teal-dark bg-teal-light px-2.5 py-1.5 rounded-full">
-                          <Check className="w-3.5 h-3.5" /> Approve
-                        </button>
-                        <button className="flex items-center gap-1 text-xs font-semibold text-sunset-dark bg-sunset-light px-2.5 py-1.5 rounded-full">
-                          <X className="w-3.5 h-3.5" /> Remove
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="bg-white border border-sand rounded-2xl p-6">
-                <h3 className="font-display text-lg text-ink-900 mb-5">Attractions (live from database)</h3>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
-                      <th className="pb-3 font-medium">Name</th>
-                      <th className="pb-3 font-medium">City</th>
-                      <th className="pb-3 font-medium">Category</th>
-                      <th className="pb-3 font-medium">Entry fee</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-sand">
-                    {attractions.map((a) => (
-                      <tr key={a._id}>
-                        <td className="py-3 font-medium text-ink-900">{a.name}</td>
-                        <td className="py-3 text-ink-900/70">{a.city}</td>
-                        <td className="py-3 text-ink-900/70">{a.category}</td>
-                        <td className="py-3 font-mono text-ink-900/70">{a.entry_fee === 0 ? "Free" : `৳${a.entry_fee}`}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+        <main className="px-6 md:px-10 py-8">
+          <ActiveComponent />
         </main>
       </div>
     </div>
