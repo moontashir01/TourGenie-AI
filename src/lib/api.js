@@ -84,6 +84,13 @@ export const transportApi = {
   },
 };
 
+export const flightApi = {
+  search: ({ origin, destination, date, travelers }) => {
+    const qs = new URLSearchParams({ origin, destination, ...(date && { date }), ...(travelers && { travelers }) }).toString();
+    return request(`/flights?${qs}`);
+  },
+};
+
 export const communityApi = {
   list: (place) => request(`/community-posts${place && place !== "All places" ? `?place=${encodeURIComponent(place)}` : ""}`, { auth: false }),
   create: (payload) => request("/community-posts", { method: "POST", body: payload }),

@@ -3,8 +3,25 @@ import { Link } from "react-router-dom";
 import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2 } from "lucide-react";
 import AppShell from "../components/AppShell";
 import RouteLine from "../components/RouteLine";
+import FlightSearch from "../components/FlightSearch";
 import { tripsApi, itineraryApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+
+
+// Consider a trip international if origin and destination are different countries
+// Uses a simple heuristic based on known Bangladesh cities.
+const BD_CITIES = new Set([
+  "dhaka","chittagong","chattogram","sylhet","cox's bazar","coxs bazar",
+  "cox bazar","rajshahi","khulna","barisal","rangpur","mymensingh","comilla",
+  "narayanganj","jessore","jashore","bogra","cumilla"
+]);
+function isLikelyInternational(origin, dest) {
+  if (!origin || !dest) return false;
+  const oLower = origin.toLowerCase().trim();
+  const dLower = dest.toLowerCase().trim();
+  // If destination is not a known BD city it's probably international
+  return !BD_CITIES.has(dLower);
+}
 
 export default function Itinerary() {
   const { currentTripId } = useCurrentTrip();
@@ -110,6 +127,15 @@ export default function Itinerary() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
+          {/* Flight search panel — shown when transport preference is Flight
+              OR when origin and destination are different countries */}
+          {trip && (
+            trip.transport_preference === "Flight" ||
+            isLikelyInternational(trip.origin, trip.destination)
+          ) && (
+            <FlightSearch trip={trip} />
+          )}
+
           {items.length === 0 && !showForm && (
             <div className="bg-white border border-dashed border-sand rounded-2xl p-10 text-center">
               {generating ? (

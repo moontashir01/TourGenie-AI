@@ -89,6 +89,7 @@ export default function PlanTrip() {
             <Field label="Transport preference">
               <select name="transport_preference" className="input" defaultValue="No preference">
                 <option>No preference</option>
+                <option>Flight</option>
                 <option>Bus</option>
                 <option>Train</option>
                 <option>Launch</option>
