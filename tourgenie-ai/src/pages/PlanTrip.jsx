@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, AlertCircle } from "lucide-react";
+import { Sparkles, AlertCircle, MapPin, Globe2 } from "lucide-react";
 import AppShell from "../components/AppShell";
 import { destinationsApi, tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
@@ -14,12 +14,20 @@ export default function PlanTrip() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [destinations, setDestinations] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [destinationMode, setDestinationMode] = useState("city"); // "city" | "country"
 
   useEffect(() => {
     destinationsApi
       .list({ limit: 200 })
-      .then((data) => setDestinations(data.destinations || []))
-      .catch(() => setDestinations([]));
+      .then((data) => {
+        setDestinations(data.destinations || []);
+        setCountries(data.countries || []);
+      })
+      .catch(() => {
+        setDestinations([]);
+        setCountries([]);
+      });
   }, []);
 
   const destinationsByCountry = useMemo(() => {
@@ -28,6 +36,13 @@ export default function PlanTrip() {
       return groups;
     }, {});
   }, [destinations]);
+
+  // Only countries with 2+ seeded cities can actually support a "which
+  // cities should I visit" plan — everything else stays a single-city pick.
+  const multiCityCountries = useMemo(
+    () => countries.filter((c) => c.destinations >= 2),
+    [countries]
+  );
 
   function toggleInterest(i) {
     setSelectedInterests((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
@@ -40,13 +55,13 @@ export default function PlanTrip() {
 
     const originId = form.get("origin_destination_id");
     const destinationId = form.get("destination_id");
+    const countryCode = form.get("country_code");
     const selectedOrigin = destinations.find((destination) => destination._id === originId);
     const selectedDestination = destinations.find((destination) => destination._id === destinationId);
+    const selectedCountry = countries.find((c) => c.country_code === countryCode);
     const payload = {
       origin: selectedOrigin?.name || form.get("origin"),
-      destination: selectedDestination?.name || form.get("destination"),
       origin_destination_id: originId || undefined,
-      destination_id: destinationId || undefined,
       start_date: form.get("start_date"),
       end_date: form.get("end_date"),
       travelers: Number(form.get("travelers")),
@@ -55,6 +70,9 @@ export default function PlanTrip() {
       hotel_preference: form.get("hotel_preference"),
       food_preference: form.get("food_preference"),
       interests: selectedInterests,
+      ...(destinationMode === "country"
+        ? { country_code: countryCode, destination: selectedCountry?.name }
+        : { destination: selectedDestination?.name || form.get("destination"), destination_id: destinationId || undefined }),
     };
 
     if (!payload.destination || !payload.start_date || !payload.end_date || !payload.budget) {
@@ -98,11 +116,55 @@ export default function PlanTrip() {
               )}
             </Field>
             <Field label="Destination">
-              {destinations.length ? (
-                <DestinationSelect name="destination_id" groups={destinationsByCountry} required placeholder="Choose a destination" />
-              ) : (
-                <input name="destination" type="text" placeholder="e.g. Bangkok or Kuala Lumpur" className="input" required />
-              )}
+              <div className="space-y-2">
+                {multiCityCountries.length > 0 && (
+                  <div className="flex gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setDestinationMode("city")}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors ${
+                        destinationMode === "city"
+                          ? "bg-teal text-white border-teal"
+                          : "border-sand text-ink-900/60 hover:border-teal/40"
+                      }`}
+                    >
+                      <MapPin className="w-3 h-3" /> One city
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDestinationMode("country")}
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors ${
+                        destinationMode === "country"
+                          ? "bg-teal text-white border-teal"
+                          : "border-sand text-ink-900/60 hover:border-teal/40"
+                      }`}
+                    >
+                      <Globe2 className="w-3 h-3" /> Whole country
+                    </button>
+                  </div>
+                )}
+
+                {destinationMode === "country" ? (
+                  <select name="country_code" required className="input">
+                    <option value="">Choose a country</option>
+                    {multiCityCountries.map((c) => (
+                      <option key={c.country_code} value={c.country_code}>
+                        {c.name} ({c.destinations} cities)
+                      </option>
+                    ))}
+                  </select>
+                ) : destinations.length ? (
+                  <DestinationSelect name="destination_id" groups={destinationsByCountry} required placeholder="Choose a destination" />
+                ) : (
+                  <input name="destination" type="text" placeholder="e.g. Bangkok or Kuala Lumpur" className="input" required />
+                )}
+
+                {destinationMode === "country" && (
+                  <p className="text-xs text-ink-900/40">
+                    We'll pick which cities to visit and how to travel between them based on your trip length.
+                  </p>
+                )}
+              </div>
             </Field>
             <Field label="Start date">
               <input name="start_date" type="date" className="input" required />

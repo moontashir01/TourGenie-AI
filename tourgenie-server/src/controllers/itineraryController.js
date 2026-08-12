@@ -1,6 +1,7 @@
 import ItineraryItem from "../models/ItineraryItem.js";
 import Trip from "../models/Trip.js";
 import Attraction from "../models/Attraction.js";
+import Destination from "../models/Destination.js";
 import FlightOption from "../models/FlightOption.js";
 import TransportOption from "../models/TransportOption.js";
 import { generateItineraryWithAI } from "../services/aiPlanner.js";
@@ -22,15 +23,26 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
   const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
-  const attractions = await Attraction.find({
-    ...(trip.destination_id?._id
-      ? { destination_id: trip.destination_id._id }
-      : { city: new RegExp(`^${trip.destination}$`, "i") }),
-  });
+  let attractions;
+  let candidateCities = [];
+  if (trip.multi_city && trip.country_code) {
+    candidateCities = await Destination.find({ country_code: trip.country_code, is_active: true })
+      .sort({ popularity: -1 })
+      .select("name recommended_days avg_daily_cost tags summary");
+    attractions = await Attraction.find({
+      destination_id: { $in: candidateCities.map((c) => c._id) },
+    });
+  } else {
+    attractions = await Attraction.find({
+      ...(trip.destination_id?._id
+        ? { destination_id: trip.destination_id._id }
+        : { city: new RegExp(`^${trip.destination}$`, "i") }),
+    });
+  }
 
   let items;
   try {
-    items = await generateItineraryWithAI(trip, attractions);
+    items = await generateItineraryWithAI(trip, attractions, candidateCities);
   } catch (err) {
     return res.status(502).json({
       message: `AI itinerary generation failed: ${err.message}`,
@@ -41,13 +53,15 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
     return res.status(502).json({ message: "AI returned an empty or invalid itinerary" });
   }
 
-  // Augment travel items with real transport options
+  // Augment travel items with real transport options. Multi-city trips carry
+  // explicit from_city/to_city per leg (set by the AI); single-destination
+  // trips only travel on day 1 (arrival) and the last day (return), between
+  // the trip's origin and its one destination.
   for (const item of items) {
     if (item.category === "travel") {
-      let fromCity = trip.origin;
-      let toCity = trip.destination;
-      // If it's the last day, assume it's the return trip
-      if (trip.duration_days && item.day === trip.duration_days) {
+      let fromCity = item.from_city || (trip.multi_city ? trip.entry_city : trip.origin);
+      let toCity = item.to_city || (trip.multi_city ? trip.entry_city : trip.destination);
+      if (!item.from_city && !item.to_city && !trip.multi_city && trip.duration_days && item.day === trip.duration_days) {
         fromCity = trip.destination;
         toCity = trip.origin;
       }
@@ -80,6 +94,9 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
       time: i.time,
       activity: i.activity,
       location: i.location,
+      city: i.city || (trip.multi_city ? "" : trip.destination),
+      from_city: i.from_city || "",
+      to_city: i.to_city || "",
       est_cost: i.est_cost || 0,
       category: i.category || "activity",
       attraction_id: i.attraction_id || null,

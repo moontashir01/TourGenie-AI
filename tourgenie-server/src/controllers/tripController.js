@@ -1,5 +1,6 @@
 import Trip from "../models/Trip.js";
 import Destination from "../models/Destination.js";
+import Country from "../models/Country.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const DESTINATION_FIELDS = "name country country_code timezone currency pricing_currency nearest_airport type";
@@ -35,15 +36,53 @@ function allowedTripFields(body) {
     food_preference: body.food_preference,
     budget_tier: body.budget_tier,
     notes: body.notes,
+    selected_flight: body.selected_flight,
   };
+}
+
+// A country-level trip ("Thailand", not one city) needs at least two active
+// destinations for the AI to actually route between — otherwise it's just a
+// worse version of picking the one city directly.
+async function resolveCountryTrip(countryCode) {
+  const country = await Country.findOne({ code: String(countryCode).toUpperCase(), is_active: true });
+  if (!country) {
+    const error = new Error(`Unsupported country: ${countryCode}`);
+    error.status = 400;
+    throw error;
+  }
+  const cities = await Destination.find({ country_code: country.code, is_active: true }).sort({ popularity: -1 });
+  if (cities.length < 2) {
+    const error = new Error(`${country.name} doesn't have multiple cities set up for a country-wide trip yet`);
+    error.status = 400;
+    throw error;
+  }
+  return { country, cities };
 }
 
 // FR-03 — Trip Creation
 export const createTrip = asyncHandler(async (req, res) => {
-  const [destination, origin] = await Promise.all([
-    resolveDestination({ id: req.body.destination_id, name: req.body.destination, required: true }),
-    resolveDestination({ id: req.body.origin_destination_id, name: req.body.origin }),
-  ]);
+  const origin = await resolveDestination({ id: req.body.origin_destination_id, name: req.body.origin });
+
+  if (req.body.country_code) {
+    const { country, cities } = await resolveCountryTrip(req.body.country_code);
+    const entryCity = cities.find((c) => c.name === country.capital) || cities[0];
+    const trip = await Trip.create({
+      ...allowedTripFields(req.body),
+      user_id: req.user._id,
+      origin: origin?.name || req.body.origin || req.user.city || "",
+      destination: country.name,
+      origin_destination_id: origin?._id || null,
+      destination_id: null,
+      multi_city: true,
+      country_code: country.code,
+      entry_city: entryCity.name,
+      currency: country.pricing_currency || "BDT",
+      status: "draft",
+    });
+    return res.status(201).json({ trip });
+  }
+
+  const destination = await resolveDestination({ id: req.body.destination_id, name: req.body.destination, required: true });
   const trip = await Trip.create({
     ...allowedTripFields(req.body),
     user_id: req.user._id,
@@ -69,6 +108,7 @@ export const getMyTrips = asyncHandler(async (req, res) => {
 export const getTripById = asyncHandler(async (req, res) => {
   const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id })
     .populate("hotel_id")
+    .populate("hotel_selections.hotel_id")
     .populate("origin_destination_id", DESTINATION_FIELDS)
     .populate("destination_id", DESTINATION_FIELDS);
   if (!trip) return res.status(404).json({ message: "Trip not found" });

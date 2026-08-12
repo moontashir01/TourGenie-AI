@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Star, Wifi, Loader2, CheckCircle2, ArrowUpDown, AlertCircle } from "lucide-react";
+import { Star, Wifi, Loader2, CheckCircle2, ArrowUpDown, AlertCircle, MapPin } from "lucide-react";
 import AppShell from "../components/AppShell";
-import { tripsApi, hotelApi } from "../lib/api";
+import { tripsApi, hotelApi, itineraryApi, destinationsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
 const sortOptions = [
@@ -14,6 +14,9 @@ const sortOptions = [
 export default function Hotels() {
   const { currentTripId } = useCurrentTrip();
   const [trip, setTrip] = useState(null);
+  const [cities, setCities] = useState([]); // multi-city trips only
+  const [activeCity, setActiveCity] = useState(null);
+  const [hotelSelections, setHotelSelections] = useState([]); // [{ city, hotel_id }]
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,8 +32,37 @@ export default function Hotels() {
     setError("");
     tripsApi
       .get(currentTripId)
-      .then(({ trip }) => {
+      .then(async ({ trip }) => {
         setTrip(trip);
+
+        if (trip.multi_city) {
+          const selections = (trip.hotel_selections || []).map((s) => ({
+            city: s.city,
+            hotel_id: s.hotel_id?._id || s.hotel_id,
+          }));
+          setHotelSelections(selections);
+
+          // Prefer the cities the AI actually routed through; fall back to
+          // every city in the country if the itinerary hasn't been generated yet.
+          let cityList = [];
+          try {
+            const { items } = await itineraryApi.get(currentTripId);
+            cityList = [...new Set((items || []).map((i) => i.city).filter(Boolean))];
+          } catch {
+            cityList = [];
+          }
+          if (cityList.length === 0) {
+            const { destinations } = await destinationsApi.list({ country_code: trip.country_code });
+            cityList = destinations.map((d) => d.name);
+          }
+          setCities(cityList);
+          const initialCity = cityList.includes(trip.entry_city) ? trip.entry_city : cityList[0];
+          setActiveCity(initialCity);
+          return initialCity
+            ? hotelApi.list({ city: initialCity, ...(sort ? { sort } : {}) })
+            : null;
+        }
+
         setSelectedHotelId(trip.hotel_id?._id || trip.hotel_id || null);
         return hotelApi.list({
           ...(trip.destination_id?._id
@@ -44,8 +76,21 @@ export default function Hotels() {
       .finally(() => setLoading(false));
   }, [currentTripId]);
 
+  function fetchHotelsFor(city, sortValue) {
+    setLoading(true);
+    hotelApi
+      .list({ city, ...(sortValue ? { sort: sortValue } : {}) })
+      .then(({ hotels }) => setHotels(hotels))
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }
+
   function changeSort(value) {
     setSort(value);
+    if (trip?.multi_city) {
+      fetchHotelsFor(activeCity, value);
+      return;
+    }
     setLoading(true);
     hotelApi
       .list({
@@ -59,12 +104,25 @@ export default function Hotels() {
       .finally(() => setLoading(false));
   }
 
+  function changeCity(city) {
+    setActiveCity(city);
+    fetchHotelsFor(city, sort);
+  }
+
   async function handleSelect(hotelId) {
     setSelectingId(hotelId);
     setError("");
     try {
-      await hotelApi.select(hotelId, currentTripId);
-      setSelectedHotelId(hotelId);
+      if (trip.multi_city) {
+        await hotelApi.select(hotelId, currentTripId, activeCity);
+        setHotelSelections((prev) => [
+          ...prev.filter((s) => s.city.toLowerCase() !== activeCity.toLowerCase()),
+          { city: activeCity, hotel_id: hotelId },
+        ]);
+      } else {
+        await hotelApi.select(hotelId, currentTripId);
+        setSelectedHotelId(hotelId);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -83,6 +141,10 @@ export default function Hotels() {
     );
   }
 
+  const activeSelectedHotelId = trip?.multi_city
+    ? hotelSelections.find((s) => s.city.toLowerCase() === activeCity?.toLowerCase())?.hotel_id || null
+    : selectedHotelId;
+
   return (
     <AppShell
       title="Hotel Recommendations"
@@ -95,8 +157,30 @@ export default function Hotels() {
         </div>
       )}
 
+      {trip?.multi_city && cities.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          {cities.map((city) => {
+            const picked = hotelSelections.some((s) => s.city.toLowerCase() === city.toLowerCase());
+            return (
+              <button
+                key={city}
+                onClick={() => changeCity(city)}
+                className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-full border transition-colors ${
+                  activeCity === city
+                    ? "bg-teal text-white border-teal"
+                    : "bg-white text-ink-900/70 border-sand hover:border-teal/40"
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5" /> {city}
+                {picked && <CheckCircle2 className="w-3.5 h-3.5" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-ink-900/50">{hotels.length} hotel{hotels.length !== 1 ? "s" : ""} found</p>
+        <p className="text-sm text-ink-900/50">{hotels.length} hotel{hotels.length !== 1 ? "s" : ""} found{trip?.multi_city && activeCity ? ` in ${activeCity}` : ""}</p>
         <div className="flex items-center gap-2">
           <ArrowUpDown className="w-4 h-4 text-ink-900/40" />
           <select
@@ -118,13 +202,13 @@ export default function Hotels() {
       ) : hotels.length === 0 ? (
         <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 text-sm">
-            No seeded hotels for {trip?.destination} yet — add some via the admin console or the seed script.
+            No seeded hotels for {trip?.multi_city ? activeCity : trip?.destination} yet — add some via the admin console or the seed script.
           </p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {hotels.map((h) => {
-            const isSelected = selectedHotelId === h._id;
+            const isSelected = activeSelectedHotelId === h._id;
             return (
               <div key={h._id} className="bg-white border border-sand rounded-2xl overflow-hidden hover:border-teal/40 transition-colors flex flex-col">
                 <div className="h-28 bg-teal-light flex items-center justify-center">

@@ -46,13 +46,26 @@ function sortAndFilter(hotels, { maxPrice, sort }) {
   return result;
 }
 
+// Single-city trips store one hotel_id for the whole stay. Multi-city trips
+// need one hotel per city visited, so a select there is scoped by req.body.city
+// and replaces any prior pick for that same city rather than the whole trip.
 export const selectHotelForTrip = asyncHandler(async (req, res) => {
   const Trip = (await import("../models/Trip.js")).default;
-  const trip = await Trip.findOneAndUpdate(
-    { _id: req.body.trip_id, user_id: req.user._id },
-    { hotel_id: req.params.id },
-    { new: true }
-  );
+  const trip = await Trip.findOne({ _id: req.body.trip_id, user_id: req.user._id });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
-  res.json({ trip });
+
+  if (trip.multi_city) {
+    const city = req.body.city;
+    if (!city) return res.status(400).json({ message: "city is required to select a hotel on a multi-city trip" });
+    trip.hotel_selections = [
+      ...trip.hotel_selections.filter((s) => s.city.toLowerCase() !== city.toLowerCase()),
+      { city, hotel_id: req.params.id },
+    ];
+  } else {
+    trip.hotel_id = req.params.id;
+  }
+  await trip.save();
+
+  const updated = await Trip.findById(trip._id).populate("hotel_id").populate("hotel_selections.hotel_id");
+  res.json({ trip: updated });
 });

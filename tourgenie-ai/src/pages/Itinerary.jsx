@@ -10,7 +10,7 @@ import { useCurrentTrip } from "../context/TripContext";
 
 function isInternationalTrip(trip) {
   const originCountry = trip?.origin_destination_id?.country_code;
-  const destinationCountry = trip?.destination_id?.country_code;
+  const destinationCountry = trip?.multi_city ? trip.country_code : trip?.destination_id?.country_code;
   return Boolean(originCountry && destinationCountry && originCountry !== destinationCountry);
 }
 
@@ -102,7 +102,30 @@ export default function Itinerary() {
   }
 
   const days = [...new Set(items.map((i) => i.day))].sort((a, b) => a - b);
-  const totalCost = items.reduce((s, i) => s + (i.est_cost || 0), 0);
+  const itineraryCost = items.reduce((s, i) => s + (i.est_cost || 0), 0);
+  const flightCost = trip?.selected_flight?.price || 0;
+  let hotelCost = 0;
+  if (trip?.multi_city && trip.hotel_selections?.length) {
+    // Each day's last activity (items are ordered by day, time, so later
+    // entries win) marks the city slept in that night.
+    const cityByDay = {};
+    for (const i of items) {
+      if (i.city) cityByDay[i.day] = i.city;
+    }
+    const nightsByCity = {};
+    for (const city of Object.values(cityByDay)) {
+      nightsByCity[city] = (nightsByCity[city] || 0) + 1;
+    }
+    hotelCost = trip.hotel_selections.reduce((s, sel) => {
+      const hotel = sel.hotel_id;
+      if (!hotel?.price_per_night) return s;
+      const nights = nightsByCity[sel.city] || 1;
+      return s + hotel.price_per_night * nights;
+    }, 0);
+  } else if (trip?.hotel_id) {
+    hotelCost = (trip.hotel_id.price_per_night || 0) * (trip.duration_days || 1);
+  }
+  const totalCost = itineraryCost + flightCost + hotelCost;
 
   return (
     <AppShell
@@ -124,7 +147,10 @@ export default function Itinerary() {
             trip.transport_preference === "Flight" ||
             isInternationalTrip(trip)
           ) && (
-            <FlightSearch trip={trip} />
+            <FlightSearch
+              trip={trip.multi_city ? { ...trip, destination: trip.entry_city } : trip}
+              onFlightSelected={(flight) => setTrip((prev) => ({ ...prev, selected_flight: flight }))}
+            />
           )}
 
           {items.length === 0 && !showForm && (
@@ -159,10 +185,20 @@ export default function Itinerary() {
           {days.map((day) => {
             const dayItems = items.filter((i) => i.day === day).sort((a, b) => a.time.localeCompare(b.time));
             const open = openDay === day;
+            const dayCities = trip?.multi_city
+              ? [...new Set(dayItems.map((i) => i.city).filter(Boolean))]
+              : [];
             return (
               <div key={day} className="bg-white border border-sand rounded-2xl overflow-hidden">
                 <button onClick={() => setOpenDay(open ? null : day)} className="w-full flex items-center justify-between px-6 py-4">
-                  <p className="font-display text-lg text-ink-900">Day {day}</p>
+                  <div className="flex items-center gap-2.5">
+                    <p className="font-display text-lg text-ink-900">Day {day}</p>
+                    {dayCities.length > 0 && (
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-light/40 text-teal-dark">
+                        {dayCities.join(" → ")}
+                      </span>
+                    )}
+                  </div>
                   <ChevronDown className={`w-4 h-4 text-ink-900/40 transition-transform ${open ? "rotate-180" : ""}`} />
                 </button>
                 {open && (
@@ -294,8 +330,15 @@ export default function Itinerary() {
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between"><dt className="text-paper/50">Route</dt><dd className="text-paper">{trip?.origin} → {trip?.destination}</dd></div>
               <div className="flex justify-between"><dt className="text-paper/50">Travelers</dt><dd className="text-paper">{trip?.travelers}</dd></div>
+              <div className="flex justify-between"><dt className="text-paper/50">Activities</dt><dd className="text-paper">৳{itineraryCost.toLocaleString()}</dd></div>
+              {flightCost > 0 && (
+                <div className="flex justify-between"><dt className="text-paper/50">Flight</dt><dd className="text-paper">৳{flightCost.toLocaleString()}</dd></div>
+              )}
+              {hotelCost > 0 && (
+                <div className="flex justify-between"><dt className="text-paper/50">Hotel</dt><dd className="text-paper">৳{hotelCost.toLocaleString()}</dd></div>
+              )}
               <div className="flex justify-between border-t border-ink-700 pt-3">
-                <dt className="text-paper/50">Itinerary cost so far</dt>
+                <dt className="text-paper/50">Trip cost so far</dt>
                 <dd className="text-sunset font-mono font-semibold">৳{totalCost.toLocaleString()}</dd>
               </div>
             </dl>

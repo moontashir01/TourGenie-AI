@@ -77,7 +77,8 @@ export const hotelApi = {
     const qs = new URLSearchParams(params).toString();
     return request(`/hotels${qs ? `?${qs}` : ""}`, { auth: false });
   },
-  select: (hotelId, tripId) => request(`/hotels/${hotelId}/select`, { method: "POST", body: { trip_id: tripId } }),
+  select: (hotelId, tripId, city) =>
+    request(`/hotels/${hotelId}/select`, { method: "POST", body: { trip_id: tripId, ...(city && { city }) } }),
 };
 
 export const attractionApi = {

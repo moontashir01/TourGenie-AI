@@ -16,11 +16,22 @@ const budgetLineSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const hotelSelectionSchema = new mongoose.Schema(
+  {
+    city: { type: String, required: true },
+    hotel_id: { type: mongoose.Schema.Types.ObjectId, ref: "Hotel", required: true },
+  },
+  { _id: false }
+);
+
 const tripSchema = new mongoose.Schema(
   {
     // — proposal §4.1.2 —
     user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     hotel_id: { type: mongoose.Schema.Types.ObjectId, ref: "Hotel", default: null },
+    // Multi-city trips need one hotel per city rather than the single
+    // hotel_id above — each entry replaces any prior pick for that city.
+    hotel_selections: { type: [hotelSelectionSchema], default: [] },
     origin: { type: String, required: true },
     destination: { type: String, required: true },
     start_date: { type: Date, required: true },
@@ -40,6 +51,13 @@ const tripSchema = new mongoose.Schema(
     origin_destination_id: { type: mongoose.Schema.Types.ObjectId, ref: "Destination", default: null },
     destination_id: { type: mongoose.Schema.Types.ObjectId, ref: "Destination", default: null },
 
+    // Country-level trip: destination is a whole country ("Thailand") rather
+    // than one city, so the AI itinerary picks which cities to visit and how
+    // to move between them. destination_id stays null for these trips.
+    multi_city: { type: Boolean, default: false },
+    country_code: { type: String, default: null, uppercase: true, maxlength: 2 },
+    entry_city: { type: String, default: "" }, // main gateway city, e.g. "Bangkok"
+
     duration_days: { type: Number, default: null }, // derived, kept for quick reads
     budget_tier: { type: String, enum: ["budget", "mid", "luxury"], default: "mid" },
     currency: { type: String, default: "BDT" },
@@ -51,6 +69,7 @@ const tripSchema = new mongoose.Schema(
     // FR-06 — the route the map draws for this trip.
     route_id: { type: mongoose.Schema.Types.ObjectId, ref: "Route", default: null },
     transport_option_id: { type: mongoose.Schema.Types.ObjectId, ref: "TransportOption", default: null },
+    selected_flight: { type: mongoose.Schema.Types.Mixed, default: null },
 
     // FR-16 — carbon estimate, stored so the Budget page banner is a read.
     carbon: {

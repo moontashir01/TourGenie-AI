@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
 import { Plane, Clock, ArrowRight, Loader2, AlertCircle, RefreshCw, Users, ChevronsRight } from "lucide-react";
-import { flightApi } from "../lib/api";
+import { flightApi, tripsApi } from "../lib/api";
 
 // Shown on the Itinerary page when transport_preference is "Flight"
 // or when the destination looks international.
 // Uses live fares when configured and the seeded recurring schedules as a
 // deterministic fallback.
-export default function FlightSearch({ trip }) {
+export default function FlightSearch({ trip, onFlightSelected }) {
   const [flights, setFlights] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
+  const [selectedFlightId, setSelectedFlightId] = useState(trip?.selected_flight?.id || null);
 
   // Auto-search when the component mounts if we have enough info
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function FlightSearch({ trip }) {
     setLoading(true);
     setError("");
     setSearched(true);
+    setSelectedFlightId(null);
     try {
       const result = await flightApi.search({
         origin: trip.origin,
@@ -37,6 +39,17 @@ export default function FlightSearch({ trip }) {
       setError(typeof err.message === 'string' ? err.message : typeof err === 'string' ? err : JSON.stringify(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Handle saving the selected flight to the backend
+  async function handleSelect(flight) {
+    setSelectedFlightId(flight.id);
+    try {
+      await tripsApi.update(trip._id, { selected_flight: flight });
+      onFlightSelected?.(flight);
+    } catch (err) {
+      setError("Could not save flight selection");
     }
   }
 
@@ -107,7 +120,13 @@ export default function FlightSearch({ trip }) {
       {!loading && flights.length > 0 && (
         <div className="space-y-3">
           {flights.map((f) => (
-            <FlightCard key={f.id} flight={f} travelers={trip.travelers} />
+            <FlightCard 
+              key={f.id} 
+              flight={f} 
+              travelers={trip.travelers}
+              isSelected={selectedFlightId === f.id}
+              onSelect={handleSelect}
+            />
           ))}
           <p className="text-xs text-ink-900/40 text-center pt-2">
             {meta?.source === "ignav"
@@ -132,7 +151,7 @@ export default function FlightSearch({ trip }) {
   );
 }
 
-function FlightCard({ flight, travelers }) {
+function FlightCard({ flight, travelers, onSelect, isSelected }) {
   const depTime = new Date(flight.departure);
   const arrTime = new Date(flight.arrival);
 
@@ -159,7 +178,9 @@ function FlightCard({ flight, travelers }) {
   }).format(amount || 0);
 
   return (
-    <div className="border border-sand rounded-xl p-4 hover:border-teal/40 hover:shadow-sm transition-all">
+    <div className={`border rounded-xl p-4 transition-all ${
+      isSelected ? "border-teal bg-teal-light/10 shadow-sm" : "border-sand hover:border-teal/40 hover:shadow-sm"
+    }`}>
       <div className="flex items-start justify-between gap-4 flex-wrap">
         {/* Left: airline + flight number */}
         <div className="flex items-center gap-3 min-w-0">
@@ -199,15 +220,15 @@ function FlightCard({ flight, travelers }) {
           </div>
         </div>
 
-        {/* Right: price + cabin */}
-        <div className="text-right shrink-0">
+        {/* Right: price + cabin + select button */}
+        <div className="text-right shrink-0 flex flex-col items-end">
           <p className="font-mono text-xl font-bold text-ink-900">
             {formatMoney(totalPrice)}
           </p>
           {perPerson && (
             <p className="text-xs text-ink-900/50">{formatMoney(perPerson)} / person</p>
           )}
-          <div className="flex items-center justify-end gap-2 mt-1.5">
+          <div className="flex items-center justify-end gap-2 mt-1.5 mb-2">
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cabinColor}`}>
               {flight.cabin}
             </span>
@@ -217,6 +238,16 @@ function FlightCard({ flight, travelers }) {
               </span>
             )}
           </div>
+          <button
+            onClick={() => onSelect(flight)}
+            className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${
+              isSelected 
+                ? "bg-teal text-white shadow-sm" 
+                : "bg-paper text-ink-900/70 border border-sand hover:border-teal hover:text-teal"
+            }`}
+          >
+            {isSelected ? "Selected" : "Select"}
+          </button>
         </div>
       </div>
     </div>

@@ -17,6 +17,9 @@ const itineraryItemSchema = new mongoose.Schema(
     location: { type: String, default: "" },
 
     // — additive —
+    city: { type: String, default: "" }, // which city this activity is in — multi-city trips span several
+    from_city: { type: String, default: "" }, // travel items only
+    to_city: { type: String, default: "" }, // travel items only
     date: { type: Date, default: null }, // resolved calendar date for the day
     end_time: { type: String, default: "" },
     duration_min: { type: Number, default: 60 },
