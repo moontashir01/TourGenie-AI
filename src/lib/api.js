@@ -46,6 +46,14 @@ export const tripsApi = {
   remove: (id) => request(`/trips/${id}`, { method: "DELETE" }),
 };
 
+export const destinationsApi = {
+  list: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/destinations${qs ? `?${qs}` : ""}`, { auth: false });
+  },
+  get: (idOrSlug) => request(`/destinations/${idOrSlug}`, { auth: false }),
+};
+
 export const itineraryApi = {
   get: (tripId) => request(`/trips/${tripId}/itinerary`),
   generateAI: (tripId) => request(`/trips/${tripId}/itinerary/generate`, { method: "POST" }),
@@ -53,6 +61,8 @@ export const itineraryApi = {
   update: (tripId, itemId, payload) =>
     request(`/trips/${tripId}/itinerary/${itemId}`, { method: "PATCH", body: payload }),
   remove: (tripId, itemId) => request(`/trips/${tripId}/itinerary/${itemId}`, { method: "DELETE" }),
+  selectTransport: (tripId, itemId, payload) =>
+    request(`/trips/${tripId}/itinerary/${itemId}/transport`, { method: "PUT", body: payload }),
 };
 
 export const expenseApi = {

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Compass, Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Compass, Mail, Lock, User, AlertCircle, Globe2 } from "lucide-react";
 import RouteLine from "../components/RouteLine";
 import { useAuth } from "../context/AuthContext";
+import { destinationsApi } from "../lib/api";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,6 +14,21 @@ export default function Register() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [countryCode, setCountryCode] = useState("BD");
+  const [countries, setCountries] = useState([
+    { country_code: "BD", name: "Bangladesh" },
+    { country_code: "TH", name: "Thailand" },
+    { country_code: "MY", name: "Malaysia" },
+    { country_code: "IN", name: "India" },
+    { country_code: "NP", name: "Nepal" },
+  ]);
+
+  useEffect(() => {
+    destinationsApi.list({ limit: 1 }).then(({ countries: rows }) => {
+      const core = (rows || []).filter((country) => country.is_core);
+      if (core.length) setCountries(core);
+    }).catch(() => {});
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -25,7 +41,7 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await register(name, email, password, "en");
+      await register(name, email, password, "en", countryCode);
       navigate("/dashboard");
     } catch (err) {
       setError(err.message || "Registration failed");
@@ -69,6 +85,22 @@ export default function Register() {
                   placeholder="Your name"
                   className="bg-transparent text-paper text-sm py-2.5 w-full focus:outline-none placeholder:text-paper/30"
                 />
+              </div>
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Home country</span>
+              <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
+                <Globe2 className="w-4 h-4 text-paper/30" />
+                <select
+                  required
+                  value={countryCode}
+                  onChange={(event) => setCountryCode(event.target.value)}
+                  className="bg-ink-900 text-paper text-sm py-2.5 w-full focus:outline-none"
+                >
+                  {countries.map((country) => (
+                    <option key={country.country_code} value={country.country_code}>{country.name}</option>
+                  ))}
+                </select>
               </div>
             </label>
             <label className="block">

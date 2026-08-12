@@ -32,7 +32,12 @@ export default function Hotels() {
       .then(({ trip }) => {
         setTrip(trip);
         setSelectedHotelId(trip.hotel_id?._id || trip.hotel_id || null);
-        return hotelApi.list({ city: trip.destination, ...(sort ? { sort } : {}) });
+        return hotelApi.list({
+          ...(trip.destination_id?._id
+            ? { destination_id: trip.destination_id._id }
+            : { city: trip.destination }),
+          ...(sort ? { sort } : {}),
+        });
       })
       .then((res) => res && setHotels(res.hotels))
       .catch((err) => setError(err.message))
@@ -43,7 +48,12 @@ export default function Hotels() {
     setSort(value);
     setLoading(true);
     hotelApi
-      .list({ city: trip.destination, ...(value ? { sort: value } : {}) })
+      .list({
+        ...(trip.destination_id?._id
+          ? { destination_id: trip.destination_id._id }
+          : { city: trip.destination }),
+        ...(value ? { sort: value } : {}),
+      })
       .then(({ hotels }) => setHotels(hotels))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));

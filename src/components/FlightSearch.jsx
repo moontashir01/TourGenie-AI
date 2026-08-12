@@ -4,7 +4,8 @@ import { flightApi } from "../lib/api";
 
 // Shown on the Itinerary page when transport_preference is "Flight"
 // or when the destination looks international.
-// Fetches real fares from Amadeus → your backend → this component.
+// Uses live fares when configured and the seeded recurring schedules as a
+// deterministic fallback.
 export default function FlightSearch({ trip }) {
   const [flights, setFlights] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -109,7 +110,9 @@ export default function FlightSearch({ trip }) {
             <FlightCard key={f.id} flight={f} travelers={trip.travelers} />
           ))}
           <p className="text-xs text-ink-900/40 text-center pt-2">
-            Fares are live from Amadeus · Prices include taxes · Book directly with the airline
+            {meta?.source === "ignav"
+              ? "Live fares from Ignav · Prices include taxes · Book directly with the airline"
+              : "Indicative seeded fares · Verify price and schedule with the airline before booking"}
           </p>
         </div>
       )}
@@ -149,6 +152,11 @@ function FlightCard({ flight, travelers }) {
     flight.cabin === "BUSINESS" ? "bg-sunset-light text-sunset-dark" :
     flight.cabin === "FIRST" ? "bg-ink-900 text-paper" :
     "bg-sand text-ink-900/60";
+  const formatMoney = (amount) => new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: flight.currency || "BDT",
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
 
   return (
     <div className="border border-sand rounded-xl p-4 hover:border-teal/40 hover:shadow-sm transition-all">
@@ -194,10 +202,10 @@ function FlightCard({ flight, travelers }) {
         {/* Right: price + cabin */}
         <div className="text-right shrink-0">
           <p className="font-mono text-xl font-bold text-ink-900">
-            ৳{totalPrice.toLocaleString()}
+            {formatMoney(totalPrice)}
           </p>
           {perPerson && (
-            <p className="text-xs text-ink-900/50">৳{perPerson.toLocaleString()} / person</p>
+            <p className="text-xs text-ink-900/50">{formatMoney(perPerson)} / person</p>
           )}
           <div className="flex items-center justify-end gap-2 mt-1.5">
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cabinColor}`}>

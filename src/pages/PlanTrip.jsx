@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, AlertCircle } from "lucide-react";
 import AppShell from "../components/AppShell";
-import { tripsApi } from "../lib/api";
+import { destinationsApi, tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
 const interests = ["Beaches", "Hills & nature", "History", "Food", "Nightlife", "Shopping", "Adventure", "Family-friendly"];
@@ -13,6 +13,21 @@ export default function PlanTrip() {
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [destinations, setDestinations] = useState([]);
+
+  useEffect(() => {
+    destinationsApi
+      .list({ limit: 200 })
+      .then((data) => setDestinations(data.destinations || []))
+      .catch(() => setDestinations([]));
+  }, []);
+
+  const destinationsByCountry = useMemo(() => {
+    return destinations.reduce((groups, destination) => {
+      (groups[destination.country] ||= []).push(destination);
+      return groups;
+    }, {});
+  }, [destinations]);
 
   function toggleInterest(i) {
     setSelectedInterests((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
@@ -23,9 +38,15 @@ export default function PlanTrip() {
     setError("");
     const form = new FormData(e.target);
 
+    const originId = form.get("origin_destination_id");
+    const destinationId = form.get("destination_id");
+    const selectedOrigin = destinations.find((destination) => destination._id === originId);
+    const selectedDestination = destinations.find((destination) => destination._id === destinationId);
     const payload = {
-      origin: form.get("origin"),
-      destination: form.get("destination"),
+      origin: selectedOrigin?.name || form.get("origin"),
+      destination: selectedDestination?.name || form.get("destination"),
+      origin_destination_id: originId || undefined,
+      destination_id: destinationId || undefined,
       start_date: form.get("start_date"),
       end_date: form.get("end_date"),
       travelers: Number(form.get("travelers")),
@@ -66,10 +87,22 @@ export default function PlanTrip() {
 
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Origin">
-              <input name="origin" type="text" defaultValue="Dhaka" className="input" />
+              {destinations.length ? (
+                <DestinationSelect
+                  name="origin_destination_id"
+                  groups={destinationsByCountry}
+                  defaultValue={destinations.find((destination) => destination.slug === "dhaka")?._id}
+                />
+              ) : (
+                <input name="origin" type="text" defaultValue="Dhaka" className="input" />
+              )}
             </Field>
             <Field label="Destination">
-              <input name="destination" type="text" placeholder="e.g. Cox's Bazar" className="input" required />
+              {destinations.length ? (
+                <DestinationSelect name="destination_id" groups={destinationsByCountry} required placeholder="Choose a destination" />
+              ) : (
+                <input name="destination" type="text" placeholder="e.g. Bangkok or Kuala Lumpur" className="input" required />
+              )}
             </Field>
             <Field label="Start date">
               <input name="start_date" type="date" className="input" required />
@@ -80,7 +113,7 @@ export default function PlanTrip() {
             <Field label="Number of travelers">
               <input name="travelers" type="number" min="1" defaultValue="2" className="input" />
             </Field>
-            <Field label="Budget (BDT)">
+            <Field label="Budget (BDT — normalized)">
               <input name="budget" type="number" min="0" step="500" placeholder="e.g. 20000" className="input" required />
             </Field>
           </div>
@@ -165,5 +198,22 @@ function Field({ label, children }) {
       <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">{label}</span>
       {children}
     </label>
+  );
+}
+
+function DestinationSelect({ groups, placeholder, ...props }) {
+  return (
+    <select className="input" {...props}>
+      {placeholder && <option value="">{placeholder}</option>}
+      {Object.entries(groups).map(([country, countryDestinations]) => (
+        <optgroup key={country} label={country}>
+          {countryDestinations.map((destination) => (
+            <option key={destination._id} value={destination._id}>
+              {destination.name}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
   );
 }

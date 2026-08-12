@@ -8,19 +8,10 @@ import { tripsApi, itineraryApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
 
-// Consider a trip international if origin and destination are different countries
-// Uses a simple heuristic based on known Bangladesh cities.
-const BD_CITIES = new Set([
-  "dhaka","chittagong","chattogram","sylhet","cox's bazar","coxs bazar",
-  "cox bazar","rajshahi","khulna","barisal","rangpur","mymensingh","comilla",
-  "narayanganj","jessore","jashore","bogra","cumilla"
-]);
-function isLikelyInternational(origin, dest) {
-  if (!origin || !dest) return false;
-  const oLower = origin.toLowerCase().trim();
-  const dLower = dest.toLowerCase().trim();
-  // If destination is not a known BD city it's probably international
-  return !BD_CITIES.has(dLower);
+function isInternationalTrip(trip) {
+  const originCountry = trip?.origin_destination_id?.country_code;
+  const destinationCountry = trip?.destination_id?.country_code;
+  return Boolean(originCountry && destinationCountry && originCountry !== destinationCountry);
 }
 
 export default function Itinerary() {
@@ -131,7 +122,7 @@ export default function Itinerary() {
               OR when origin and destination are different countries */}
           {trip && (
             trip.transport_preference === "Flight" ||
-            isLikelyInternational(trip.origin, trip.destination)
+            isInternationalTrip(trip)
           ) && (
             <FlightSearch trip={trip} />
           )}
@@ -187,6 +178,40 @@ export default function Itinerary() {
                               <p className="text-xs text-ink-900/50 flex items-center gap-1 mt-0.5">
                                 <MapPin className="w-3 h-3" /> {item.location}
                               </p>
+                            )}
+                            {item.available_transport_options?.length > 0 && (
+                              <div className="mt-3 bg-sand/30 rounded-xl p-3 border border-sand">
+                                <p className="text-xs font-semibold text-ink-900/70 mb-2 uppercase tracking-wide">Select Transport</p>
+                                <div className="space-y-2">
+                                  {item.available_transport_options.map((opt, idx) => {
+                                    const isSelected = item.selected_transport_option?.total_fare_bdt === opt.total_fare_bdt && item.selected_transport_option?.fare === opt.fare && (item.selected_transport_option?.flight_number === opt.flight_number || item.selected_transport_option?.code === opt.code);
+                                    return (
+                                      <button
+                                        key={idx}
+                                        onClick={async () => {
+                                          try {
+                                            const { item: updated } = await itineraryApi.selectTransport(currentTripId, item._id, { selected_option: opt });
+                                            setItems((prev) => prev.map((i) => (i._id === item._id ? updated : i)));
+                                          } catch (err) {
+                                            setError(err.message);
+                                          }
+                                        }}
+                                        className={`w-full text-left text-xs p-2.5 rounded-lg border flex justify-between items-center transition-all duration-200 ${
+                                          isSelected
+                                            ? "bg-teal-light/20 border-teal shadow-sm text-teal-dark font-medium"
+                                            : "bg-white border-sand hover:border-teal/40 text-ink-900 hover:shadow-sm"
+                                        }`}
+                                      >
+                                        <span>
+                                          <span className="font-semibold">{opt.airline || opt.operator}</span>
+                                          <span className="opacity-70 ml-1.5">{opt.flight_number || opt.mode} • {opt.depart_time}</span>
+                                        </span>
+                                        <span className="font-mono font-medium">৳{(opt.estimated_cost || 0).toLocaleString()}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             )}
                           </div>
                           <div className="text-xs font-mono text-ink-900/60 pt-0.5 shrink-0">

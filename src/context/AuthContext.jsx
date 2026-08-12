@@ -27,8 +27,8 @@ export function AuthProvider({ children }) {
     return user;
   }
 
-  async function register(name, email, password, language) {
-    await authApi.register({ name, email, password, language });
+  async function register(name, email, password, language, country_code) {
+    await authApi.register({ name, email, password, language, country_code });
     return login(email, password);
   }
 
