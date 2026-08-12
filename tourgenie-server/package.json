@@ -1,0 +1,31 @@
+{
+  "name": "tourgenie-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed/index.js",
+    "seed:fresh": "node src/seed/index.js --fresh",
+    "seed:reference": "node src/seed/index.js --no-demo",
+    "seed:validate": "node src/seed/validateCatalog.js",
+    "seed:weather": "node src/seed/index.js --no-demo --weather-days=365",
+    "db:verify": "node src/scripts/verify.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.1",
+    "morgan": "^1.11.0"
+  }
+}
