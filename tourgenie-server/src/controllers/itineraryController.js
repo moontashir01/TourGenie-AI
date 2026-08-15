@@ -15,48 +15,35 @@ async function assertOwnsTrip(tripId, userId) {
   return trip;
 }
 
-// FR-04 — AI Itinerary Generation (real Claude API call)
-// Builds the day-by-day plan from trip params + the curated attractions
-// database for the trip's destination, then saves it the same way
-// generateItinerary (manual save) does.
-export const generateAIItinerary = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
-  if (!trip) return res.status(404).json({ message: "Trip not found" });
+// Candidate attractions + (for multi-city trips) candidate cities an AI call
+// should be grounded in, plus which of those attractions the traveler
+// explicitly picked (must appear in the plan, not just be "available").
+// Shared by generation and chat-driven adjustment.
+export async function loadAttractionContext(trip) {
+  const mustVisitIds = (trip.must_visit_attraction_ids || []).map((id) => String(id?._id || id));
 
-  let attractions;
-  let candidateCities = [];
   if (trip.multi_city && trip.country_code) {
-    candidateCities = await Destination.find({ country_code: trip.country_code, is_active: true })
+    const candidateCities = await Destination.find({ country_code: trip.country_code, is_active: true })
       .sort({ popularity: -1 })
       .select("name recommended_days avg_daily_cost tags summary");
-    attractions = await Attraction.find({
+    const attractions = await Attraction.find({
       destination_id: { $in: candidateCities.map((c) => c._id) },
     });
-  } else {
-    attractions = await Attraction.find({
-      ...(trip.destination_id?._id
-        ? { destination_id: trip.destination_id._id }
-        : { city: new RegExp(`^${trip.destination}$`, "i") }),
-    });
+    return { attractions, candidateCities, mustVisitIds };
   }
+  const attractions = await Attraction.find({
+    ...(trip.destination_id?._id
+      ? { destination_id: trip.destination_id._id }
+      : { city: new RegExp(`^${trip.destination}$`, "i") }),
+  });
+  return { attractions, candidateCities: [], mustVisitIds };
+}
 
-  let items;
-  try {
-    items = await generateItineraryWithAI(trip, attractions, candidateCities);
-  } catch (err) {
-    return res.status(502).json({
-      message: `AI itinerary generation failed: ${err.message}`,
-    });
-  }
-
-  if (!Array.isArray(items) || items.length === 0) {
-    return res.status(502).json({ message: "AI returned an empty or invalid itinerary" });
-  }
-
-  // Augment travel items with real transport options. Multi-city trips carry
-  // explicit from_city/to_city per leg (set by the AI); single-destination
-  // trips only travel on day 1 (arrival) and the last day (return), between
-  // the trip's origin and its one destination.
+// Augment travel items with real transport options. Multi-city trips carry
+// explicit from_city/to_city per leg (set by the AI); single-destination
+// trips only travel on day 1 (arrival) and the last day (return), between
+// the trip's origin and its one destination. Mutates items in place.
+export async function augmentTravelItems(items, trip) {
   for (const item of items) {
     if (item.category === "travel") {
       let fromCity = item.from_city || (trip.multi_city ? trip.entry_city : trip.origin);
@@ -85,7 +72,11 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
       ];
     }
   }
+}
 
+// Replaces a trip's itinerary wholesale with a freshly generated/adjusted
+// items[] (the shape generateItineraryWithAI / adjustItineraryWithAI return).
+export async function persistItinerary(trip, items) {
   await ItineraryItem.deleteMany({ trip_id: trip._id });
   const created = await ItineraryItem.insertMany(
     items.map((i) => ({
@@ -107,7 +98,38 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
   trip.status = "planned";
   await trip.save();
 
-  res.status(201).json({ items: created });
+  return created;
+}
+
+// FR-04 — AI Itinerary Generation (real Claude API call)
+// Builds the day-by-day plan from trip params + the curated attractions
+// database for the trip's destination, then saves it the same way
+// generateItinerary (manual save) does.
+export const generateAIItinerary = asyncHandler(async (req, res) => {
+  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+  const { attractions, candidateCities, mustVisitIds } = await loadAttractionContext(trip);
+
+  let items;
+  try {
+    items = await generateItineraryWithAI(trip, attractions, candidateCities, mustVisitIds);
+  } catch (err) {
+    return res.status(502).json({
+      message: `AI itinerary generation failed: ${err.message}`,
+    });
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(502).json({ message: "AI returned an empty or invalid itinerary" });
+  }
+
+  await augmentTravelItems(items, trip);
+  const created = await persistItinerary(trip, items);
+  await ItineraryItem.populate(created, { path: "attraction_id", select: "name lat_lng city" });
+  const city_coordinates = await buildCityCoordinates(trip, created);
+
+  res.status(201).json({ items: created, city_coordinates });
 });
 
 // Manual save — used by the "Add activity" flow where the client sends
@@ -132,12 +154,33 @@ export const generateItinerary = asyncHandler(async (req, res) => {
   res.status(201).json({ items: created });
 });
 
+// The AI never sets an item's own lat_lng (it isn't in the generation
+// prompt's JSON schema), so the map needs two other sources of coordinates:
+// the linked Attraction's exact position where one exists, and a city-center
+// fallback (via Destination) for everything else — meals, check-in/out,
+// generic activities the AI didn't tie to a catalog attraction.
+async function buildCityCoordinates(trip, items) {
+  const cityNames = new Set([trip.origin, trip.destination]);
+  for (const item of items) {
+    if (item.city) cityNames.add(item.city);
+    if (item.from_city) cityNames.add(item.from_city);
+    if (item.to_city) cityNames.add(item.to_city);
+  }
+
+  const destinations = await Destination.find({ name: { $in: [...cityNames] } }).select("name lat_lng");
+  return Object.fromEntries(destinations.filter((d) => d.lat_lng?.lat != null).map((d) => [d.name, d.lat_lng]));
+}
+
 export const getItinerary = asyncHandler(async (req, res) => {
   const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
-  const items = await ItineraryItem.find({ trip_id: trip._id }).sort({ day: 1, time: 1 });
-  res.json({ items });
+  const items = await ItineraryItem.find({ trip_id: trip._id })
+    .sort({ day: 1, time: 1 })
+    .populate("attraction_id", "name lat_lng city");
+
+  const city_coordinates = await buildCityCoordinates(trip, items);
+  res.json({ items, city_coordinates });
 });
 
 export const updateItineraryItem = asyncHandler(async (req, res) => {

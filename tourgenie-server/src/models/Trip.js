@@ -46,6 +46,11 @@ const tripSchema = new mongoose.Schema(
     hotel_preference: { type: String, default: "Balanced" },
     food_preference: { type: String, default: "No preference" },
 
+    // Attractions the traveler explicitly picked to have in the plan —
+    // AI itinerary generation (and chat-driven edits) must include every one
+    // of these, rather than freely choosing from the whole catalog.
+    must_visit_attraction_ids: { type: [mongoose.Schema.Types.ObjectId], ref: "Attraction", default: [] },
+
     // — additive —
     title: { type: String, default: "" }, // "4 days in Cox's Bazar"
     origin_destination_id: { type: mongoose.Schema.Types.ObjectId, ref: "Destination", default: null },

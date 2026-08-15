@@ -102,6 +102,23 @@ export const flightApi = {
   },
 };
 
+export const routeApi = {
+  get: (from, to, mode) => {
+    const qs = new URLSearchParams({ from, to, ...(mode && { mode }) }).toString();
+    return request(`/routes?${qs}`, { auth: false });
+  },
+};
+
+export const chatApi = {
+  quickActions: () => request("/chat/quick-actions"),
+  session: (tripId) => request(`/chat/session${tripId ? `?trip_id=${tripId}` : ""}`),
+  send: (message, tripId, sessionId) =>
+    request("/chat/messages", {
+      method: "POST",
+      body: { message, trip_id: tripId || undefined, session_id: sessionId || undefined },
+    }),
+};
+
 export const communityApi = {
   list: (place) => request(`/community-posts${place && place !== "All places" ? `?place=${encodeURIComponent(place)}` : ""}`, { auth: false }),
   create: (payload) => request("/community-posts", { method: "POST", body: payload }),

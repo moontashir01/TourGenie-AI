@@ -21,7 +21,7 @@ function mapCategory(cat) {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
-async function getVirtualExpenses(trip) {
+export async function getVirtualExpenses(trip) {
   const virtuals = [];
   const items = await ItineraryItem.find({ trip_id: trip._id }).sort({ day: 1, time: 1 });
 

@@ -37,6 +37,7 @@ function allowedTripFields(body) {
     budget_tier: body.budget_tier,
     notes: body.notes,
     selected_flight: body.selected_flight,
+    must_visit_attraction_ids: body.must_visit_attraction_ids,
   };
 }
 
@@ -109,6 +110,7 @@ export const getTripById = asyncHandler(async (req, res) => {
   const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id })
     .populate("hotel_id")
     .populate("hotel_selections.hotel_id")
+    .populate("must_visit_attraction_ids")
     .populate("origin_destination_id", DESTINATION_FIELDS)
     .populate("destination_id", DESTINATION_FIELDS);
   if (!trip) return res.status(404).json({ message: "Trip not found" });

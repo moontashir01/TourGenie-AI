@@ -21,6 +21,8 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import flightRoutes from "./routes/flightRoutes.js";
 import destinationRoutes from "./routes/destinationRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import routeRoutes from "./routes/routeRoutes.js";
 
 const app = express();
 
@@ -45,6 +47,8 @@ app.use("/api/community-posts", communityRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/flights", flightRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/routes", routeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

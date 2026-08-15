@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2 } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark } from "lucide-react";
 import AppShell from "../components/AppShell";
-import RouteLine from "../components/RouteLine";
+import DayMap from "../components/DayMap";
 import FlightSearch from "../components/FlightSearch";
 import { tripsApi, itineraryApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
@@ -18,6 +18,7 @@ export default function Itinerary() {
   const { currentTripId } = useCurrentTrip();
   const [trip, setTrip] = useState(null);
   const [items, setItems] = useState([]);
+  const [cityCoordinates, setCityCoordinates] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [openDay, setOpenDay] = useState(1);
@@ -34,6 +35,7 @@ export default function Itinerary() {
       .then(([tripRes, itemsRes]) => {
         setTrip(tripRes.trip);
         setItems(itemsRes.items);
+        setCityCoordinates(itemsRes.city_coordinates || {});
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -43,8 +45,9 @@ export default function Itinerary() {
     setError("");
     setGenerating(true);
     try {
-      const { items: generated } = await itineraryApi.generateAI(currentTripId);
+      const { items: generated, city_coordinates } = await itineraryApi.generateAI(currentTripId);
       setItems(generated);
+      setCityCoordinates(city_coordinates || {});
       setOpenDay(generated[0]?.day || 1);
     } catch (err) {
       setError(err.message);
@@ -162,7 +165,14 @@ export default function Itinerary() {
                 </div>
               ) : (
                 <>
-                  <p className="text-ink-900/60 mb-5 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
+                  <p className="text-ink-900/60 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
+                  <p className="text-ink-900/50 mb-5 text-xs">
+                    {trip?.must_visit_attraction_ids?.length > 0 ? (
+                      <span className="text-teal-dark font-medium">{trip.must_visit_attraction_ids.length} must-see attraction{trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} locked in</span>
+                    ) : (
+                      <>Want more control over what's included? <Link to="/attractions" className="font-semibold text-teal-dark hover:text-teal underline">Pick your must-see attractions first</Link>.</>
+                    )}
+                  </p>
                   <div className="flex flex-wrap items-center justify-center gap-3">
                     <button
                       onClick={handleGenerateAI}
@@ -203,7 +213,7 @@ export default function Itinerary() {
                 </button>
                 {open && (
                   <div className="px-6 pb-6">
-                    <RouteLine className="w-full h-3 mb-4" color="#DCEFEC" />
+                    <DayMap items={dayItems} cityCoordinates={cityCoordinates} />
                     <ul className="space-y-4">
                       {dayItems.map((item) => (
                         <li key={item._id} className="flex gap-4">
@@ -357,6 +367,16 @@ export default function Itinerary() {
               />
             </div>
           </div>
+
+          <Link
+            to="/attractions"
+            className="w-full inline-flex items-center justify-center gap-2 bg-white border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-3 rounded-full transition-colors"
+          >
+            <Landmark className="w-4 h-4" />
+            {trip?.must_visit_attraction_ids?.length > 0
+              ? `${trip.must_visit_attraction_ids.length} Must-See${trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} Picked`
+              : "Pick Must-See Attractions"}
+          </Link>
 
           <Link
             to="/hotels"

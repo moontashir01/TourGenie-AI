@@ -8,7 +8,25 @@
 const daily = [0, 1, 2, 3, 4, 5, 6];
 const exceptFriday = [0, 1, 2, 3, 4, 6];
 
-export const transportOptions = [
+// Every route below was originally seeded one-way (Dhaka -> destination
+// only), so a trip's return leg — or any journey run the other direction —
+// had no schedule to match against and showed no bus/train/launch options
+// at all. This mirrors each entry into its return leg (same operator,
+// schedule pattern and fare, boarding/dropping points swapped) so a round
+// trip has real options in both directions, the way the outbound leg always did.
+function returnLeg(entry) {
+  return {
+    ...entry,
+    code: entry.code ? `${entry.code}-R` : undefined,
+    from_city: entry.to_city,
+    to_city: entry.from_city,
+    boarding_point: entry.dropping_point,
+    dropping_point: entry.boarding_point,
+    via: [...(entry.via || [])].reverse(),
+  };
+}
+
+const outboundOptions = [
   // ───────────────── Dhaka ↔ Cox's Bazar — bus ─────────────────
   { code: "GL-701", operator: "Green Line Paribahan", mode: "bus", from_city: "Dhaka", to_city: "Cox's Bazar", depart_time: "07:00", arrive_time: "17:00", duration_min: 600, fare: 1800, service_class: "AC Business", coach_type: "Scania Multi-Axle", boarding_point: "Rajarbagh Counter, Dhaka", dropping_point: "Kolatoli, Cox's Bazar", via: ["Cumilla", "Chattogram"], total_seats: 36, seats_available: 22, seat_layout: "2-1", has_ac: true, amenities: ["WiFi", "Blanket", "Water", "Snack", "Toilet"], rating: 4.5, days_of_week: daily },
   { code: "GL-703", operator: "Green Line Paribahan", mode: "bus", from_city: "Dhaka", to_city: "Cox's Bazar", depart_time: "22:30", arrive_time: "08:00", duration_min: 570, fare: 1800, service_class: "AC Sleeper", coach_type: "Scania Multi-Axle", boarding_point: "Kalabagan Counter, Dhaka", dropping_point: "Kolatoli, Cox's Bazar", via: ["Cumilla", "Chattogram"], total_seats: 28, seats_available: 11, seat_layout: "2-1", has_ac: true, amenities: ["WiFi", "Blanket", "Pillow", "Water", "Toilet"], rating: 4.6, arrives_next_day: true, days_of_week: daily },
@@ -69,6 +87,29 @@ export const transportOptions = [
   { code: "SYL-JFL-07", operator: "Jaflong Local Service", mode: "bus", from_city: "Sylhet", to_city: "Jaflong", depart_time: "08:00", arrive_time: "10:00", duration_min: 120, fare: 120, service_class: "Local", coach_type: "Minibus", boarding_point: "Shibganj, Sylhet", dropping_point: "Jaflong Zero Point", via: ["Gowainghat"], total_seats: 32, seats_available: 25, seat_layout: "2-2", has_ac: false, amenities: [], rating: 3.3, days_of_week: daily },
   { code: "HTY-NJD-02", operator: "Nijhum Dwip Sea Truck", mode: "launch", from_city: "Hatiya", to_city: "Nijhum Dwip", depart_time: "10:00", arrive_time: "11:30", duration_min: 90, fare: 150, service_class: "Deck", boarding_point: "Tomoruddin Ghat, Hatiya", dropping_point: "Nijhum Dwip Ghat", via: [], total_seats: 80, seats_available: 62, seat_layout: "open-deck", has_ac: false, amenities: [], rating: 3.4, days_of_week: daily },
   { code: "DHK-HTY-01", operator: "MV Farhan-3", mode: "launch", from_city: "Dhaka", to_city: "Hatiya", depart_time: "17:30", arrive_time: "07:00", duration_min: 810, fare: 1800, service_class: "Single Cabin", boarding_point: "Sadarghat Launch Terminal, Dhaka", dropping_point: "Tomoruddin Ghat, Hatiya", via: ["Chandpur", "Bhola"], total_seats: 50, seats_available: 27, seat_layout: "1-1", has_ac: true, amenities: ["AC Cabin", "Bedding", "Restaurant", "Toilet"], rating: 4.0, arrives_next_day: true, days_of_week: daily },
+
+  // ───────────────── Dhaka ↔ Sajek Valley — bus ─────────────────
+  // Sold as a single through-ticket (bus to Khagrachari/Baghaihat, then the
+  // operator's own jeep transfer up to Sajek) rather than a rail/river leg,
+  // so it's modelled as one bus option the way operators actually sell it.
+  { code: "SNK-SJK-01", operator: "Shanti Paribahan (Sajek Express)", mode: "bus", from_city: "Dhaka", to_city: "Sajek Valley", depart_time: "21:00", arrive_time: "08:00", duration_min: 660, fare: 1400, service_class: "AC Business (bus + jeep transfer)", coach_type: "Hyundai Universe", boarding_point: "Saidabad Terminal, Dhaka", dropping_point: "Sajek Valley Jeep Stand", via: ["Cumilla", "Chattogram", "Khagrachari", "Baghaihat"], total_seats: 40, seats_available: 21, seat_layout: "2-2", has_ac: true, amenities: ["Blanket", "Water", "Jeep Transfer Included"], rating: 4.0, arrives_next_day: true, days_of_week: daily },
+  { code: "SXN-SJK-02", operator: "Saintmartin Paribahan", mode: "bus", from_city: "Dhaka", to_city: "Sajek Valley", depart_time: "20:30", arrive_time: "07:30", duration_min: 660, fare: 1600, service_class: "AC Sleeper (bus + jeep transfer)", coach_type: "Hino AK1J", boarding_point: "Kalabagan Counter, Dhaka", dropping_point: "Sajek Valley Jeep Stand", via: ["Cumilla", "Chattogram", "Khagrachari", "Baghaihat"], total_seats: 36, seats_available: 14, seat_layout: "2-2", has_ac: true, amenities: ["Blanket", "Water", "WiFi", "Jeep Transfer Included"], rating: 4.3, arrives_next_day: true, days_of_week: daily },
+
+  // ───────────────── Dhaka ↔ Paharpur — bus ─────────────────
+  { code: "SHY-PHP-01", operator: "Shyamoli Paribahan", mode: "bus", from_city: "Dhaka", to_city: "Paharpur", depart_time: "22:30", arrive_time: "06:00", duration_min: 450, fare: 750, service_class: "Non-AC Chair", coach_type: "Hino", boarding_point: "Gabtoli Terminal, Dhaka", dropping_point: "Paharpur Bus Stand, Badalgachhi", via: ["Bangabandhu Bridge", "Bogura", "Naogaon"], total_seats: 40, seats_available: 26, seat_layout: "2-2", has_ac: false, amenities: ["Water"], rating: 3.7, arrives_next_day: true, days_of_week: daily },
+  { code: "NBL-PHP-02", operator: "Nabil Paribahan", mode: "bus", from_city: "Dhaka", to_city: "Paharpur", depart_time: "23:15", arrive_time: "06:30", duration_min: 435, fare: 950, service_class: "AC Chair", coach_type: "Hyundai Universe", boarding_point: "Kalyanpur Terminal, Dhaka", dropping_point: "Paharpur Bus Stand, Badalgachhi", via: ["Bangabandhu Bridge", "Bogura", "Naogaon"], total_seats: 36, seats_available: 20, seat_layout: "2-2", has_ac: true, amenities: ["Water", "Blanket"], rating: 4.0, arrives_next_day: true, days_of_week: daily },
+
+  // ───────────────── Teknaf ↔ Saint Martin's Island — launch ─────────────────
+  // Completes Dhaka -> Cox's Bazar -> Teknaf -> Saint Martin's: the open-sea
+  // crossing is a ship, not a road service, so it's modelled as "launch"
+  // like the other river/sea legs rather than bus.
+  { code: "TKF-SMI-01", operator: "Keari Sindbad", mode: "launch", from_city: "Teknaf", to_city: "Saint Martin's Island", depart_time: "09:30", arrive_time: "12:00", duration_min: 150, fare: 1200, service_class: "Deck", boarding_point: "Teknaf Jetty", dropping_point: "Saint Martin's Jetty", via: [], total_seats: 300, seats_available: 210, seat_layout: "open-deck", has_ac: false, amenities: ["Restaurant", "Toilet"], rating: 3.9, days_of_week: [5, 6, 0, 1, 2] },
+  { code: "TKF-SMI-02", operator: "Bay One Cruise", mode: "launch", from_city: "Teknaf", to_city: "Saint Martin's Island", depart_time: "08:00", arrive_time: "10:15", duration_min: 135, fare: 2200, service_class: "AC Cabin", boarding_point: "Teknaf Jetty", dropping_point: "Saint Martin's Jetty", via: [], total_seats: 120, seats_available: 68, seat_layout: "1-1", has_ac: true, amenities: ["AC Cabin", "Restaurant", "Sundeck", "Toilet"], rating: 4.3, days_of_week: [5, 6, 0, 1, 2] },
+];
+
+export const transportOptions = [
+  ...outboundOptions,
+  ...outboundOptions.map(returnLeg),
 ];
 
 export default transportOptions;

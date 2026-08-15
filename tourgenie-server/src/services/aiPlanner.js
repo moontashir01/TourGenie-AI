@@ -13,17 +13,38 @@ function daysBetween(start, end) {
   return Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)) + 1);
 }
 
-function buildPrompt(trip, attractions) {
+// Splits the catalog into "the traveler explicitly picked this" (hard
+// requirement) vs "available, use at your discretion" — so a traveler who
+// picked specific attractions actually gets them, rather than the AI being
+// free to swap in whatever it likes.
+function formatAttractionSection(attractions, mustVisitIds, pricingCurrency) {
+  const mustSet = new Set(mustVisitIds || []);
+  const describe = (a) =>
+    `- id:${a._id} | ${a.name} (${a.category}) in ${a.city} | entry fee ${a.entry_fee} ${a.currency || pricingCurrency} | hours: ${a.open_hours}`;
+
+  const must = attractions.filter((a) => mustSet.has(String(a._id)));
+  const optional = attractions.filter((a) => !mustSet.has(String(a._id)));
+
+  const parts = [];
+  if (must.length > 0) {
+    parts.push(
+      `MUST INCLUDE — the traveler specifically picked these; every one of them must appear as an item's attraction_id exactly once somewhere in the itinerary:\n${must.map(describe).join("\n")}`
+    );
+  }
+  parts.push(
+    `${must.length > 0 ? "Other attractions available (optional — use where they fit, no obligation to include them)" : "Attractions available (use these where relevant via their id in attraction_id; you may also add generic activities like meals or travel legs with attraction_id null)"}:\n${
+      optional.map(describe).join("\n") || "(none — invent reasonable generic activities and note costs are estimates)"
+    }`
+  );
+  return parts.join("\n\n");
+}
+
+function buildPrompt(trip, attractions, mustVisitIds = []) {
   const numDays = daysBetween(trip.start_date, trip.end_date);
   const destinationCountry = trip.destination_id?.country || "the destination country";
   const pricingCurrency = trip.currency || trip.destination_id?.pricing_currency || "BDT";
 
-  const attractionList = attractions
-    .map(
-      (a) =>
-        `- id:${a._id} | ${a.name} (${a.category}) in ${a.city} | entry fee ${a.entry_fee} ${a.currency || pricingCurrency} | hours: ${a.open_hours}`
-    )
-    .join("\n");
+  const attractionSection = formatAttractionSection(attractions, mustVisitIds, pricingCurrency);
 
   return `You are the itinerary-planning engine for TourGenie AI, a multi-country travel app. Build a realistic day-by-day itinerary for ${trip.destination}, ${destinationCountry}, as pure JSON — no markdown, no commentary, no code fences.
 
@@ -38,8 +59,7 @@ Trip details:
 - Hotel preference: ${trip.hotel_preference}
 - Food preference: ${trip.food_preference}
 
-Attractions available near ${trip.destination} (use these where relevant, via their id in attraction_id; you may also add generic activities like meals or travel legs with attraction_id null):
-${attractionList || "(none seeded for this destination — invent reasonable generic activities and note costs are estimates)"}
+${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
 [
@@ -48,17 +68,18 @@ Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one 
 
 Rules:
 - Cover all ${numDays} day(s), roughly 3-5 activities per day including at least one meal.
+- Every attraction id listed under MUST INCLUDE (if any) must appear as an item's attraction_id exactly once, scheduled at a sensible time given its open hours.
 - Keep the sum of est_cost values reasonably within the total budget of ${trip.budget} ${pricingCurrency} across the whole trip.
 - time must be 24-hour "HH:MM".
 - est_cost is a number in ${pricingCurrency} (0 for free activities).
-- Only use attraction_id values from the list above, or null.
+- Only use attraction_id values from the lists above, or null.
 - Output valid JSON only — it will be parsed programmatically.`;
 }
 
 // Country-level trip ("Thailand" rather than one city): the AI also has to
 // pick which cities to visit and plan the legs between them, so it gets the
 // candidate city list instead of a single fixed destination.
-function buildCountryPrompt(trip, attractions, candidateCities) {
+function buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds = []) {
   const numDays = daysBetween(trip.start_date, trip.end_date);
   const pricingCurrency = trip.currency || "BDT";
 
@@ -71,12 +92,9 @@ function buildCountryPrompt(trip, attractions, candidateCities) {
     })
     .join("\n");
 
-  const attractionList = attractions
-    .map(
-      (a) =>
-        `- id:${a._id} | ${a.name} (${a.category}) in ${a.city} | entry fee ${a.entry_fee} ${a.currency || pricingCurrency} | hours: ${a.open_hours}`
-    )
-    .join("\n");
+  const attractionSection = formatAttractionSection(attractions, mustVisitIds, pricingCurrency);
+  const mustSet = new Set(mustVisitIds || []);
+  const mustCities = [...new Set(attractions.filter((a) => mustSet.has(String(a._id))).map((a) => a.city))];
 
   return `You are the itinerary-planning engine for TourGenie AI, a multi-country travel app. The traveler wants a country-wide trip across ${trip.destination} rather than one fixed city — decide which cities to visit and build a realistic multi-city day-by-day itinerary as pure JSON, no markdown, no commentary, no code fences.
 
@@ -93,11 +111,11 @@ Trip details:
 
 Cities available in ${trip.destination} (choose a sensible subset based on the trip length — short trips should stay in 1-2 cities rather than rushing; longer trips can cover 3+):
 ${cityList || "(no cities catalogued — invent well-known real cities in this country)"}
+${mustCities.length > 0 ? `\nThe cities you choose MUST include: ${mustCities.join(", ")} — the traveler picked specific attractions there (see MUST INCLUDE below).` : ""}
 
 ${trip.entry_city}, is the international gateway city — the trip must begin and end there.
 
-Attractions available across these cities (use these where relevant, via their id in attraction_id; you may also add generic activities like meals with attraction_id null):
-${attractionList || "(none seeded — invent reasonable generic activities and note costs are estimates)"}
+${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
 [
@@ -106,6 +124,7 @@ Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one 
 
 Rules:
 - Cover all ${numDays} day(s), roughly 3-5 activities per day including at least one meal.
+- Every attraction id listed under MUST INCLUDE (if any) must appear as an item's attraction_id exactly once, in whichever city it belongs to.
 - Day 1's first item must be a "travel" item with from_city "${trip.origin}" and to_city "${trip.entry_city}" (the international arrival).
 - The last day's final item must be a "travel" item with from_city set to whatever city the traveler ends the trip in and to_city "${trip.origin}" (the international departure).
 - Whenever the traveler moves between two cities within ${trip.destination}, add a "travel" item on that transition with from_city and to_city set to the two real city names (never the country name), and describe a realistic transport mode in "activity" (e.g. "Overnight train to Chiang Mai", "Domestic flight to Phuket", "Bus to Pattaya") with a realistic est_cost.
@@ -113,7 +132,7 @@ Rules:
 - Keep the sum of est_cost values reasonably within the total budget of ${trip.budget} ${pricingCurrency} across the whole trip.
 - time must be 24-hour "HH:MM".
 - est_cost is a number in ${pricingCurrency} (0 for free activities).
-- Only use attraction_id values from the list above, or null.
+- Only use attraction_id values from the lists above, or null.
 - Output valid JSON only — it will be parsed programmatically.`;
 }
 
@@ -210,10 +229,7 @@ const PROVIDERS = [
   { name: "OpenAI", envKey: "OPENAI_API_KEY", call: callOpenAI },
 ];
 
-export async function generateItineraryWithAI(trip, attractions, candidateCities = []) {
-  const prompt = trip.multi_city
-    ? buildCountryPrompt(trip, attractions, candidateCities)
-    : buildPrompt(trip, attractions);
+async function runProviders(prompt) {
   const configured = PROVIDERS.filter((p) => process.env[p.envKey]);
 
   if (configured.length === 0) {
@@ -225,7 +241,8 @@ export async function generateItineraryWithAI(trip, attractions, candidateCities
   let lastError;
   for (const provider of configured) {
     try {
-      return await provider.call(prompt);
+      const items = await provider.call(prompt);
+      return { items, provider: provider.name.toLowerCase() };
     } catch (err) {
       console.warn(`${provider.name} itinerary generation failed:`, err.message);
       lastError = err;
@@ -233,4 +250,68 @@ export async function generateItineraryWithAI(trip, attractions, candidateCities
   }
 
   throw lastError;
+}
+
+export async function generateItineraryWithAI(trip, attractions, candidateCities = [], mustVisitIds = []) {
+  const prompt = trip.multi_city
+    ? buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds)
+    : buildPrompt(trip, attractions, mustVisitIds);
+  const { items } = await runProviders(prompt);
+  return items;
+}
+
+// FR-05 — Chat Assistant itinerary edits ("make it cheaper", "add a day",
+// "vegetarian only"…). Unlike generation, this feeds the existing itinerary
+// back in and asks for a revised full plan, so activities the request didn't
+// touch stay put rather than the AI starting over from a blank slate.
+function buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds = []) {
+  const numDays = trip.duration_days || daysBetween(trip.start_date, trip.end_date);
+  const pricingCurrency = trip.currency || trip.destination_id?.pricing_currency || "BDT";
+
+  const currentItinerary = existingItems
+    .map((i) => `day:${i.day} time:${i.time} [${i.category}] ${i.activity} @ ${i.location}${i.city ? ` (${i.city})` : ""} — cost ${i.est_cost} ${pricingCurrency}`)
+    .join("\n");
+
+  const attractionSection = formatAttractionSection(attractions, mustVisitIds, pricingCurrency);
+
+  const cityContext = trip.multi_city
+    ? `This is a multi-city trip across ${trip.destination}. Cities available:\n${candidateCities
+        .map((c) => `- ${c.name} (recommended ${c.recommended_days} day${c.recommended_days > 1 ? "s" : ""})`)
+        .join("\n")}\n${trip.entry_city} is the international gateway — the trip must still begin and end there. Keep using real city names (never the country name) in "city", "from_city" and "to_city".`
+    : `Destination: ${trip.destination}.`;
+
+  return `You are the itinerary-adjustment engine for TourGenie AI's chat assistant. A traveler already has the itinerary below for their trip and just asked, in chat, for a change. Apply their request and output the FULL revised itinerary as pure JSON — no markdown, no commentary, no code fences.
+
+Trip details:
+- Origin: ${trip.origin}
+- ${cityContext}
+- Trip length: ${numDays} day${numDays > 1 ? "s" : ""} (change this only if the request explicitly asks to add/remove days)
+- Travelers: ${trip.travelers}
+- Total budget: ${trip.budget} ${pricingCurrency}
+
+Current itinerary:
+${currentItinerary || "(empty — nothing planned yet)"}
+
+Traveler's request: "${instruction}"
+
+${attractionSection}
+
+Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
+[
+  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string or null", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string or null — only for category=travel", "to_city": "string or null — only for category=travel" }
+]
+
+Rules:
+- Apply the traveler's request faithfully — that might mean changing costs, adding/removing a day, changing pace, swapping meals, or adding rainy-day alternatives.
+- Every attraction id listed under MUST INCLUDE (if any) must still appear as an item's attraction_id exactly once — the traveler picked those specifically, so keep them even while applying the requested change.
+- Keep everything the request didn't ask you to change as close to the original as makes sense.
+- Output a complete itinerary covering every day of the (possibly changed) trip length — not just the days you touched.
+- time must be 24-hour "HH:MM". est_cost is a number in ${pricingCurrency} (0 for free activities).
+- Only use attraction_id values from the lists above, or null.
+- Output valid JSON only — it will be parsed programmatically.`;
+}
+
+export async function adjustItineraryWithAI(trip, attractions, existingItems, instruction, candidateCities = [], mustVisitIds = []) {
+  const prompt = buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds);
+  return runProviders(prompt);
 }
