@@ -358,11 +358,18 @@ export default function Itinerary() {
             <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5" /> Budget snapshot
             </p>
-            <p className="text-2xl font-display text-ink-900 mb-1">৳{totalCost.toLocaleString()}</p>
-            <p className="text-xs text-ink-900/50">of ৳{trip?.budget?.toLocaleString()} planned budget</p>
+            <p className={`text-2xl font-display mb-1 ${totalCost > (trip?.budget || 0) ? "text-sunset-dark" : "text-ink-900"}`}>৳{totalCost.toLocaleString()}</p>
+            <p className="text-xs text-ink-900/50">
+              of ৳{trip?.budget?.toLocaleString()} planned budget
+              {trip?.budget > 0 && totalCost > trip.budget && (
+                <span className="text-sunset-dark font-medium"> — over by ৳{(totalCost - trip.budget).toLocaleString()}</span>
+              )}
+            </p>
+            {/* The bar caps at 100%, so overspend is shown by colour and the
+                line above rather than disappearing off the end. */}
             <div className="w-full h-2 bg-paper rounded-full mt-3 overflow-hidden">
               <div
-                className="h-full bg-teal"
+                className={totalCost > (trip?.budget || 0) ? "h-full bg-sunset" : "h-full bg-teal"}
                 style={{ width: `${trip?.budget ? Math.min((totalCost / trip.budget) * 100, 100) : 0}%` }}
               />
             </div>

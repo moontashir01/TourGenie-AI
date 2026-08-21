@@ -5,6 +5,8 @@
 // time — the seeder uses it so that seeded trips and user-created trips
 // produce identical shapes.
 
+import { buildBudgetBreakdown } from "../../services/budgetEstimator.js";
+
 const DAY_MS = 86400000;
 
 /**
@@ -132,45 +134,11 @@ export function buildItineraryItems(template, trip, attractionBySlug = new Map()
   return items;
 }
 
-/**
- * FR-09 — categorised budget from the cost benchmark, itinerary and hotel.
- * Returns { lines, estimated_total }.
- */
-export function buildBudgetBreakdown({ benchmark, categories, days, travelers, hotelPricePerNight, transportFare }) {
-  const byCode = new Map(categories.map((c) => [c.code, c]));
-  const perDay = benchmark?.per_person_per_day || {};
-
-  const accommodation = hotelPricePerNight != null
-    ? hotelPricePerNight * Math.max(1, days - 1) // nights, not days
-    : (perDay.accommodation || 0) * Math.max(1, days - 1) * travelers;
-
-  const amounts = {
-    transport: (transportFare != null ? transportFare * travelers * 2 : 0) + (perDay.local_transport || 0) * days * travelers,
-    hotel: Math.round(accommodation),
-    food: (perDay.food || 0) * days * travelers,
-    attractions: (perDay.attractions || 0) * days * travelers,
-    shopping: (perDay.shopping || 0) * days * travelers,
-    emergency: (perDay.misc || 0) * days * travelers,
-  };
-
-  const lines = Object.entries(amounts)
-    .filter(([, amount]) => amount > 0)
-    .map(([category, amount]) => {
-      const meta = byCode.get(category);
-      return {
-        category,
-        label: meta?.label || category,
-        amount: Math.round(amount),
-        color: meta?.color || "#8A7B6B",
-      };
-    })
-    .sort((a, b) => (byCode.get(a.category)?.sort_order || 99) - (byCode.get(b.category)?.sort_order || 99));
-
-  return {
-    lines,
-    estimated_total: lines.reduce((sum, l) => sum + l.amount, 0),
-  };
-}
+// FR-09 — the budget breakdown now lives with the rest of the cost model
+// (src/services/budgetEstimator.js) so trip creation and the seed script
+// produce identical numbers. Re-exported here so the seed imports are
+// unchanged.
+export { buildBudgetBreakdown };
 
 /**
  * FR-16 — distance × emission factor ÷ 1000, doubled for the return leg.

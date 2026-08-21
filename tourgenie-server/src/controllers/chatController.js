@@ -56,7 +56,11 @@ async function matchIntent(message) {
 
 async function totalCostFor(trip) {
   const virtuals = await getVirtualExpenses(trip);
-  return virtuals.reduce((sum, e) => sum + e.amount, 0);
+  // Same rule the Budget page uses: an airfare the traveler excluded from
+  // the budget is shown but not counted against it.
+  return virtuals
+    .filter((e) => e.counts_toward_budget !== false)
+    .reduce((sum, e) => sum + e.amount, 0);
 }
 
 async function loadTripWithHotels(tripId, userId) {

@@ -8,6 +8,8 @@
 // API docs: https://ignav.com/docs
 // Pricing:  https://ignav.com/pricing ($2 / 1,000 after free tier; failed requests not billed)
 
+import { toBdt } from "../utils/currency.js";
+
 const IGNAV_BASE = "https://ignav.com/api/fares";
 
 // ---- IATA code map for cities relevant to Bangladeshi travelers ----
@@ -147,12 +149,18 @@ export async function searchFlights({ origin, destination, date, travelers = 1 }
   const data = await res.json();
   const itineraries = (data.itineraries || []).slice(0, 10);
 
-  // Shape Ignav response → frontend-friendly objects
-  return itineraries.map((it) => {
+  // Shape Ignav response → frontend-friendly objects. Ignav quotes in USD;
+  // everything downstream (trip budget, expenses, the Budget page) is BDT,
+  // so the fare is converted here rather than being added raw to a BDT
+  // total ~122x too small.
+  return Promise.all(itineraries.map(async (it) => {
     const seg = it.outbound?.segments?.[0] || {};
     const lastSeg = it.outbound?.segments?.slice(-1)[0] || seg;
     const stops = (it.outbound?.segments?.length || 1) - 1;
     const durationMin = it.outbound?.duration_minutes;
+
+    const sourceCurrency = it.price?.currency || "USD";
+    const fareBdt = await toBdt(it.price?.amount, sourceCurrency);
 
     return {
       id: it.ignav_id,
@@ -165,15 +173,19 @@ export async function searchFlights({ origin, destination, date, travelers = 1 }
       arrival: lastSeg.arrival_time_local,
       duration: durationMin ? formatDurationMin(durationMin) : null,
       stops,
-      price: it.price?.amount,
-      currency: it.price?.currency || "USD",
+      price: Math.round(fareBdt.amount),
+      currency: "BDT",
+      price_original: it.price?.amount ?? null,
+      original_currency: sourceCurrency,
+      fx_rate: fareBdt.rate,
+      fx_converted: fareBdt.converted,
       priceStatus: it.price?.status,    // "verified" | "estimated"
       cabin: it.cabin_class || "economy",
       aircraft: seg.aircraft || null,
       requiresSelfTransfer: it.requires_self_transfer || false,
       ignavId: it.ignav_id,
     };
-  });
+  }));
 }
 
 // Convert minutes → "7h 30m"

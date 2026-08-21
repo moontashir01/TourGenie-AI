@@ -8,6 +8,7 @@
 // know or care whether a hotel came from StayAPI or the seed script.
 
 import Hotel from "../models/Hotel.js";
+import { toBdt } from "../utils/currency.js";
 
 const BASE_URL = "https://api.stayapi.com/v1";
 
@@ -32,21 +33,27 @@ async function lookupDestinationId(cityName, apiKey) {
 }
 
 async function searchHotels(destId, destType, apiKey) {
+  // Ask for BDT up front so no conversion is needed in the common case —
+  // normalizeHotel still converts whatever currency actually comes back.
   const data = await stayApiGet(
-    `/booking/search?dest_id=${destId}&dest_type=${destType}&adults=2&rooms=1&rows_per_page=20`,
+    `/booking/search?dest_id=${destId}&dest_type=${destType}&adults=2&rooms=1&rows_per_page=20&currency_code=BDT`,
     apiKey
   );
   return data.data || [];
 }
 
-function normalizeHotel(raw, city) {
+async function normalizeHotel(raw, city) {
+  // StayAPI returns whatever currency the search asked for, and falls back
+  // to USD when it can't honour the request. Everything the app stores and
+  // sums is BDT, so convert before saving instead of mixing a USD nightly
+  // rate into a BDT trip budget.
+  const sourceCurrency = raw.currency_code || raw.currencycode || "USD";
+  const nightly = await toBdt(raw.min_total_price || 0, sourceCurrency);
   return {
     name: raw.hotel_name,
     city,
-    // NOTE: StayAPI returns whatever currency it's given (default USD),
-    // not converted to BDT — fine for a demo, just don't mix it with real
-    // BDT figures without a conversion step.
-    price_per_night: raw.min_total_price ? Math.round(raw.min_total_price) : 0,
+    price_per_night: Math.round(nightly.amount),
+    currency: "BDT",
     rating: raw.star_rating || (raw.review_score ? raw.review_score / 2 : 3.5),
     facilities: raw.unit_configuration_label ? [raw.unit_configuration_label] : ["WiFi"],
   };
@@ -65,7 +72,7 @@ export async function fetchAndCacheStayApiHotels(cityName) {
   const rawHotels = await searchHotels(destination.destId, destination.destType, apiKey);
   if (rawHotels.length === 0) return [];
 
-  const normalized = rawHotels.map((h) => normalizeHotel(h, cityName));
+  const normalized = await Promise.all(rawHotels.map((h) => normalizeHotel(h, cityName)));
 
   const saved = await Promise.all(
     normalized.map((h) =>

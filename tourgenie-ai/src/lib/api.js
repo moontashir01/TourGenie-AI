@@ -26,6 +26,9 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
     const message = data?.message || `Request failed with status ${res.status}`;
     const error = new Error(message);
     error.status = res.status;
+    // Structured context the API attached (e.g. the cost estimate behind a
+    // rejected budget) so callers can show numbers, not just the sentence.
+    error.details = data?.details;
     throw error;
   }
 
@@ -41,9 +44,17 @@ export const authApi = {
 export const tripsApi = {
   list: () => request("/trips"),
   create: (payload) => request("/trips", { method: "POST", body: payload }),
+  // What a trip would cost, without creating it — powers the live figure
+  // under the budget field on the Plan a trip form.
+  estimate: (payload) => request("/trips/estimate", { method: "POST", body: payload }),
   get: (id) => request(`/trips/${id}`),
   update: (id, payload) => request(`/trips/${id}`, { method: "PATCH", body: payload }),
   remove: (id) => request(`/trips/${id}`, { method: "DELETE" }),
+};
+
+export const referenceApi = {
+  currencies: () => request("/reference/currencies", { auth: false }),
+  expenseCategories: () => request("/reference/expense-categories", { auth: false }),
 };
 
 export const destinationsApi = {

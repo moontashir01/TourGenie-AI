@@ -23,6 +23,7 @@ import flightRoutes from "./routes/flightRoutes.js";
 import destinationRoutes from "./routes/destinationRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import routeRoutes from "./routes/routeRoutes.js";
+import referenceRoutes from "./routes/referenceRoutes.js";
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/flights", flightRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/routes", routeRoutes);
+app.use("/api/reference", referenceRoutes); // currencies + expense categories
 
 app.use(notFound);
 app.use(errorHandler);

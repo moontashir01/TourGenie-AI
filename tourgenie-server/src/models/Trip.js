@@ -38,6 +38,15 @@ const tripSchema = new mongoose.Schema(
     end_date: { type: Date, required: true },
     travelers: { type: Number, required: true, min: 1 },
     budget: { type: Number, required: true, min: 0 },
+    // Always BDT. The amount the traveler actually typed, and the currency
+    // they typed it in, are kept alongside so the form can show it back
+    // unchanged — conversion happens once, on write.
+    budget_currency: { type: String, default: "BDT", uppercase: true },
+    budget_input: { type: Number, default: null },
+    // Whether the number above is meant to cover the flights in and out.
+    // When false the Budget page tracks flights separately instead of
+    // eating the whole budget with one international fare.
+    budget_includes_flights: { type: Boolean, default: true },
     status: { type: String, enum: ["draft", "planned", "active", "completed"], default: "draft" },
 
     // — already in use by the app —
@@ -100,6 +109,12 @@ const tripSchema = new mongoose.Schema(
 tripSchema.pre("validate", function setDuration() {
   if (this.start_date && this.end_date) {
     const ms = new Date(this.end_date) - new Date(this.start_date);
+    // A reversed range used to clamp to a single day and silently poison
+    // every per-day cost downstream — reject it instead.
+    if (ms < 0) {
+      this.invalidate("end_date", "End date must be on or after the start date");
+      return;
+    }
     this.duration_days = Math.max(1, Math.round(ms / 86400000) + 1);
   }
 });
