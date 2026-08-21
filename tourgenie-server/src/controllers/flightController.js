@@ -1,7 +1,29 @@
-import { searchFlights, resolveIata } from "../services/ignavFlights.js";
+import { searchFlights as searchIgnav, resolveIata } from "../services/ignavFlights.js";
+import { searchFlights as searchTravelpayouts } from "../services/travelpayoutsFlights.js";
 import Airport from "../models/Airport.js";
 import FlightOption from "../models/FlightOption.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+
+// FR-05 — Flight search.
+//
+// Providers are tried in order and the first one that actually returns
+// fares wins; any provider without a key configured is skipped. Only the
+// last entry is fabricated, and it says so in the response so the UI never
+// presents invented schedules as bookable flights.
+const PROVIDERS = [
+  {
+    name: "travelpayouts",
+    envKey: "TRAVELPAYOUTS_API_KEY",
+    search: searchTravelpayouts,
+    signupUrl: "https://www.travelpayouts.com",
+  },
+  {
+    name: "ignav",
+    envKey: "IGNAV_API_KEY",
+    search: searchIgnav,
+    signupUrl: "https://ignav.com",
+  },
+];
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -30,6 +52,9 @@ function datedTime(date, time, nextDay = false) {
   return value.toISOString();
 }
 
+// Last resort: the recurring schedules in the seed data. These are modelled
+// on real routes but the fares and departure times are not live, so they are
+// flagged `priceStatus: "indicative"` and the response is marked not-real.
 async function seededFlightOffers({ originCode, destinationCode, date, travelers }) {
   const day = new Date(`${date}T12:00:00Z`).getUTCDay();
   const schedules = await FlightOption.find({
@@ -51,11 +76,13 @@ async function seededFlightOffers({ originCode, destinationCode, date, travelers
     duration: `${Math.floor(flight.duration_min / 60)}h ${flight.duration_min % 60}m`,
     stops: flight.stops,
     price: flight.total_fare_bdt * travelers,
+    pricePerSeat: flight.total_fare_bdt,
     currency: "BDT",
     priceStatus: "indicative",
     cabin: flight.cabin.toUpperCase(),
     aircraft: flight.aircraft || null,
     requiresSelfTransfer: false,
+    bookingUrl: null,
     source: "seeded",
   }));
 }
@@ -90,22 +117,36 @@ export const getFlights = asyncHandler(async (req, res) => {
 
   const travelerCount = Math.min(Math.max(Number(travelers) || 1, 1), 9);
   const departureDate = date?.slice(0, 10) || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+
   let flights = [];
   let source = "seeded";
+  const attempts = [];
 
-  if (process.env.IGNAV_API_KEY) {
+  for (const provider of PROVIDERS) {
+    if (!process.env[provider.envKey]) {
+      attempts.push({ provider: provider.name, status: "skipped", reason: `${provider.envKey} not set` });
+      continue;
+    }
     try {
-      flights = await searchFlights({
+      const results = await provider.search({
         origin: originCode,
         destination: destCode,
         date: departureDate,
         travelers: travelerCount,
       });
-      source = "ignav";
+      if (results.length) {
+        flights = results;
+        source = provider.name;
+        attempts.push({ provider: provider.name, status: "ok", count: results.length });
+        break;
+      }
+      attempts.push({ provider: provider.name, status: "empty" });
     } catch (error) {
-      console.warn(`Live flight search failed for ${originCode} → ${destCode}; using seeded schedules:`, error.message);
+      console.warn(`${provider.name} flight search failed for ${originCode} → ${destCode}:`, error.message);
+      attempts.push({ provider: provider.name, status: "error", reason: error.message });
     }
   }
+
   if (!flights.length) {
     flights = await seededFlightOffers({
       originCode,
@@ -113,7 +154,11 @@ export const getFlights = asyncHandler(async (req, res) => {
       date: departureDate,
       travelers: travelerCount,
     });
+    source = "seeded";
   }
+
+  const isReal = source !== "seeded";
+  const dateShifted = flights.some((f) => f.dateShifted);
 
   res.json({
     flights,
@@ -123,6 +168,15 @@ export const getFlights = asyncHandler(async (req, res) => {
       date: departureDate,
       count: flights.length,
       source,
+      // The UI must be able to tell a real fare from a demo one without
+      // knowing which providers exist.
+      is_real: isReal,
+      date_shifted: dateShifted,
+      attempts,
+      // Shown when nothing real could be reached, so the fix is obvious.
+      setup_hint: isReal
+        ? null
+        : `No live flight provider is configured. Add ${PROVIDERS[0].envKey} to the server .env — a free token takes a minute at ${PROVIDERS[0].signupUrl}.`,
     },
   });
 });
