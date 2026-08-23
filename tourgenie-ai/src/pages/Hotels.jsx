@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Star, Wifi, Loader2, CheckCircle2, ArrowUpDown, AlertCircle, MapPin } from "lucide-react";
 import AppShell from "../components/AppShell";
+import { CardSkeleton } from "../components/Skeleton";
 import { tripsApi, hotelApi, itineraryApi, destinationsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
@@ -196,8 +197,10 @@ export default function Hotels() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading hotels…
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }, (_, i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
       ) : hotels.length === 0 ? (
         <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">

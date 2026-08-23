@@ -14,19 +14,47 @@ import {
   Landmark,
   Menu,
   X,
+  Languages,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 
+// Labels come from the FR-17 string tables; the English text doubles as the
+// fallback so a missing key never renders as a bare "nav.dashboard".
 const links = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { to: "/plan", label: "Plan New Trip", icon: MapPinned },
-  { to: "/attractions", label: "Attractions", icon: Landmark },
-  { to: "/hotels", label: "Hotels", icon: Building2 },
-  { to: "/budget", label: "Budget & Expenses", icon: Wallet },
-  { to: "/chat", label: "AI Assistant", icon: MessageCircleMore },
-  { to: "/community", label: "Community", icon: Users },
-  { to: "/documents", label: "Documents", icon: FileStack },
+  { to: "/dashboard", key: "nav.dashboard", fallback: "Dashboard", icon: LayoutGrid },
+  { to: "/plan", key: "trip.plan_new", fallback: "Plan New Trip", icon: MapPinned },
+  { to: "/attractions", key: "admin.attractions", fallback: "Attractions", icon: Landmark },
+  { to: "/hotels", key: "admin.hotels", fallback: "Hotels", icon: Building2 },
+  { to: "/budget", key: "budget.title", fallback: "Budget & Expenses", icon: Wallet },
+  { to: "/chat", key: "chat.title", fallback: "AI Assistant", icon: MessageCircleMore },
+  { to: "/community", key: "nav.community", fallback: "Community", icon: Users },
+  { to: "/documents", key: "nav.documents", fallback: "Documents", icon: FileStack },
 ];
+
+// FR-17 — the switcher itself. Languages come from the API; the choice is
+// remembered in localStorage and applies instantly, RTL included.
+function LanguageSwitcher() {
+  const { lang, setLang, languages } = useLanguage();
+  if (languages.length < 2) return null;
+  return (
+    <label className="flex items-center gap-2 px-3 py-2 bg-white/70 border border-sand rounded-xl cursor-pointer">
+      <Languages className="w-4 h-4 text-teal-dark shrink-0" />
+      <select
+        value={lang}
+        onChange={(e) => setLang(e.target.value)}
+        className="flex-1 min-w-0 bg-transparent text-sm text-ink-900 focus:outline-none cursor-pointer"
+        aria-label="Language"
+      >
+        {languages.map((l) => (
+          <option key={l.lang} value={l.lang}>
+            {l.flag ? `${l.flag} ` : ""}{l.native_label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 function Brand() {
   return (
@@ -42,6 +70,7 @@ function Brand() {
 }
 
 function NavLinks({ onNavigate }) {
+  const { t } = useLanguage();
   const linkClass = ({ isActive }) =>
     `group relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
       isActive
@@ -62,7 +91,7 @@ function NavLinks({ onNavigate }) {
                 }`}
                 strokeWidth={1.75}
               />
-              {l.label}
+              {t(l.key, l.fallback)}
             </>
           )}
         </NavLink>
@@ -72,6 +101,7 @@ function NavLinks({ onNavigate }) {
 }
 
 function UserFooter({ user, onLogout, onNavigate }) {
+  const { t } = useLanguage();
   const initials = user?.name
     ?.split(" ")
     .map((n) => n[0])
@@ -86,10 +116,11 @@ function UserFooter({ user, onLogout, onNavigate }) {
 
   return (
     <div className="mt-auto flex flex-col gap-1">
+      <LanguageSwitcher />
       {user?.role === "admin" && (
         <NavLink to="/admin" className={adminLinkClass} onClick={onNavigate}>
           <Settings className="w-4 h-4" strokeWidth={1.75} />
-          Admin console
+          {t("nav.admin", "Admin console")}
         </NavLink>
       )}
       <div className="flex items-center gap-3 px-3 py-3 mt-2 bg-white/70 border border-sand rounded-xl">

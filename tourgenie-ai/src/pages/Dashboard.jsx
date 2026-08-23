@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Waves, Mountain, Trees, Clock, Users2, Loader2 } from "lucide-react";
+import { Plus, Waves, Mountain, Trees, Clock, Users2 } from "lucide-react";
 import AppShell from "../components/AppShell";
+import Skeleton, { CardSkeleton } from "../components/Skeleton";
 import { tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import { useLanguage } from "../context/LanguageContext";
 
 const coverIcons = [Waves, Mountain, Trees];
 // Distinct card artwork per position so a wall of trips doesn't read as one
@@ -25,6 +27,7 @@ function daysUntil(date) {
 }
 
 export default function Dashboard() {
+  const { t } = useLanguage();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -48,16 +51,23 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <AppShell title="Dashboard">
-        <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading your trips…
+      <AppShell title={t("nav.dashboard", "Dashboard")} subtitle="Everything about your trips, in one place.">
+        <Skeleton className="h-52 rounded-2xl mb-10" />
+        <div className="flex items-center justify-between mb-5">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-5 w-20" />
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
         </div>
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Dashboard" subtitle="Everything about your trips, in one place.">
+    <AppShell title={t("nav.dashboard", "Dashboard")} subtitle="Everything about your trips, in one place.">
       {error && (
         <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-6">
           Couldn't load trips: {error}

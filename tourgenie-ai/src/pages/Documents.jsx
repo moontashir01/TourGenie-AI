@@ -4,6 +4,7 @@ import { FileText, RefreshCw, Trash2, Plus, X, Loader2, Sparkles, CalendarClock,
 import AppShell from "../components/AppShell";
 import { documentApi, packingApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import { useLanguage } from "../context/LanguageContext";
 
 const DOC_TYPES = ["passport", "visa", "id", "insurance", "ticket", "hotel", "other"];
 
@@ -28,6 +29,7 @@ function expiryBadge(date) {
 // FR-15 — the generated packing list for the current trip: rule-matched
 // against the trip's real weather, persisted so ticks survive reloads.
 function PackingPanel() {
+  const { t } = useLanguage();
   const { currentTripId } = useCurrentTrip();
   const [list, setList] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ function PackingPanel() {
     <aside className="card p-6 h-fit">
       <div className="flex items-center justify-between mb-1">
         <h3 className="font-display text-lg text-ink-900 flex items-center gap-2">
-          <Luggage className="w-4 h-4 text-teal-dark" /> Smart packing list
+          <Luggage className="w-4 h-4 text-teal-dark" /> {t("packing.title", "Smart packing list")}
         </h3>
         {list && (
           <button
@@ -143,7 +145,7 @@ function PackingPanel() {
             {list.categories.map((group) => (
               <div key={group.category}>
                 <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/50 mb-2">
-                  {CATEGORY_LABELS[group.category] || group.category}
+                  {t(`packing.${group.category}`, CATEGORY_LABELS[group.category] || group.category)}
                 </p>
                 <ul className="space-y-1.5">
                   {group.items.map((item) => (
@@ -179,6 +181,7 @@ function PackingPanel() {
 }
 
 export default function Documents() {
+  const { t } = useLanguage();
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -228,7 +231,7 @@ export default function Documents() {
   }
 
   return (
-    <AppShell title="Travel Documents & Packing" subtitle="Everything you need, stored with the trip.">
+    <AppShell title={t("documents.title", "Travel Documents & Packing")} subtitle="Everything you need, stored with the trip.">
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
           {error && (

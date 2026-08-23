@@ -5,6 +5,8 @@ import AppShell from "../components/AppShell";
 import DayMap from "../components/DayMap";
 import FlightSearch from "../components/FlightSearch";
 import WeatherBadge, { WeatherDetail } from "../components/WeatherBadge";
+import GenerationProgress from "../components/GenerationProgress";
+import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, itineraryApi, weatherApi, nearbyApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
@@ -207,8 +209,18 @@ export default function Itinerary() {
   if (loading) {
     return (
       <AppShell title="Itinerary">
-        <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading itinerary…
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-4">
+            <DayCardSkeleton />
+            <DayCardSkeleton />
+            <DayCardSkeleton />
+            <DayCardSkeleton />
+          </div>
+          <div className="space-y-5">
+            <PanelSkeleton lines={5} />
+            <PanelSkeleton lines={3} />
+            <Skeleton className="h-12 rounded-full" />
+          </div>
         </div>
       </AppShell>
     );
@@ -284,40 +296,33 @@ export default function Itinerary() {
             />
           )}
 
-          {items.length === 0 && !showForm && (
+          {generating && <GenerationProgress trip={trip} />}
+
+          {!generating && items.length === 0 && !showForm && (
             <div className="bg-white border border-dashed border-sand rounded-2xl p-10 text-center">
-              {generating ? (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <Loader2 className="w-6 h-6 text-teal animate-spin" />
-                  <p className="text-sm text-ink-900/60">Asking Claude to plan your {trip?.destination} trip…</p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-ink-900/60 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
-                  <p className="text-ink-900/50 mb-5 text-xs">
-                    {trip?.must_visit_attraction_ids?.length > 0 ? (
-                      <span className="text-teal-dark font-medium">{trip.must_visit_attraction_ids.length} must-see attraction{trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} locked in</span>
-                    ) : (
-                      <>Want more control over what's included? <Link to="/attractions" className="font-semibold text-teal-dark hover:text-teal underline">Pick your must-see attractions first</Link>.</>
-                    )}
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-3">
-                    <button onClick={handleGenerateAI} className="btn-primary">
-                      <Sparkles className="w-4 h-4" /> Generate Itinerary with AI
-                    </button>
-                    <button
-                      onClick={() => setShowForm(true)}
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal px-2"
-                    >
-                      <Plus className="w-4 h-4" /> Add activity manually
-                    </button>
-                  </div>
-                </>
-              )}
+              <p className="text-ink-900/60 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
+              <p className="text-ink-900/50 mb-5 text-xs">
+                {trip?.must_visit_attraction_ids?.length > 0 ? (
+                  <span className="text-teal-dark font-medium">{trip.must_visit_attraction_ids.length} must-see attraction{trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} locked in</span>
+                ) : (
+                  <>Want more control over what's included? <Link to="/attractions" className="font-semibold text-teal-dark hover:text-teal underline">Pick your must-see attractions first</Link>.</>
+                )}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button onClick={handleGenerateAI} className="btn-primary">
+                  <Sparkles className="w-4 h-4" /> Generate Itinerary with AI
+                </button>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal px-2"
+                >
+                  <Plus className="w-4 h-4" /> Add activity manually
+                </button>
+              </div>
             </div>
           )}
 
-          {days.map((day) => {
+          {!generating && days.map((day) => {
             const dayItems = items.filter((i) => i.day === day).sort((a, b) => a.time.localeCompare(b.time));
             const open = openDay === day;
             const dayCities = trip?.multi_city
@@ -448,7 +453,7 @@ export default function Itinerary() {
             );
           })}
 
-          {items.length > 0 && !showForm && (
+          {!generating && items.length > 0 && !showForm && (
             <div className="flex flex-wrap items-center gap-4">
               <button
                 onClick={() => setShowForm(true)}
@@ -458,11 +463,9 @@ export default function Itinerary() {
               </button>
               <button
                 onClick={handleGenerateAI}
-                disabled={generating}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-sunset-dark disabled:opacity-60"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-sunset-dark"
               >
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {generating ? "Regenerating…" : "Regenerate with AI (replaces current plan)"}
+                <Sparkles className="w-4 h-4" /> Regenerate with AI (replaces current plan)
               </button>
             </div>
           )}

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Loader2, X, Plane, AlertTriangle } from "lucide-react";
 import AppShell from "../components/AppShell";
+import Skeleton, { PanelSkeleton } from "../components/Skeleton";
 import { expenseApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import { useLanguage } from "../context/LanguageContext";
 
 const categoryColors = {
   Transport: "#1C8C82",
@@ -15,6 +17,7 @@ const categoryColors = {
 };
 
 export default function Budget() {
+  const { t } = useLanguage();
   const { currentTripId } = useCurrentTrip();
   const [summary, setSummary] = useState(null);
   const [expenses, setExpenses] = useState([]);
@@ -67,7 +70,7 @@ export default function Budget() {
 
   if (!currentTripId) {
     return (
-      <AppShell title="Budget & Expenses">
+      <AppShell title={t("budget.title", "Budget & Expenses")}>
         <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
           <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
@@ -78,9 +81,16 @@ export default function Budget() {
 
   if (loading) {
     return (
-      <AppShell title="Budget & Expenses">
-        <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading budget…
+      <AppShell title={t("budget.title", "Budget & Expenses")} subtitle="Tracked spending for this trip">
+        <div className="grid sm:grid-cols-3 gap-5 mb-8">
+          <PanelSkeleton lines={1} />
+          <PanelSkeleton lines={1} />
+          <PanelSkeleton lines={1} />
+        </div>
+        <Skeleton className="h-2 rounded-full mb-10" />
+        <div className="grid lg:grid-cols-2 gap-8">
+          <PanelSkeleton lines={6} />
+          <PanelSkeleton lines={6} />
         </div>
       </AppShell>
     );
@@ -108,7 +118,7 @@ export default function Budget() {
   const overPercent = summary?.budget ? Math.min((summary.overspend / summary.budget) * 100, 100) : 0;
 
   return (
-    <AppShell title="Budget & Expenses" subtitle="Tracked spending for this trip">
+    <AppShell title={t("budget.title", "Budget & Expenses")} subtitle="Tracked spending for this trip">
       {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-6">{error}</div>}
 
       {overBudget && (

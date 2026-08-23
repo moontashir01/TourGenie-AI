@@ -4,13 +4,16 @@ import "./index.css";
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { TripProvider } from "./context/TripContext.jsx";
+import { LanguageProvider } from "./context/LanguageContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <AuthProvider>
-      <TripProvider>
-        <App />
-      </TripProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <TripProvider>
+          <App />
+        </TripProvider>
+      </AuthProvider>
+    </LanguageProvider>
   </StrictMode>
 );

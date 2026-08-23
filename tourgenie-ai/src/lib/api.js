@@ -55,6 +55,9 @@ export const tripsApi = {
 export const referenceApi = {
   currencies: () => request("/reference/currencies", { auth: false }),
   expenseCategories: () => request("/reference/expense-categories", { auth: false }),
+  // FR-17 — languages for the switcher, and one language's string table.
+  languages: () => request("/reference/languages", { auth: false }),
+  translation: (lang) => request(`/reference/translations/${lang}`, { auth: false }),
 };
 
 export const destinationsApi = {

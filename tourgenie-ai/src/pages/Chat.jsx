@@ -4,6 +4,7 @@ import { Send, Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react
 import AppShell from "../components/AppShell";
 import { chatApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import { useLanguage } from "../context/LanguageContext";
 
 const GREETING = {
   role: "assistant",
@@ -12,6 +13,7 @@ const GREETING = {
 };
 
 export default function Chat() {
+  const { t } = useLanguage();
   const { currentTripId } = useCurrentTrip();
   const [messages, setMessages] = useState([GREETING]);
   const [sessionId, setSessionId] = useState(null);
@@ -74,7 +76,7 @@ export default function Chat() {
   }
 
   return (
-    <AppShell title="AI Chat Assistant" subtitle="Edit your itinerary or ask travel questions in plain language.">
+    <AppShell title={t("chat.title", "AI Chat Assistant")} subtitle="Edit your itinerary or ask travel questions in plain language.">
       {!currentTripId && (
         <div className="max-w-2xl mx-auto mb-4 flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
