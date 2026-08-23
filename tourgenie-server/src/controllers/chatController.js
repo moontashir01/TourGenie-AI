@@ -74,10 +74,10 @@ async function applyItineraryEdit(trip, instruction) {
   const beforeTotal = await totalCostFor(trip);
   const beforeCount = await ItineraryItem.countDocuments({ trip_id: trip._id });
 
-  const { attractions, candidateCities, mustVisitIds } = await loadAttractionContext(trip);
+  const { attractions, candidateCities, mustVisitIds, mealGuidance } = await loadAttractionContext(trip);
   const existingItems = await ItineraryItem.find({ trip_id: trip._id }).sort({ day: 1, time: 1 });
 
-  const { items, provider } = await adjustItineraryWithAI(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds);
+  const { items, provider } = await adjustItineraryWithAI(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds, mealGuidance);
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error("the AI returned an empty or invalid itinerary");
   }

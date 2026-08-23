@@ -13,14 +13,45 @@
     @apply bg-sunset/30;
   }
   :focus-visible {
-    outline: 2px solid #EF8354;
+    outline: 2px solid #ef8354;
     outline-offset: 2px;
+  }
+
+  /* Slim scrollbar in the app palette (WebKit + Firefox). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #e4d9c4 transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-sand rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-900/20;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
 
 @layer components {
   .input {
-    @apply w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 text-ink-900 focus:outline-none focus:border-teal transition-colors;
+    @apply w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/15 transition-all;
+  }
+  .card {
+    @apply bg-white border border-sand rounded-2xl shadow-soft;
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-all shadow-sm hover:shadow-glow disabled:opacity-60 disabled:shadow-none active:scale-[0.98];
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-white border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-all hover:shadow-soft active:scale-[0.98];
   }
 }
 
@@ -30,5 +61,17 @@
     background-size: 10px 2px;
     background-repeat: repeat-x;
     height: 2px;
+  }
+  /* Warm paper texture for page backgrounds — barely-there radial washes. */
+  .bg-paper-texture {
+    background-image:
+      radial-gradient(ellipse 80% 60% at 15% 0%, rgba(28, 140, 130, 0.05), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 90% 100%, rgba(239, 131, 84, 0.05), transparent 55%);
+  }
+  /* Dark hero glow used on the ink sections. */
+  .bg-ink-glow {
+    background-image:
+      radial-gradient(ellipse 60% 55% at 75% 15%, rgba(239, 131, 84, 0.14), transparent 60%),
+      radial-gradient(ellipse 50% 50% at 10% 90%, rgba(28, 140, 130, 0.16), transparent 60%);
   }
 }

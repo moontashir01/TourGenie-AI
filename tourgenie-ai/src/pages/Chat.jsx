@@ -85,20 +85,22 @@ export default function Chat() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto bg-white border border-sand rounded-2xl flex flex-col h-[65vh]">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="max-w-2xl mx-auto card shadow-lift flex flex-col h-[70vh] overflow-hidden">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-paper-texture">
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={i} className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              {m.role !== "user" && (
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sunset to-sunset-dark flex items-center justify-center shrink-0 shadow-soft">
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
+                </div>
+              )}
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-soft ${
                   m.role === "user"
-                    ? "bg-teal text-white rounded-br-sm"
-                    : "bg-paper text-ink-900 rounded-bl-sm border border-sand"
+                    ? "bg-gradient-to-br from-teal to-teal-dark text-white rounded-br-sm"
+                    : "bg-white text-ink-900 rounded-bl-sm border border-sand"
                 }`}
               >
-                {m.role === "assistant" && (
-                  <Sparkles className="w-3.5 h-3.5 text-sunset inline mr-1.5 -mt-0.5" />
-                )}
                 {m.content}
                 {m.applied_changes && (
                   <div className="mt-2 pt-2 border-t border-sand/70 flex items-center gap-1.5 text-xs text-teal-dark font-medium">
@@ -121,9 +123,14 @@ export default function Chat() {
             </div>
           ))}
           {sending && (
-            <div className="flex justify-start">
-              <div className="bg-paper border border-sand rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm text-ink-900/50 flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Thinking…
+            <div className="flex items-end gap-2 justify-start">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sunset to-sunset-dark flex items-center justify-center shrink-0 shadow-soft">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div className="bg-white border border-sand rounded-2xl rounded-bl-sm px-4 py-3 shadow-soft flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce" />
+                <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce [animation-delay:0.15s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce [animation-delay:0.3s]" />
               </div>
             </div>
           )}

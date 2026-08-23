@@ -71,6 +71,10 @@ const tripSchema = new mongoose.Schema(
     multi_city: { type: Boolean, default: false },
     country_code: { type: String, default: null, uppercase: true, maxlength: 2 },
     entry_city: { type: String, default: "" }, // main gateway city, e.g. "Bangkok"
+    // Cities the traveler picked on the form for a country trip. The AI plan
+    // must visit every one; empty means the planner chooses. Names, not ids —
+    // they go straight into the generation prompt.
+    preferred_cities: { type: [String], default: [] },
 
     duration_days: { type: Number, default: null }, // derived, kept for quick reads
     budget_tier: { type: String, enum: ["budget", "mid", "luxury"], default: "mid" },

@@ -49,10 +49,10 @@ export default function Landing() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative bg-ink-900 overflow-hidden">
+      <section className="relative bg-ink-900 bg-ink-glow overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 pt-20 pb-28 relative z-10">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-sunset bg-sunset/10 px-3 py-1.5 rounded-full">
+          <div className="max-w-2xl animate-fade-up">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-sunset bg-sunset/10 border border-sunset/20 px-3 py-1.5 rounded-full">
               <Sparkles className="w-3.5 h-3.5" /> Powered by Claude
             </span>
             <h1 className="font-display text-5xl md:text-6xl leading-[1.05] text-paper mt-6">
@@ -66,7 +66,7 @@ export default function Landing() {
               instead of six tabs.
             </p>
 
-            <form className="mt-10 bg-ink-800 border border-ink-700 rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-xl">
+            <form className="mt-10 bg-ink-800/90 backdrop-blur border border-ink-700 rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-xl shadow-lift focus-within:border-teal/50 transition-colors">
               <div className="flex items-center gap-2 flex-1 px-3">
                 <Search className="w-4 h-4 text-paper/40 shrink-0" />
                 <input
@@ -77,7 +77,7 @@ export default function Landing() {
               </div>
               <Link
                 to="/plan"
-                className="bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-colors shrink-0"
+                className="bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-glow shrink-0 active:scale-[0.98]"
               >
                 Plan My Trip with AI <ArrowRight className="w-4 h-4" />
               </Link>
@@ -86,6 +86,21 @@ export default function Landing() {
             <div className="mt-6 flex items-center gap-2 text-paper/50 text-xs">
               <RouteLine className="w-24 h-4" color="#EF8354" />
               Dhaka → Cox&apos;s Bazar → Himchari → back home
+            </div>
+
+            {/* What's actually in the catalogue — real numbers, not vanity ones */}
+            <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3">
+              {[
+                ["27", "destinations"],
+                ["87", "attractions"],
+                ["36", "hotels"],
+                ["5", "languages"],
+              ].map(([n, label]) => (
+                <div key={label} className="flex items-baseline gap-2">
+                  <span className="font-display text-2xl text-paper">{n}</span>
+                  <span className="text-xs text-paper/50 uppercase tracking-wide">{label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -106,8 +121,8 @@ export default function Landing() {
         </div>
         <div className="grid sm:grid-cols-2 gap-6">
           {features.map((f) => (
-            <div key={f.title} className="border border-sand bg-white rounded-2xl p-6 hover:border-teal/40 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-teal-light flex items-center justify-center mb-4">
+            <div key={f.title} className="group card card-hover p-6">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-light to-teal/25 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
                 <f.icon className="w-5 h-5 text-teal-dark" strokeWidth={1.75} />
               </div>
               <h3 className="font-display text-lg text-ink-900 mb-1.5">{f.title}</h3>
@@ -157,20 +172,26 @@ export default function Landing() {
             Browse the community <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-        <div className="bg-white border border-sand rounded-2xl p-6">
-          <div className="flex items-center gap-1 text-gold mb-3">
-            {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-gold" />)}
+        <div className="relative">
+          <div className="absolute -top-3 -left-3 w-full h-full rounded-2xl bg-teal-light/60 -rotate-1" aria-hidden />
+          <div className="relative card shadow-lift p-6 animate-drift">
+            <div className="flex items-center gap-1 text-gold mb-3">
+              {[...Array(5)].map((_, i) => <Star key={i} className="w-4 h-4 fill-gold" />)}
+            </div>
+            <p className="text-ink-900/80 leading-relaxed mb-4 font-display text-lg italic">
+              "The AI itinerary nailed the sunset timing at Laboni Beach —
+              genuinely better than the plan I made myself last year."
+            </p>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal to-teal-dark text-white flex items-center justify-center text-xs font-bold">FR</div>
+              <p className="text-sm font-semibold text-ink-900">Farhana R. <span className="font-normal text-ink-900/50">— Cox's Bazar</span></p>
+            </div>
           </div>
-          <p className="text-ink-900/80 leading-relaxed mb-4">
-            "The AI itinerary nailed the sunset timing at Laboni Beach —
-            genuinely better than the plan I made myself last year."
-          </p>
-          <p className="text-sm font-semibold text-ink-900">Farhana R. <span className="font-normal text-ink-900/50">— Cox's Bazar</span></p>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="bg-ink-900 relative overflow-hidden">
+      <section className="bg-ink-900 bg-ink-glow relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 py-20 text-center relative z-10">
           <ShieldCheck className="w-8 h-8 text-sunset mx-auto mb-5" strokeWidth={1.5} />
           <h2 className="font-display text-3xl md:text-4xl text-paper mb-4">

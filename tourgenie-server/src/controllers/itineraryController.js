@@ -2,10 +2,32 @@ import ItineraryItem from "../models/ItineraryItem.js";
 import Trip from "../models/Trip.js";
 import Attraction from "../models/Attraction.js";
 import Destination from "../models/Destination.js";
-import FlightOption from "../models/FlightOption.js";
 import TransportOption from "../models/TransportOption.js";
 import { generateItineraryWithAI } from "../services/aiPlanner.js";
+import { searchFlights as searchTravelpayouts } from "../services/travelpayoutsFlights.js";
+import { benchmarkFor } from "../services/budgetEstimator.js";
+import { resolveAirport } from "./flightController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+
+// Realistic per-meal prices for the WHOLE party, averaged across the cities
+// being visited, from the seeded CostBenchmark rows. Without these anchors
+// the AI lowballs food to squeeze inside the budget — ৳300 dinners for a
+// party of two at a mid-range tier.
+async function buildMealGuidance(trip, costTargets) {
+  if (!costTargets.length) return null;
+  const tier = trip.budget_tier || "mid";
+  const rows = (await Promise.all(costTargets.map((d) => benchmarkFor(d, tier)))).filter(Boolean);
+  if (!rows.length) return null;
+  const travelers = Math.max(1, trip.travelers || 1);
+  const avg = (key) =>
+    Math.round(((rows.reduce((sum, r) => sum + (r.meal_costs?.[key] || 0), 0) / rows.length) * travelers) / 10) * 10;
+  const meals = { breakfast: avg("breakfast"), lunch: avg("lunch"), dinner: avg("dinner"), snack: avg("street_snack") };
+  return meals.dinner > 0 ? meals : null;
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 async function assertOwnsTrip(tripId, userId) {
   const trip = await Trip.findOne({ _id: tripId, user_id: userId }).populate(
@@ -26,51 +48,122 @@ export async function loadAttractionContext(trip) {
     const candidateCities = await Destination.find({ country_code: trip.country_code, is_active: true })
       .sort({ popularity: -1 })
       .select("name recommended_days avg_daily_cost tags summary");
-    const attractions = await Attraction.find({
-      destination_id: { $in: candidateCities.map((c) => c._id) },
-    });
-    return { attractions, candidateCities, mustVisitIds };
+    // When the traveler picked cities, only their attractions belong in the
+    // prompt — Bangkok's catalogue is dead prompt weight on a Phuket + Chiang
+    // Mai trip, and Groq's free tier meters prompt + completion together, so
+    // trimming it here buys the completion room a long itinerary needs.
+    // Must-visit picks are kept regardless of city.
+    const preferredNames = new Set((trip.preferred_cities || []).map((n) => String(n).toLowerCase()));
+    const cityPool = preferredNames.size
+      ? candidateCities.filter((c) => preferredNames.has(c.name.toLowerCase()))
+      : candidateCities;
+    const attractionFilter = {
+      destination_id: { $in: (cityPool.length ? cityPool : candidateCities).map((c) => c._id) },
+    };
+    const attractions = await Attraction.find(
+      mustVisitIds.length ? { $or: [attractionFilter, { _id: { $in: mustVisitIds } }] } : attractionFilter
+    );
+    const mealGuidance = await buildMealGuidance(trip, cityPool.length ? cityPool : candidateCities);
+    return { attractions, candidateCities, mustVisitIds, mealGuidance };
   }
   const attractions = await Attraction.find({
     ...(trip.destination_id?._id
       ? { destination_id: trip.destination_id._id }
       : { city: new RegExp(`^${trip.destination}$`, "i") }),
   });
-  return { attractions, candidateCities: [], mustVisitIds };
+  const mealGuidance = await buildMealGuidance(trip, trip.destination_id ? [trip.destination_id] : []);
+  return { attractions, candidateCities: [], mustVisitIds, mealGuidance };
 }
 
 // Augment travel items with real transport options. Multi-city trips carry
 // explicit from_city/to_city per leg (set by the AI); single-destination
 // trips only travel on day 1 (arrival) and the last day (return), between
 // the trip's origin and its one destination. Mutates items in place.
+//
+// Flight options come from the Travelpayouts API (real fares for that leg's
+// actual calendar date) — the seeded FlightOption collection is deliberately
+// ignored. Ground options (bus/train/launch) still come from the catalogue.
+// Every estimated_cost covers the WHOLE party, matching est_cost semantics,
+// so selecting an option moves the budget by the amount the party pays.
 export async function augmentTravelItems(items, trip) {
+  const travelers = Math.max(1, trip.travelers || 1);
+
+  // International trips: the arrival and departure legs are covered by the
+  // ROUND-TRIP fare picked in the flight panel. Offering per-leg options
+  // there showed the same airline at a second (one-way) price and produced a
+  // duplicate-looking flight cost on the last day — so those legs get no
+  // options of their own.
+  const destCountry = trip.multi_city ? trip.country_code : trip.destination_id?.country_code || null;
+  let isInternational = false;
+  if (destCountry && trip.origin) {
+    const exactOrigin = new RegExp(`^${escapeRegex(trip.origin)}$`, "i");
+    const originRow = await Destination.findOne({
+      is_active: true,
+      $or: [{ name: exactOrigin }, { aliases: exactOrigin }],
+    })
+      .select("country_code")
+      .lean();
+    isInternational = (originRow?.country_code || "BD") !== destCountry;
+  }
+  const sameCity = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+
   for (const item of items) {
-    if (item.category === "travel") {
-      let fromCity = item.from_city || (trip.multi_city ? trip.entry_city : trip.origin);
-      let toCity = item.to_city || (trip.multi_city ? trip.entry_city : trip.destination);
-      if (!item.from_city && !item.to_city && !trip.multi_city && trip.duration_days && item.day === trip.duration_days) {
-        fromCity = trip.destination;
-        toCity = trip.origin;
-      }
+    if (item.category !== "travel") continue;
 
-      const flights = await FlightOption.find({
-        from_city: new RegExp(`^${fromCity}$`, "i"),
-        to_city: new RegExp(`^${toCity}$`, "i"),
-        is_active: true,
-      }).lean();
-
-      const transports = await TransportOption.find({
-        from_city: new RegExp(`^${fromCity}$`, "i"),
-        to_city: new RegExp(`^${toCity}$`, "i"),
-        is_active: true,
-      }).lean();
-
-      // Ensure a unified format so the frontend can display them interchangeably
-      item.available_transport_options = [
-        ...flights.map(f => ({ ...f, option_type: "flight", estimated_cost: f.total_fare_bdt })),
-        ...transports.map(t => ({ ...t, option_type: "transport", estimated_cost: t.fare }))
-      ];
+    let fromCity = item.from_city || (trip.multi_city ? trip.entry_city : trip.origin);
+    let toCity = item.to_city || (trip.multi_city ? trip.entry_city : trip.destination);
+    if (!item.from_city && !item.to_city && !trip.multi_city && trip.duration_days && item.day === trip.duration_days) {
+      fromCity = trip.destination;
+      toCity = trip.origin;
     }
+
+    if (isInternational && (sameCity(fromCity, trip.origin) || sameCity(toCity, trip.origin))) {
+      item.available_transport_options = [];
+      continue;
+    }
+
+    const options = [];
+
+    if (process.env.TRAVELPAYOUTS_API_KEY) {
+      try {
+        const [fromAirport, toAirport] = await Promise.all([resolveAirport(fromCity), resolveAirport(toCity)]);
+        if (fromAirport?.iata && toAirport?.iata && fromAirport.iata !== toAirport.iata) {
+          // The leg flies on trip start + (day - 1), not on the search date.
+          const legDate = new Date(new Date(trip.start_date).getTime() + (item.day - 1) * 86400000)
+            .toISOString()
+            .slice(0, 10);
+          const fares = await searchTravelpayouts({
+            origin: fromAirport.iata,
+            destination: toAirport.iata,
+            date: legDate,
+            travelers,
+            limit: 5,
+          });
+          options.push(
+            ...fares.map((f) => ({
+              ...f,
+              option_type: "flight",
+              flight_number: f.flightNumber,
+              depart_time: f.departure ? String(f.departure).slice(11, 16) : "",
+              estimated_cost: f.price, // already the whole-party total in BDT
+            }))
+          );
+        }
+      } catch (error) {
+        console.warn(`Live flight options failed for ${fromCity} → ${toCity}:`, error.message);
+      }
+    }
+
+    const transports = await TransportOption.find({
+      from_city: new RegExp(`^${escapeRegex(fromCity)}$`, "i"),
+      to_city: new RegExp(`^${escapeRegex(toCity)}$`, "i"),
+      is_active: true,
+    }).lean();
+    options.push(
+      ...transports.map((t) => ({ ...t, option_type: "transport", estimated_cost: (t.fare || 0) * travelers }))
+    );
+
+    item.available_transport_options = options;
   }
 }
 
@@ -109,11 +202,11 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
   const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
-  const { attractions, candidateCities, mustVisitIds } = await loadAttractionContext(trip);
+  const { attractions, candidateCities, mustVisitIds, mealGuidance } = await loadAttractionContext(trip);
 
   let items;
   try {
-    items = await generateItineraryWithAI(trip, attractions, candidateCities, mustVisitIds);
+    items = await generateItineraryWithAI(trip, attractions, candidateCities, mustVisitIds, mealGuidance);
   } catch (err) {
     return res.status(502).json({
       message: `AI itinerary generation failed: ${err.message}`,

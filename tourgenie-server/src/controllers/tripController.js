@@ -146,13 +146,23 @@ async function buildTripPlan(body, { budgetOptional = false } = {}) {
   if (body.country_code) {
     const { country, cities } = await resolveCountryTrip(body.country_code);
     const entryCity = cities.find((c) => c.name === country.capital) || cities[0];
+    // Cities the traveler explicitly picked on the form. Only names that are
+    // real destinations in this country survive — both the cost estimate and
+    // the AI planner honour the picks instead of guessing.
+    const wanted = Array.isArray(body.preferred_cities) ? body.preferred_cities : [];
+    const preferredCities = wanted
+      .map((name) => cities.find((c) => c.name.toLowerCase() === String(name).trim().toLowerCase()))
+      .filter(Boolean);
     scope = {
       multi_city: true,
       country,
       cities,
       entryCity,
+      preferredCities,
       label: country.name,
-      costDestinations: likelyCitiesForCountryTrip(cities, entryCity, days),
+      costDestinations: preferredCities.length
+        ? preferredCities
+        : likelyCitiesForCountryTrip(cities, entryCity, days),
       pricingCurrency: country.pricing_currency || "BDT",
     };
   } else {
@@ -249,6 +259,7 @@ export const createTrip = asyncHandler(async (req, res) => {
       multi_city: true,
       country_code: plan.scope.country.code,
       entry_city: plan.scope.entryCity.name,
+      preferred_cities: plan.scope.preferredCities.map((c) => c.name),
       currency: plan.scope.pricingCurrency,
     });
     return res.status(201).json({ trip, estimate: plan.estimate, verdict: plan.verdict });
@@ -295,6 +306,7 @@ const COST_FIELDS = [
   "budget_tier",
   "hotel_preference",
   "budget_includes_flights",
+  "preferred_cities", // which cities a country trip visits moves the cost model too
 ];
 
 export const updateTrip = asyncHandler(async (req, res) => {
@@ -344,7 +356,12 @@ export const updateTrip = asyncHandler(async (req, res) => {
       budget_includes_flights: updates.budget_includes_flights ?? existing.budget_includes_flights,
       destination_id: updates.destination_id ?? existing.destination_id,
       destination: updates.destination ?? existing.destination,
-      ...(existing.multi_city ? { country_code: existing.country_code } : {}),
+      ...(existing.multi_city
+        ? {
+            country_code: existing.country_code,
+            preferred_cities: req.body.preferred_cities ?? existing.preferred_cities,
+          }
+        : {}),
     };
     const plan = await buildTripPlan(merged);
     assertBudgetIsPlannable(plan);
@@ -356,6 +373,9 @@ export const updateTrip = asyncHandler(async (req, res) => {
       budget_breakdown: plan.estimate.lines,
       estimated_total: plan.estimate.estimated_total,
     });
+    if (existing.multi_city) {
+      updates.preferred_cities = (plan.scope.preferredCities || []).map((c) => c.name);
+    }
   }
 
   const trip = await Trip.findOneAndUpdate(

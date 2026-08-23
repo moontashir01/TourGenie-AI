@@ -210,9 +210,9 @@ export default function Hotels() {
           {hotels.map((h) => {
             const isSelected = activeSelectedHotelId === h._id;
             return (
-              <div key={h._id} className="bg-white border border-sand rounded-2xl overflow-hidden hover:border-teal/40 transition-colors flex flex-col">
-                <div className="h-28 bg-teal-light flex items-center justify-center">
-                  <Wifi className="w-8 h-8 text-teal-dark" strokeWidth={1.5} />
+              <div key={h._id} className="group card card-hover overflow-hidden flex flex-col">
+                <div className="h-28 bg-gradient-to-br from-teal-light via-teal-light to-teal/25 flex items-center justify-center">
+                  <Wifi className="w-8 h-8 text-teal-dark transition-transform duration-300 group-hover:scale-110" strokeWidth={1.5} />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <h4 className="font-display text-lg text-ink-900 mb-1">{h.name}</h4>

@@ -189,20 +189,27 @@ export default function Budget() {
             <p className="text-sm text-ink-900/50">No expenses logged yet.</p>
           ) : (
             <div className="flex items-center gap-8">
-              <svg viewBox="0 0 42 42" className="w-40 h-40 shrink-0 -rotate-90">
-                <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#EFE7D6" strokeWidth="6" />
-                {segments.map((s) => (
-                  <circle
-                    key={s.category}
-                    cx="21" cy="21" r="15.9"
-                    fill="transparent"
-                    stroke={s.color}
-                    strokeWidth="6"
-                    strokeDasharray={`${((s.end - s.start) / total) * 100} ${100 - ((s.end - s.start) / total) * 100}`}
-                    strokeDashoffset={-((s.start / total) * 100)}
-                  />
-                ))}
-              </svg>
+              <div className="relative w-40 h-40 shrink-0">
+                <svg viewBox="0 0 42 42" className="w-full h-full -rotate-90">
+                  <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#EFE7D6" strokeWidth="5" />
+                  {segments.map((s) => (
+                    <circle
+                      key={s.category}
+                      cx="21" cy="21" r="15.9"
+                      fill="transparent"
+                      stroke={s.color}
+                      strokeWidth="5"
+                      strokeLinecap="butt"
+                      strokeDasharray={`${((s.end - s.start) / total) * 100} ${100 - ((s.end - s.start) / total) * 100}`}
+                      strokeDashoffset={-((s.start / total) * 100)}
+                    />
+                  ))}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-[10px] uppercase tracking-wide text-ink-900/40 font-semibold">Spent</span>
+                  <span className="font-mono text-lg font-bold text-ink-900">{symbol}{total.toLocaleString()}</span>
+                </div>
+              </div>
               <ul className="space-y-2.5 text-sm flex-1">
                 {segments.map((s) => (
                   <li key={s.category} className="flex items-center justify-between">

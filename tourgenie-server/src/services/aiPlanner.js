@@ -63,7 +63,27 @@ function formatAttractionSection(attractions, mustVisitIds, pricingCurrency) {
   return parts.join("\n\n");
 }
 
-function buildPrompt(trip, attractions, mustVisitIds = []) {
+// Anchors every meal's est_cost to the destination's real price level.
+// Without this the model prices food at whatever squeezes inside the budget.
+function foodPricingSection(trip, meals) {
+  if (!meals) return "";
+  return `Realistic food prices at the destination for the WHOLE party of ${trip.travelers} (BDT): breakfast ~${meals.breakfast}, lunch ~${meals.lunch}, dinner ~${meals.dinner}, street snack ~${meals.snack}. Every meal item's est_cost must be in line with these figures — NEVER lowball food to make the budget fit; if money is tight, drop optional paid activities instead.`;
+}
+
+// Safety net for when the model ignores the guidance anyway: a sit-down meal
+// priced far below the destination's baseline is corrected to it.
+function enforceMealFloors(items, meals) {
+  if (!meals) return items;
+  for (const item of items) {
+    if (item.category !== "meal") continue;
+    const hour = Number(item.time.slice(0, 2));
+    const floor = hour < 11 ? meals.breakfast : hour < 16 ? meals.lunch : meals.dinner;
+    if (floor > 0 && item.est_cost < floor * 0.7) item.est_cost = floor;
+  }
+  return items;
+}
+
+function buildPrompt(trip, attractions, mustVisitIds = [], meals = null) {
   const numDays = daysBetween(trip.start_date, trip.end_date);
   const destinationCountry = trip.destination_id?.country || "the destination country";
   const pricingCurrency = trip.currency || trip.destination_id?.pricing_currency || "BDT";
@@ -83,6 +103,8 @@ Trip details:
 - Hotel preference: ${trip.hotel_preference}
 - Food preference: ${trip.food_preference}
 
+${foodPricingSection(trip, meals)}
+
 ${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
@@ -100,22 +122,121 @@ Rules:
 - Output valid JSON only — it will be parsed programmatically.`;
 }
 
+// Split the traveler's actual trip length across their chosen cities,
+// proportionally to each city's typical stay. The prompt states the result
+// as explicit per-city day counts, so the plan always divides the traveler's
+// OWN interval — never the catalogue's "recommended days" verbatim.
+function allocateDaysAcrossCities(cities, totalDays) {
+  if (!cities.length || totalDays < 1) return [];
+  const weights = cities.map((c) => Math.max(1, c.recommended_days || 1));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+  const alloc = cities.map((c, i) => ({
+    city: c.name,
+    days: Math.max(1, Math.floor((totalDays * weights[i]) / totalWeight)),
+    weight: weights[i],
+  }));
+  let used = alloc.reduce((sum, a) => sum + a.days, 0);
+  // Hand leftover days to the highest-weight cities first.
+  const byWeight = [...alloc].sort((a, b) => b.weight - a.weight);
+  for (let i = 0; used < totalDays; i = (i + 1) % byWeight.length) {
+    byWeight[i].days += 1;
+    used += 1;
+  }
+  // More cities than days: trim the largest stays back toward 1 each.
+  while (used > totalDays) {
+    const biggest = alloc.filter((a) => a.days > 1).sort((a, b) => b.days - a.days)[0];
+    if (!biggest) break;
+    biggest.days -= 1;
+    used -= 1;
+  }
+  return alloc.map(({ city, days }) => ({ city, days }));
+}
+
+// Everything the prompts need to pin cities to days: the traveler's picks,
+// their day ranges, and a literal per-day city map. Shared by the main
+// country prompt and the continuation prompt so both describe the same plan.
+function buildCityPlanContext(trip, candidateCities, numDays) {
+  const preferred = (trip.preferred_cities || [])
+    .map((name) => candidateCities.find((c) => c.name.toLowerCase() === String(name).toLowerCase()))
+    .filter(Boolean);
+
+  const allocation = allocateDaysAcrossCities(preferred, numDays);
+  const allocationOverbooked = allocation.reduce((sum, a) => sum + a.days, 0) > numDays;
+  const entryPicked = preferred.some((c) => c.name.toLowerCase() === String(trip.entry_city).toLowerCase());
+
+  // Explicit day RANGES, not just counts — models follow "days 1-6" far more
+  // faithfully than "6 days", and the ranges are what the form previewed.
+  let dayCursor = 1;
+  const rangedAllocation = allocation.map((a) => {
+    const startDay = dayCursor;
+    const endDay = Math.min(numDays, dayCursor + a.days - 1);
+    dayCursor = endDay + 1;
+    return { ...a, startDay, endDay };
+  });
+
+  // A literal per-day city map — the one format the model can't reinterpret.
+  const cityOnDay = [];
+  for (const a of rangedAllocation) {
+    for (let day = a.startDay; day <= a.endDay; day++) cityOnDay[day] = a.city;
+  }
+  const dayMapLines = [];
+  if (preferred.length && !allocationOverbooked) {
+    for (let day = 1; day <= numDays; day++) {
+      const city = cityOnDay[day] || rangedAllocation[rangedAllocation.length - 1]?.city || trip.entry_city;
+      const prev = cityOnDay[day - 1];
+      const notes = [];
+      if (day === 1) notes.push(`arrive from ${trip.origin} via ${trip.entry_city}`);
+      if (prev && prev !== city) notes.push(`first item of the day: travel ${prev} → ${city}`);
+      if (day === numDays) notes.push(`depart to ${trip.origin} via ${trip.entry_city} at the end of the day`);
+      dayMapLines.push(`day ${day}: ${city}${notes.length ? ` (${notes.join("; ")})` : ""}`);
+    }
+  }
+
+  return { preferred, rangedAllocation, allocationOverbooked, entryPicked, dayMapLines };
+}
+
 // Country-level trip ("Thailand" rather than one city): the AI also has to
 // pick which cities to visit and plan the legs between them, so it gets the
 // candidate city list instead of a single fixed destination.
-function buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds = []) {
+function buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds = [], meals = null) {
   const numDays = daysBetween(trip.start_date, trip.end_date);
   const pricingCurrency = trip.currency || "BDT";
 
-  const cityList = candidateCities
-    .slice(0, MAX_CANDIDATE_CITIES)
-    .map((c) => {
-      const bits = [`recommended ${c.recommended_days} day${c.recommended_days > 1 ? "s" : ""}`];
-      if (c.avg_daily_cost) bits.push(`~${c.avg_daily_cost} ${pricingCurrency}/day`);
-      if (c.tags?.length) bits.push(`known for: ${c.tags.join(", ")}`);
-      return `- ${c.name} (${bits.join(" · ")})${c.summary ? ` — ${c.summary}` : ""}`;
-    })
-    .join("\n");
+  const { preferred, rangedAllocation, allocationOverbooked, entryPicked, dayMapLines } =
+    buildCityPlanContext(trip, candidateCities, numDays);
+
+  const describeCity = (c) => {
+    const bits = [`recommended ${c.recommended_days} day${c.recommended_days > 1 ? "s" : ""}`];
+    if (c.avg_daily_cost) bits.push(`~${c.avg_daily_cost} ${pricingCurrency}/day`);
+    if (c.tags?.length) bits.push(`known for: ${c.tags.join(", ")}`);
+    return `- ${c.name} (${bits.join(" · ")})${c.summary ? ` — ${c.summary}` : ""}`;
+  };
+  const cityList = candidateCities.slice(0, MAX_CANDIDATE_CITIES).map(describeCity).join("\n");
+
+  const citySection = preferred.length
+    ? `The traveler has ALREADY CHOSEN the cities for this ${numDays}-day trip. Divide the traveler's OWN ${numDays} day(s) between them EXACTLY like this — move to the next city with a "travel" item at the start of its first day:\n${rangedAllocation
+        .map((a) => {
+          const c = preferred.find((p) => p.name === a.city);
+          const bits = [];
+          if (c?.avg_daily_cost) bits.push(`~${c.avg_daily_cost} ${pricingCurrency}/day`);
+          if (c?.tags?.length) bits.push(`known for: ${c.tags.join(", ")}`);
+          const range = a.startDay === a.endDay ? `day ${a.startDay}` : `days ${a.startDay}-${a.endDay}`;
+          return `- ${a.city}: ${range}${bits.length ? ` (${bits.join(" · ")})` : ""}`;
+        })
+        .join("\n")}${
+        dayMapLines.length
+          ? `\nDay-by-day city map — every item's "city" and "day" must agree with this map:\n${dayMapLines.join("\n")}`
+          : ""
+      }${
+        allocationOverbooked
+          ? "\nThe trip is shorter than one day per city — combine nearby cities on the same day where needed, but still set foot in every one."
+          : ""
+      }${
+        entryPicked
+          ? ""
+          : `\n${trip.entry_city} is only the arrival/departure gateway — pass through it, do not spend the allocated days there.`
+      }`
+    : `Cities available in ${trip.destination} (choose a sensible subset based on the trip length — short trips should stay in 1-2 cities rather than rushing; longer trips can cover 3+):\n${cityList || "(no cities catalogued — invent well-known real cities in this country)"}`;
 
   const attractionSection = formatAttractionSection(attractions, mustVisitIds, pricingCurrency);
   const mustSet = new Set(mustVisitIds || []);
@@ -134,9 +255,10 @@ Trip details:
 - Hotel preference: ${trip.hotel_preference}
 - Food preference: ${trip.food_preference}
 
-Cities available in ${trip.destination} (choose a sensible subset based on the trip length — short trips should stay in 1-2 cities rather than rushing; longer trips can cover 3+):
-${cityList || "(no cities catalogued — invent well-known real cities in this country)"}
+${citySection}
 ${mustCities.length > 0 ? `\nThe cities you choose MUST include: ${mustCities.join(", ")} — the traveler picked specific attractions there (see MUST INCLUDE below).` : ""}
+
+${foodPricingSection(trip, meals)}
 
 ${trip.entry_city}, is the international gateway city — the trip must begin and end there.
 
@@ -146,10 +268,11 @@ Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one 
 [
   { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string — the real city this happens in, must be one of the cities you chose", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string or null — only set on category=travel items", "to_city": "string or null — only set on category=travel items" }
 ]
+Keep the JSON compact: omit "attraction_id", "from_city" and "to_city" entirely when they would be null — from_city/to_city belong ONLY on travel items.
 
 Rules:
-- Cover all ${numDays} day(s), roughly 3-5 activities per day including at least one meal.
-- Every attraction id listed under MUST INCLUDE (if any) must appear as an item's attraction_id exactly once, in whichever city it belongs to.
+- Cover all ${numDays} day(s), roughly ${numDays >= 8 ? "3-4" : "3-5"} activities per day including at least one meal.
+${preferred.length > 0 ? `- Follow the day ranges above exactly (${rangedAllocation.map((a) => `${a.city} ${a.startDay === a.endDay ? `day ${a.startDay}` : `days ${a.startDay}-${a.endDay}`}`).join(", ")}) — they divide the traveler's own travel dates. The first day of each new city starts with a "travel" item carrying from_city, to_city, a realistic transport mode in "activity" and a realistic est_cost.\n` : ""}- Every attraction id listed under MUST INCLUDE (if any) must appear as an item's attraction_id exactly once, in whichever city it belongs to.
 - Day 1's first item must be a "travel" item with from_city "${trip.origin}" and to_city "${trip.entry_city}" (the international arrival).
 - The last day's final item must be a "travel" item with from_city set to whatever city the traveler ends the trip in and to_city "${trip.origin}" (the international departure).
 - Whenever the traveler moves between two cities within ${trip.destination}, add a "travel" item on that transition with from_city and to_city set to the two real city names (never the country name), and describe a realistic transport mode in "activity" (e.g. "Overnight train to Chiang Mai", "Domestic flight to Phuket", "Bus to Pattaya") with a realistic est_cost.
@@ -272,8 +395,25 @@ function extractJsonArray(text) {
   const withoutFences = trimmed.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
   const start = withoutFences.indexOf("[");
   const end = withoutFences.lastIndexOf("]");
-  if (start === -1 || end === -1) throw new Error("AI response did not contain a JSON array");
-  return JSON.parse(withoutFences.slice(start, end + 1));
+  if (start === -1) throw new Error("AI response did not contain a JSON array");
+  const raw = end > start ? withoutFences.slice(start, end + 1) : withoutFences.slice(start);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Repair the two failure shapes these models actually produce: trailing
+    // commas, and an array cut off mid-object. Items are flat objects, so
+    // every "}" closes a complete item — salvage everything up to the last one.
+    const noTrailing = raw.replace(/,\s*([\]}])/g, "$1");
+    try {
+      return JSON.parse(noTrailing);
+    } catch {
+      const lastComplete = noTrailing.lastIndexOf("}");
+      if (lastComplete > 0) {
+        return JSON.parse(noTrailing.slice(0, lastComplete + 1).replace(/,\s*$/, "") + "]");
+      }
+      throw new Error("AI response was not valid JSON");
+    }
+  }
 }
 
 // Shared helper for any OpenAI-compatible chat completions endpoint
@@ -288,7 +428,9 @@ async function callOpenAICompatible(prompt, { baseUrl, apiKey, model, providerNa
     body: JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
+      // The output is parsed programmatically — a cooler temperature buys
+      // JSON discipline, which matters more here than creative variety.
+      temperature: 0.4,
       ...extraBody,
     }),
   });
@@ -299,7 +441,9 @@ async function callOpenAICompatible(prompt, { baseUrl, apiKey, model, providerNa
     // seconds — worth one wait-and-retry before falling through to the next
     // provider, since the request itself is fine.
     const retryAfter = Number(res.headers.get("retry-after")) || Number(body.match(/try again in ([\d.]+)s/)?.[1]);
-    if (res.status === 429 && retry && retryAfter && retryAfter <= 25) {
+    // Long trips make several sequential calls (continuation), so a minute-
+    // budget refill of up to 60s is worth waiting out rather than failing.
+    if (res.status === 429 && retry && retryAfter && retryAfter <= 60) {
       await new Promise((r) => setTimeout(r, (retryAfter + 0.5) * 1000));
       return callOpenAICompatible(prompt, { baseUrl, apiKey, model, providerName, extraBody, retry: false });
     }
@@ -323,7 +467,13 @@ async function callOpenAICompatible(prompt, { baseUrl, apiKey, model, providerNa
   const text = choice?.message?.content;
   if (!text) throw new Error(`${providerName} API returned no text content`);
   if (choice.finish_reason === "length") {
-    throw new Error(`${providerName} response was cut off before the itinerary finished (raise max tokens)`);
+    // The completion budget ran out mid-plan. Salvage every complete item —
+    // the continuation loop plans the remaining days in a follow-up call.
+    try {
+      return extractJsonArray(text);
+    } catch {
+      throw new Error(`${providerName} response was cut off before the itinerary finished (raise max tokens)`);
+    }
   }
   return extractJsonArray(text);
 }
@@ -402,31 +552,117 @@ async function runProviders(prompt) {
 
   let lastError;
   for (const provider of configured) {
-    try {
-      const items = await provider.call(prompt);
-      return { items, provider: provider.name.toLowerCase() };
-    } catch (err) {
-      console.warn(`${provider.name} itinerary generation failed:`, err.message);
-      lastError = err;
+    // Two attempts per provider: free-tier models occasionally emit broken
+    // JSON or get cut off, and a fresh sample usually lands — cheaper than
+    // failing the whole generation when no fallback provider is configured.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const items = await provider.call(prompt);
+        return { items, provider: provider.name.toLowerCase() };
+      } catch (err) {
+        console.warn(`${provider.name} itinerary generation failed (attempt ${attempt}):`, err.message);
+        lastError = err;
+      }
     }
   }
 
   throw lastError;
 }
 
-export async function generateItineraryWithAI(trip, attractions, candidateCities = [], mustVisitIds = []) {
+// Asks for the days a truncated plan is missing. Days already planned are
+// final; the model only produces day fromDay+1 .. numDays, grounded in where
+// the traveler is at the end of the last planned day.
+function buildContinuationPrompt(trip, attractions, candidateCities, mustVisitIds, plannedItems, fromDay, numDays, instruction = "", meals = null) {
+  const pricingCurrency = trip.currency || trip.destination_id?.pricing_currency || "BDT";
+  const lastCity =
+    [...plannedItems.filter((i) => i.day === fromDay)].reverse().find((i) => i.city)?.city ||
+    (trip.multi_city ? trip.entry_city : trip.destination);
+  // Must-visit attractions already scheduled don't need demanding twice.
+  const remainingMust = (mustVisitIds || []).filter(
+    (id) => !plannedItems.some((i) => String(i.attraction_id) === String(id))
+  );
+  const attractionSection = formatAttractionSection(attractions, remainingMust, pricingCurrency);
+
+  let cityContext = "";
+  if (trip.multi_city) {
+    const { dayMapLines } = buildCityPlanContext(trip, candidateCities, numDays);
+    const remainingMap = dayMapLines.slice(fromDay); // lines for days fromDay+1 .. numDays
+    cityContext = remainingMap.length
+      ? `Day-by-day city map for the remaining days — every item's "city" and "day" must agree with it:\n${remainingMap.join("\n")}`
+      : `This is a multi-city trip across ${trip.destination}. The trip must end back at ${trip.entry_city} on day ${numDays} for the departure to ${trip.origin}. Use real city names (never the country name) in "city", "from_city" and "to_city".`;
+  }
+
+  return `You are the itinerary-planning engine for TourGenie AI. This trip's itinerary already covers days 1-${fromDay} and those days are FINAL — do not repeat or change them. Continue the SAME trip from day ${fromDay + 1} through day ${numDays}, as pure JSON — no markdown, no commentary.
+
+Trip details:
+- Origin: ${trip.origin}
+- Destination: ${trip.destination}
+- Total trip length: ${numDays} days — you are planning days ${fromDay + 1}-${numDays} ONLY
+- Travelers: ${trip.travelers}
+- Total budget: ${trip.budget} ${pricingCurrency} for the whole party across ALL ${numDays} days
+- Interests: ${trip.interests?.join(", ") || "none specified"}
+- Food preference: ${trip.food_preference}
+${instruction ? `- The traveler's request (already applied to days 1-${fromDay}; keep honouring it): "${instruction}"` : ""}
+At the end of day ${fromDay} the traveler is in ${lastCity}.
+
+${cityContext}
+
+${foodPricingSection(trip, meals)}
+
+${attractionSection}
+
+Return ONLY a JSON array of itinerary items covering days ${fromDay + 1} to ${numDays}, in this exact shape:
+[
+  { "day": ${fromDay + 1}, "time": "08:00", "activity": "string", "location": "string", "city": "string", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string — travel items only", "to_city": "string — travel items only" }
+]
+Keep the JSON compact: omit "attraction_id", "from_city" and "to_city" entirely when they would be null.
+
+Rules:
+- Plan EVERY day from ${fromDay + 1} to ${numDays}, roughly ${numDays >= 8 ? "3-4" : "3-5"} activities per day including at least one meal. No "day" value outside that range.
+- time must be 24-hour "HH:MM". est_cost is a number in ${pricingCurrency} covering ALL ${trip.travelers} traveler(s) combined.
+- Only use attraction_id values from the lists above, or null.
+- Output valid JSON only — it will be parsed programmatically.`;
+}
+
+// One AI call can't always hold a whole month of itinerary — free-tier
+// completion budgets cut long plans off around two weeks. Keep asking for
+// the missing days until the trip is fully covered.
+async function completeItinerary(trip, attractions, candidateCities, mustVisitIds, firstItems, numDays, instruction = "", meals = null) {
+  let items = firstItems;
+  for (let round = 0; round < 6; round++) {
+    const maxDay = items.reduce((max, i) => Math.max(max, i.day), 0);
+    if (maxDay >= numDays) return items;
+
+    const prompt = buildContinuationPrompt(trip, attractions, candidateCities, mustVisitIds, items, maxDay, numDays, instruction, meals);
+    const { items: more } = await runProviders(prompt);
+    const cleaned = sanitizeItems(more, attractions).filter((i) => i.day > maxDay && i.day <= numDays);
+    if (!cleaned.length) break; // no forward progress — stop rather than loop
+    items = [...items, ...cleaned].sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
+  }
+
+  const finalMaxDay = items.reduce((max, i) => Math.max(max, i.day), 0);
+  if (finalMaxDay < numDays) {
+    throw new Error(`the AI only managed to plan ${finalMaxDay} of ${numDays} days — try again in a minute`);
+  }
+  return items;
+}
+
+export async function generateItineraryWithAI(trip, attractions, candidateCities = [], mustVisitIds = [], meals = null) {
+  const numDays = daysBetween(trip.start_date, trip.end_date);
   const prompt = trip.multi_city
-    ? buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds)
-    : buildPrompt(trip, attractions, mustVisitIds);
+    ? buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds, meals)
+    : buildPrompt(trip, attractions, mustVisitIds, meals);
   const { items } = await runProviders(prompt);
-  return sanitizeItems(items, attractions);
+  const first = sanitizeItems(items, attractions);
+  const completed = await completeItinerary(trip, attractions, candidateCities, mustVisitIds, first, numDays, "", meals);
+  return enforceMealFloors(completed, meals);
 }
 
 // FR-05 — Chat Assistant itinerary edits ("make it cheaper", "add a day",
 // "vegetarian only"…). Unlike generation, this feeds the existing itinerary
 // back in and asks for a revised full plan, so activities the request didn't
 // touch stay put rather than the AI starting over from a blank slate.
-function buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds = []) {
+function buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds = [], meals = null) {
   const numDays = trip.duration_days || daysBetween(trip.start_date, trip.end_date);
   const pricingCurrency = trip.currency || trip.destination_id?.pricing_currency || "BDT";
 
@@ -439,7 +675,11 @@ function buildAdjustmentPrompt(trip, attractions, existingItems, instruction, ca
   const cityContext = trip.multi_city
     ? `This is a multi-city trip across ${trip.destination}. Cities available:\n${candidateCities
         .map((c) => `- ${c.name} (recommended ${c.recommended_days} day${c.recommended_days > 1 ? "s" : ""})`)
-        .join("\n")}\n${trip.entry_city} is the international gateway — the trip must still begin and end there. Keep using real city names (never the country name) in "city", "from_city" and "to_city".`
+        .join("\n")}\n${trip.entry_city} is the international gateway — the trip must still begin and end there. Keep using real city names (never the country name) in "city", "from_city" and "to_city".${
+        trip.preferred_cities?.length
+          ? `\nThe traveler chose to visit: ${trip.preferred_cities.join(", ")} — every one of these cities must stay in the revised plan unless the request explicitly says to drop one.`
+          : ""
+      }`
     : `Destination: ${trip.destination}.`;
 
   return `You are the itinerary-adjustment engine for TourGenie AI's chat assistant. A traveler already has the itinerary below for their trip and just asked, in chat, for a change. Apply their request and output the FULL revised itinerary as pure JSON — no markdown, no commentary, no code fences.
@@ -456,12 +696,15 @@ ${currentItinerary || "(empty — nothing planned yet)"}
 
 Traveler's request: "${instruction}"
 
+${foodPricingSection(trip, meals)}
+
 ${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
 [
   { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string or null", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string or null — only for category=travel", "to_city": "string or null — only for category=travel" }
 ]
+Keep the JSON compact: omit "attraction_id", "from_city" and "to_city" entirely when they would be null — from_city/to_city belong ONLY on travel items.
 
 Rules:
 - Apply the traveler's request faithfully — that might mean changing costs, adding/removing a day, changing pace, swapping meals, or adding rainy-day alternatives.
@@ -473,8 +716,18 @@ Rules:
 - Output valid JSON only — it will be parsed programmatically.`;
 }
 
-export async function adjustItineraryWithAI(trip, attractions, existingItems, instruction, candidateCities = [], mustVisitIds = []) {
-  const prompt = buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds);
+export async function adjustItineraryWithAI(trip, attractions, existingItems, instruction, candidateCities = [], mustVisitIds = [], meals = null) {
+  const numDays = trip.duration_days || daysBetween(trip.start_date, trip.end_date);
+  const prompt = buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds, meals);
   const { items, provider } = await runProviders(prompt);
-  return { items: sanitizeItems(items, attractions), provider };
+  let cleaned = sanitizeItems(items, attractions);
+
+  // A long trip's revised plan can also outgrow one completion. Top up only
+  // when the result is clearly truncated (more than one day short) — a plan
+  // exactly one day shorter may be a deliberate "remove a day" request.
+  const maxDay = cleaned.reduce((max, i) => Math.max(max, i.day), 0);
+  if (maxDay < numDays - 1) {
+    cleaned = await completeItinerary(trip, attractions, candidateCities, mustVisitIds, cleaned, numDays, instruction, meals);
+  }
+  return { items: enforceMealFloors(cleaned, meals), provider };
 }

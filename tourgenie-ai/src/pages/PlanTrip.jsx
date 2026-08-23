@@ -71,9 +71,74 @@ export default function PlanTrip() {
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState("");
 
+  // Country mode: the cities of the chosen country, and which ones the
+  // traveler picked. Every pick becomes mandatory for the AI plan; leaving
+  // it empty lets the AI choose.
+  const [countryCities, setCountryCities] = useState([]);
+  const [selectedCities, setSelectedCities] = useState([]);
+
   function setField(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+
+  useEffect(() => {
+    setSelectedCities([]);
+    if (destinationMode !== "country" || !form.country_code) {
+      setCountryCities([]);
+      return;
+    }
+    destinationsApi
+      .list({ country_code: form.country_code })
+      .then((data) => setCountryCities(data.destinations || []))
+      .catch(() => setCountryCities([]));
+  }, [destinationMode, form.country_code]);
+
+  function toggleCity(name) {
+    setSelectedCities((prev) => (prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]));
+  }
+
+  const tripDays = useMemo(() => {
+    if (!form.start_date || !form.end_date) return 0;
+    const ms = new Date(form.end_date) - new Date(form.start_date);
+    if (Number.isNaN(ms) || ms < 0) return 0;
+    return Math.round(ms / 86400000) + 1;
+  }, [form.start_date, form.end_date]);
+
+  // Mirrors the server's allocation: the traveler's OWN days, split across
+  // the picked cities in proportion to each city's typical stay — so the
+  // preview shows exactly what the generated plan will do.
+  const cityDaySplit = useMemo(() => {
+    if (!selectedCities.length || !tripDays) return [];
+    const picked = selectedCities.map((name) => countryCities.find((c) => c.name === name)).filter(Boolean);
+    if (!picked.length) return [];
+    const weights = picked.map((c) => Math.max(1, c.recommended_days || 1));
+    const totalWeight = weights.reduce((s, w) => s + w, 0);
+    const alloc = picked.map((c, i) => ({
+      city: c.name,
+      days: Math.max(1, Math.floor((tripDays * weights[i]) / totalWeight)),
+      weight: weights[i],
+    }));
+    let used = alloc.reduce((s, a) => s + a.days, 0);
+    const byWeight = [...alloc].sort((a, b) => b.weight - a.weight);
+    for (let i = 0; used < tripDays; i = (i + 1) % byWeight.length) {
+      byWeight[i].days += 1;
+      used += 1;
+    }
+    while (used > tripDays) {
+      const biggest = alloc.filter((a) => a.days > 1).sort((a, b) => b.days - a.days)[0];
+      if (!biggest) break;
+      biggest.days -= 1;
+      used -= 1;
+    }
+    // Same day ranges the server puts in the AI prompt.
+    let cursor = 1;
+    return alloc.map((a) => {
+      const startDay = cursor;
+      const endDay = Math.min(tripDays, cursor + a.days - 1);
+      cursor = endDay + 1;
+      return { ...a, startDay, endDay };
+    });
+  }, [selectedCities, countryCities, tripDays]);
 
   useEffect(() => {
     destinationsApi
@@ -126,12 +191,14 @@ export default function PlanTrip() {
     () => ({
       destination_id: destinationMode === "city" ? form.destination_id : "",
       country_code: destinationMode === "country" ? form.country_code : "",
+      // Which cities a country trip visits changes what it costs.
+      preferred_cities: destinationMode === "country" ? selectedCities : [],
       start_date: form.start_date,
       end_date: form.end_date,
       travelers: form.travelers,
       budget_tier: form.budget_tier,
     }),
-    [destinationMode, form.destination_id, form.country_code, form.start_date, form.end_date, form.travelers, form.budget_tier]
+    [destinationMode, form.destination_id, form.country_code, selectedCities, form.start_date, form.end_date, form.travelers, form.budget_tier]
   );
 
   const estimateRequest = useRef(0);
@@ -156,7 +223,7 @@ export default function PlanTrip() {
       tripsApi
         .estimate({
           ...(estimateInputs.country_code
-            ? { country_code: estimateInputs.country_code }
+            ? { country_code: estimateInputs.country_code, preferred_cities: estimateInputs.preferred_cities }
             : { destination_id: estimateInputs.destination_id }),
           start_date: estimateInputs.start_date,
           end_date: estimateInputs.end_date,
@@ -245,7 +312,7 @@ export default function PlanTrip() {
       food_preference: formData.get("food_preference"),
       interests: selectedInterests,
       ...(destinationMode === "country"
-        ? { country_code: form.country_code, destination: selectedCountry?.name }
+        ? { country_code: form.country_code, destination: selectedCountry?.name, preferred_cities: selectedCities }
         : {
             destination: selectedDestination?.name || formData.get("destination"),
             destination_id: form.destination_id || undefined,
@@ -274,7 +341,7 @@ export default function PlanTrip() {
   return (
     <AppShell title="Plan a new trip" subtitle="Fill in the basics — the AI does the rest.">
       <div className="grid lg:grid-cols-3 gap-8">
-        <form className="lg:col-span-2 bg-white border border-sand rounded-2xl p-6 md:p-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="lg:col-span-2 card shadow-lift p-6 md:p-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
             <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-3 py-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -351,7 +418,59 @@ export default function PlanTrip() {
                   <input name="destination" type="text" placeholder="e.g. Bangkok or Kuala Lumpur" className="input" required />
                 )}
 
-                {destinationMode === "country" && (
+                {destinationMode === "country" && countryCities.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-xs text-ink-900/50 mb-1.5">
+                      Cities to visit — pick the ones you want (the plan will cover every pick), or leave empty and
+                      the AI chooses:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {countryCities.map((c) => {
+                        const picked = selectedCities.includes(c.name);
+                        return (
+                          <button
+                            type="button"
+                            key={c._id}
+                            onClick={() => toggleCity(c.name)}
+                            title={c.recommended_days ? `Travelers typically spend ~${c.recommended_days} day${c.recommended_days > 1 ? "s" : ""} here` : undefined}
+                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                              picked
+                                ? "bg-teal text-white border-teal"
+                                : "border-sand text-ink-900/60 hover:border-teal/40"
+                            }`}
+                          >
+                            {c.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedCities.length > 0 && (
+                      <p className="text-xs text-teal-dark mt-1.5">
+                        {tripDays > 0 ? (
+                          <>
+                            Your {tripDays} day{tripDays > 1 ? "s" : ""}: ≈{" "}
+                            {cityDaySplit
+                              .map((a) => `${a.city} ${a.startDay === a.endDay ? `day ${a.startDay}` : `days ${a.startDay}-${a.endDay}`}`)
+                              .join(" · ")}{" "}
+                            — travel between cities happens inside those days (the AI may shift a boundary day to fit
+                            transport timing).
+                          </>
+                        ) : (
+                          <>
+                            The itinerary will visit all {selectedCities.length}: {selectedCities.join(", ")}. Pick
+                            your travel dates to see how your days get split.
+                          </>
+                        )}
+                      </p>
+                    )}
+                    {tripDays > 0 && selectedCities.length > tripDays && (
+                      <p className="text-xs text-sunset-dark mt-1">
+                        You picked more cities than days — add days or drop a city for a comfortable pace.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {destinationMode === "country" && countryCities.length === 0 && (
                   <p className="text-xs text-ink-900/40">
                     We'll pick which cities to visit and how to travel between them based on your trip length.
                   </p>
@@ -461,16 +580,12 @@ export default function PlanTrip() {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-900 font-semibold text-sm px-6 py-3 rounded-full transition-colors"
-          >
+          <button type="submit" disabled={submitting} className="btn-primary w-full sm:w-auto px-6 py-3">
             <Sparkles className="w-4 h-4" /> {submitting ? "Creating trip…" : "Create Trip"}
           </button>
         </form>
 
-        <aside className="bg-ink-900 rounded-2xl p-6 h-fit sticky top-24">
+        <aside className="bg-ink-900 bg-ink-glow rounded-2xl p-6 h-fit sticky top-24 shadow-lift">
           <Sparkles className="w-6 h-6 text-sunset mb-4" strokeWidth={1.5} />
           <h3 className="font-display text-lg text-paper mb-3">How the AI plans your trip</h3>
           <ol className="space-y-3 text-sm text-paper/60">

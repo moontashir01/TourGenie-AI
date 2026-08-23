@@ -24,6 +24,9 @@ import destinationRoutes from "./routes/destinationRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import routeRoutes from "./routes/routeRoutes.js";
 import referenceRoutes from "./routes/referenceRoutes.js";
+import weatherRoutes from "./routes/weatherRoutes.js";
+import packingRoutes from "./routes/packingRoutes.js";
+import nearbyRoutes from "./routes/nearbyRoutes.js";
 
 const app = express();
 
@@ -51,6 +54,9 @@ app.use("/api/flights", flightRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/routes", routeRoutes);
 app.use("/api/reference", referenceRoutes); // currencies + expense categories
+app.use("/api", weatherRoutes); // exposes /api/trips/:tripId/weather (FR-11)
+app.use("/api", packingRoutes); // exposes /api/trips/:tripId/packing-list (FR-15)
+app.use("/api/nearby", nearbyRoutes); // FR-13
 
 app.use(notFound);
 app.use(errorHandler);

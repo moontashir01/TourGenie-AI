@@ -28,6 +28,30 @@ export default {
         body: ["'Inter'", "sans-serif"],
         mono: ["'IBM Plex Mono'", "monospace"],
       },
+      boxShadow: {
+        soft: "0 1px 2px rgba(11, 31, 46, 0.04), 0 4px 16px rgba(11, 31, 46, 0.06)",
+        lift: "0 6px 16px rgba(11, 31, 46, 0.08), 0 16px 40px rgba(11, 31, 46, 0.10)",
+        glow: "0 0 0 1px rgba(239, 131, 84, 0.25), 0 8px 32px rgba(239, 131, 84, 0.18)",
+      },
+      keyframes: {
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "dot-bounce": {
+          "0%, 80%, 100%": { transform: "translateY(0)", opacity: "0.4" },
+          "40%": { transform: "translateY(-4px)", opacity: "1" },
+        },
+        drift: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+      },
+      animation: {
+        "fade-up": "fade-up 0.45s ease-out both",
+        "dot-bounce": "dot-bounce 1.2s infinite ease-in-out",
+        drift: "drift 6s ease-in-out infinite",
+      },
     },
   },
   plugins: [],

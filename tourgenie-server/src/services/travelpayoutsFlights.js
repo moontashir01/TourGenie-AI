@@ -61,18 +61,21 @@ function formatDurationMin(minutes) {
   return [h && `${h}h`, m && `${m}m`].filter(Boolean).join(" ") || null;
 }
 
-async function fetchPrices({ origin, destination, departureAt, currency, token, limit }) {
+async function fetchPrices({ origin, destination, departureAt, returnAt, currency, token, limit }) {
   const params = new URLSearchParams({
     origin,
     destination,
     currency: currency.toLowerCase(),
-    one_way: "true",
+    // With a return date the API prices the whole round trip in one figure,
+    // which is what the trip budget counts — once, not once per direction.
+    one_way: returnAt ? "false" : "true",
     direct: "false",
     sorting: "price",
     limit: String(limit),
     token,
   });
   if (departureAt) params.set("departure_at", departureAt);
+  if (returnAt) params.set("return_at", returnAt);
 
   const res = await fetch(`${BASE_URL}/aviasales/v3/prices_for_dates?${params}`);
 
@@ -150,6 +153,10 @@ function normalize(offer, { origin, destination, travelers, currency, airlines, 
     // True when the exact date had nothing cached and this fare is from a
     // nearby date in the same month.
     dateShifted: Boolean(dateShifted),
+    // Round-trip offers price both directions in one figure.
+    tripType: offer.return_at ? "round_trip" : "one_way",
+    returnAt: offer.return_at || null,
+    durationBack: formatDurationMin(offer.duration_back),
     source: "travelpayouts",
   };
 }
@@ -161,7 +168,7 @@ function normalize(offer, { origin, destination, travelers, currency, airlines, 
  * cached — those results come back flagged `dateShifted` so the caller can
  * label them instead of quietly showing the wrong day.
  */
-export async function searchFlights({ origin, destination, date, travelers = 1, currency = "BDT", limit = 20 }) {
+export async function searchFlights({ origin, destination, date, returnDate, travelers = 1, currency = "BDT", limit = 20 }) {
   const token = process.env.TRAVELPAYOUTS_API_KEY;
   if (!token) {
     throw new Error("TRAVELPAYOUTS_API_KEY is not set in .env — get a free token at https://www.travelpayouts.com");
@@ -169,7 +176,8 @@ export async function searchFlights({ origin, destination, date, travelers = 1, 
 
   const seats = Math.min(Math.max(Number(travelers) || 1, 1), 9);
   const day = date ? String(date).slice(0, 10) : null;
-  const key = cacheKey({ origin, destination, day, seats, currency });
+  const returnDay = returnDate ? String(returnDate).slice(0, 10) : null;
+  const key = cacheKey({ origin, destination, day, returnDay, seats, currency });
 
   const cached = searchCache.get(key);
   if (cached && Date.now() - cached.at < SEARCH_TTL_MS) return cached.flights;
@@ -178,15 +186,16 @@ export async function searchFlights({ origin, destination, date, travelers = 1, 
   const marker = process.env.TRAVELPAYOUTS_MARKER || "";
   const shared = { origin, destination, travelers: seats, currency, airlines, marker };
 
-  let { rows, quoted } = await fetchPrices({ origin, destination, departureAt: day, currency, token, limit });
+  let { rows, quoted } = await fetchPrices({ origin, destination, departureAt: day, returnAt: returnDay, currency, token, limit });
   let dateShifted = false;
 
   if (!rows.length && day) {
-    // Nothing cached for that exact day — widen to the month it sits in.
+    // Nothing cached for those exact dates — widen to the month(s) they sit in.
     ({ rows, quoted } = await fetchPrices({
       origin,
       destination,
       departureAt: day.slice(0, 7),
+      returnAt: returnDay ? returnDay.slice(0, 7) : null,
       currency,
       token,
       limit,

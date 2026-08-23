@@ -167,12 +167,14 @@ export default function AttractionPicker() {
               <button
                 key={a._id}
                 onClick={() => toggle(a._id)}
-                className={`text-left bg-white border rounded-2xl overflow-hidden transition-all flex flex-col ${
-                  isSelected ? "border-teal shadow-sm ring-1 ring-teal" : "border-sand hover:border-teal/40"
+                className={`group text-left bg-white border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col ${
+                  isSelected
+                    ? "border-teal shadow-lift ring-1 ring-teal -translate-y-0.5"
+                    : "border-sand shadow-soft hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5"
                 }`}
               >
-                <div className="h-24 bg-teal-light flex items-center justify-center relative">
-                  <Landmark className="w-7 h-7 text-teal-dark" strokeWidth={1.5} />
+                <div className="h-24 bg-gradient-to-br from-teal-light via-teal-light to-teal/25 flex items-center justify-center relative">
+                  <Landmark className="w-7 h-7 text-teal-dark transition-transform duration-300 group-hover:scale-110" strokeWidth={1.5} />
                   {isSelected && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-teal text-white flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4" />

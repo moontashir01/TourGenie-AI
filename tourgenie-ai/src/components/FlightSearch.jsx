@@ -64,6 +64,8 @@ export default function FlightSearch({ trip, onFlightSelected }) {
         origin: trip.origin,
         destination: trip.destination,
         date: trip.start_date?.slice(0, 10),
+        // Return on the trip's end date — the fare quoted covers both ways.
+        return_date: trip.end_date?.slice(0, 10),
         travelers: trip.travelers,
       });
       setFlights(result.flights || []);
@@ -121,7 +123,15 @@ export default function FlightSearch({ trip, onFlightSelected }) {
         <ArrowRight className="w-4 h-4 text-teal" />
         <span className="font-semibold text-ink-900">{trip.destination}</span>
         <span className="mx-1">·</span>
-        <span>{trip.start_date ? new Date(trip.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</span>
+        <span>
+          {trip.start_date ? new Date(trip.start_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+          {trip.end_date && (
+            <> – {new Date(trip.end_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</>
+          )}
+        </span>
+        {trip.end_date && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-light text-teal-dark">Round trip</span>
+        )}
         <span className="mx-1">·</span>
         <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {trip.travelers} traveler{trip.travelers > 1 ? "s" : ""}</span>
         {meta && (
@@ -300,6 +310,12 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
           </p>
           {perPerson && (
             <p className="text-xs text-ink-900/50">{formatMoney(perPerson)} / person</p>
+          )}
+          {flight.tripType === "round_trip" && (
+            <p className="text-[10px] text-teal-dark font-semibold">
+              both ways included
+              {flight.returnAt && <> · returns {fmtDate(new Date(flight.returnAt))}</>}
+            </p>
           )}
           <div className="flex items-center justify-end gap-2 mt-1.5 mb-2 flex-wrap">
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cabinColor}`}>

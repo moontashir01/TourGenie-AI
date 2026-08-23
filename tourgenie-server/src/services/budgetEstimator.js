@@ -35,7 +35,7 @@ export function nightsFromDays(days) {
   return Math.max(1, Number(days) - 1);
 }
 
-async function benchmarkFor(destination, tier) {
+export async function benchmarkFor(destination, tier) {
   if (!destination) return null;
   if (destination._id) {
     const row = await CostBenchmark.findOne({ destination_id: destination._id, tier }).lean();

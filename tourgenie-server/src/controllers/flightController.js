@@ -1,27 +1,28 @@
 import { searchFlights as searchIgnav, resolveIata } from "../services/ignavFlights.js";
 import { searchFlights as searchTravelpayouts } from "../services/travelpayoutsFlights.js";
 import Airport from "../models/Airport.js";
-import FlightOption from "../models/FlightOption.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // FR-05 — Flight search.
 //
-// Providers are tried in order and the first one that actually returns
-// fares wins; any provider without a key configured is skipped. Only the
-// last entry is fabricated, and it says so in the response so the UI never
-// presents invented schedules as bookable flights.
+// Fares come from live providers ONLY. The seeded FlightOption schedules are
+// deliberately never consulted — the fallback that used to fabricate demo
+// offers from the database has been removed, so an empty result means "no
+// fares found", never an invented schedule.
 const PROVIDERS = [
   {
     name: "travelpayouts",
     envKey: "TRAVELPAYOUTS_API_KEY",
     search: searchTravelpayouts,
     signupUrl: "https://www.travelpayouts.com",
+    supportsRoundTrip: true,
   },
   {
     name: "ignav",
     envKey: "IGNAV_API_KEY",
     search: searchIgnav,
     signupUrl: "https://ignav.com",
+    supportsRoundTrip: false,
   },
 ];
 
@@ -29,7 +30,7 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function resolveAirport(value) {
+export async function resolveAirport(value) {
   if (!value) return null;
   const normalized = value.trim();
   if (/^[A-Za-z]{3}$/.test(normalized)) {
@@ -46,50 +47,11 @@ async function resolveAirport(value) {
   return fallback ? { iata: fallback, city: normalized } : null;
 }
 
-function datedTime(date, time, nextDay = false) {
-  const value = new Date(`${date}T${time}:00`);
-  if (nextDay) value.setDate(value.getDate() + 1);
-  return value.toISOString();
-}
-
-// Last resort: the recurring schedules in the seed data. These are modelled
-// on real routes but the fares and departure times are not live, so they are
-// flagged `priceStatus: "indicative"` and the response is marked not-real.
-async function seededFlightOffers({ originCode, destinationCode, date, travelers }) {
-  const day = new Date(`${date}T12:00:00Z`).getUTCDay();
-  const schedules = await FlightOption.find({
-    from_iata: originCode,
-    to_iata: destinationCode,
-    is_active: true,
-    days_of_week: day,
-  }).sort({ total_fare_bdt: 1 }).lean();
-
-  return schedules.map((flight) => ({
-    id: `seed:${flight._id}:${date}`,
-    airline: flight.airline,
-    airlineCode: flight.airline_code,
-    flightNumber: flight.flight_number,
-    origin: flight.from_iata,
-    destination: flight.to_iata,
-    departure: datedTime(date, flight.depart_time),
-    arrival: datedTime(date, flight.arrive_time, flight.arrives_next_day),
-    duration: `${Math.floor(flight.duration_min / 60)}h ${flight.duration_min % 60}m`,
-    stops: flight.stops,
-    price: flight.total_fare_bdt * travelers,
-    pricePerSeat: flight.total_fare_bdt,
-    currency: "BDT",
-    priceStatus: "indicative",
-    cabin: flight.cabin.toUpperCase(),
-    aircraft: flight.aircraft || null,
-    requiresSelfTransfer: false,
-    bookingUrl: null,
-    source: "seeded",
-  }));
-}
-
-// GET /api/flights?origin=Dhaka&destination=Dubai&date=2026-09-15&travelers=2
+// GET /api/flights?origin=Dhaka&destination=Dubai&date=2026-09-15&return_date=2026-09-22&travelers=2
+// With return_date the fares quoted are ROUND TRIP — one figure covering both
+// directions, so the budget counts the airfare exactly once.
 export const getFlights = asyncHandler(async (req, res) => {
-  const { origin, destination, date, travelers } = req.query;
+  const { origin, destination, date, return_date, travelers } = req.query;
 
   if (!origin || !destination) {
     return res.status(400).json({ message: "origin and destination are required" });
@@ -117,14 +79,23 @@ export const getFlights = asyncHandler(async (req, res) => {
 
   const travelerCount = Math.min(Math.max(Number(travelers) || 1, 1), 9);
   const departureDate = date?.slice(0, 10) || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const returnDate = return_date?.slice(0, 10) || null;
+  if (returnDate && returnDate < departureDate) {
+    return res.status(400).json({ message: "return_date must be on or after the departure date" });
+  }
 
   let flights = [];
-  let source = "seeded";
+  let source = "none";
   const attempts = [];
+  const anyConfigured = PROVIDERS.some((p) => process.env[p.envKey]);
 
   for (const provider of PROVIDERS) {
     if (!process.env[provider.envKey]) {
       attempts.push({ provider: provider.name, status: "skipped", reason: `${provider.envKey} not set` });
+      continue;
+    }
+    if (returnDate && !provider.supportsRoundTrip) {
+      attempts.push({ provider: provider.name, status: "skipped", reason: "round-trip search not supported" });
       continue;
     }
     try {
@@ -132,6 +103,7 @@ export const getFlights = asyncHandler(async (req, res) => {
         origin: originCode,
         destination: destCode,
         date: departureDate,
+        returnDate,
         travelers: travelerCount,
       });
       if (results.length) {
@@ -147,17 +119,6 @@ export const getFlights = asyncHandler(async (req, res) => {
     }
   }
 
-  if (!flights.length) {
-    flights = await seededFlightOffers({
-      originCode,
-      destinationCode: destCode,
-      date: departureDate,
-      travelers: travelerCount,
-    });
-    source = "seeded";
-  }
-
-  const isReal = source !== "seeded";
   const dateShifted = flights.some((f) => f.dateShifted);
 
   res.json({
@@ -166,15 +127,16 @@ export const getFlights = asyncHandler(async (req, res) => {
       originCode,
       destCode,
       date: departureDate,
+      return_date: returnDate,
+      round_trip: Boolean(returnDate),
       count: flights.length,
       source,
-      // The UI must be able to tell a real fare from a demo one without
-      // knowing which providers exist.
-      is_real: isReal,
+      is_real: flights.length > 0,
       date_shifted: dateShifted,
       attempts,
-      // Shown when nothing real could be reached, so the fix is obvious.
-      setup_hint: isReal
+      // Shown only when no provider key exists at all; an empty result from a
+      // configured provider is a genuine "no fares found", not a setup problem.
+      setup_hint: anyConfigured
         ? null
         : `No live flight provider is configured. Add ${PROVIDERS[0].envKey} to the server .env — a free token takes a minute at ${PROVIDERS[0].signupUrl}.`,
     },

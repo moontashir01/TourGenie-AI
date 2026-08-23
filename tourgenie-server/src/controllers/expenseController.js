@@ -116,7 +116,10 @@ export async function getVirtualExpenses(trip) {
       _id: `virt_flight_${f.id}`,
       trip_id: trip._id,
       category: "Transport",
-      description: `${f.airline || "Flight"} ${f.flightNumber || ""}`.trim(),
+      // A round-trip fare covers both directions in this single line —
+      // isBookedFlightLeg() below drops the itinerary's own arrival and
+      // departure legs so the airfare is never charged twice.
+      description: `${f.airline || "Flight"} ${f.flightNumber || ""}${f.tripType === "round_trip" ? " (round trip)" : ""}`.trim(),
       amount: Math.round(fare.amount),
       date: trip.start_date,
       is_estimated: true,

@@ -1,11 +1,111 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone } from "lucide-react";
 import AppShell from "../components/AppShell";
 import DayMap from "../components/DayMap";
 import FlightSearch from "../components/FlightSearch";
-import { tripsApi, itineraryApi } from "../lib/api";
+import WeatherBadge, { WeatherDetail } from "../components/WeatherBadge";
+import { tripsApi, itineraryApi, weatherApi, nearbyApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+
+// FR-13 — "what's around me" for one itinerary day. Anchored on the day's
+// first catalogued attraction, falling back to the city center.
+const NEARBY_CATEGORIES = [
+  ["restaurant", "Food"],
+  ["cafe", "Cafés"],
+  ["atm", "ATMs"],
+  ["pharmacy", "Pharmacy"],
+  ["hospital", "Hospital"],
+  ["shopping", "Shops"],
+];
+
+function NearbySection({ dayItems, cityCoordinates, city }) {
+  const [category, setCategory] = useState(null);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const exact = dayItems.find((i) => i.attraction_id?.lat_lng?.lat != null)?.attraction_id?.lat_lng;
+  const anchor = exact || cityCoordinates?.[city] || null;
+
+  function pick(cat) {
+    if (cat === category) {
+      setCategory(null);
+      return;
+    }
+    setCategory(cat);
+    setLoading(true);
+    setError("");
+    const query = anchor
+      ? { lat: anchor.lat, lng: anchor.lng, category: cat, radius_km: 8, limit: 6 }
+      : { city, category: cat, limit: 6 };
+    nearbyApi
+      .list(query)
+      .then(({ services }) => setResults(services))
+      .catch((err) => {
+        setResults([]);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }
+
+  if (!anchor && !city) return null;
+
+  return (
+    <div className="mt-5 pt-4 border-t border-sand">
+      <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/40 mb-2 flex items-center gap-1.5">
+        <Compass className="w-3.5 h-3.5" /> Nearby{city ? ` in ${city}` : ""}
+      </p>
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {NEARBY_CATEGORIES.map(([cat, label]) => (
+          <button
+            key={cat}
+            onClick={() => pick(cat)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+              category === cat ? "bg-teal text-white border-teal" : "border-sand text-ink-900/60 hover:border-teal/40"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {loading && (
+        <p className="text-xs text-ink-900/40 flex items-center gap-1.5">
+          <Loader2 className="w-3 h-3 animate-spin" /> Searching nearby…
+        </p>
+      )}
+      {error && <p className="text-xs text-sunset-dark">{error}</p>}
+      {!loading && category && results.length === 0 && !error && (
+        <p className="text-xs text-ink-900/40">Nothing catalogued in this category around here yet.</p>
+      )}
+      {!loading && results.length > 0 && (
+        <ul className="grid sm:grid-cols-2 gap-2">
+          {results.map((s) => (
+            <li key={s._id} className="bg-paper border border-sand rounded-xl px-3 py-2.5 text-xs">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-ink-900 leading-snug">{s.name}</p>
+                {s.distance_m != null && (
+                  <span className="font-mono text-teal-dark shrink-0">
+                    {s.distance_m < 1000 ? `${s.distance_m}m` : `${(s.distance_m / 1000).toFixed(1)}km`}
+                  </span>
+                )}
+              </div>
+              <p className="text-ink-900/50 mt-0.5">
+                {[s.subcategory, s.area].filter(Boolean).join(" · ") || s.category}
+                {s.is_24h && <span className="text-teal-dark font-semibold"> · 24h</span>}
+              </p>
+              {s.phone && (
+                <p className="text-ink-900/50 mt-0.5 inline-flex items-center gap-1">
+                  <Phone className="w-3 h-3" /> {s.phone}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 
 function isInternationalTrip(trip) {
@@ -19,12 +119,20 @@ export default function Itinerary() {
   const [trip, setTrip] = useState(null);
   const [items, setItems] = useState([]);
   const [cityCoordinates, setCityCoordinates] = useState({});
+  const [weatherByDay, setWeatherByDay] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [openDay, setOpenDay] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  function loadWeather(tripId) {
+    weatherApi
+      .trip(tripId)
+      .then(({ days }) => setWeatherByDay(Object.fromEntries(days.map((d) => [d.day, d]))))
+      .catch(() => setWeatherByDay({}));
+  }
 
   useEffect(() => {
     if (!currentTripId) {
@@ -39,6 +147,7 @@ export default function Itinerary() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+    loadWeather(currentTripId);
   }, [currentTripId]);
 
   async function handleGenerateAI() {
@@ -49,6 +158,7 @@ export default function Itinerary() {
       setItems(generated);
       setCityCoordinates(city_coordinates || {});
       setOpenDay(generated[0]?.day || 1);
+      loadWeather(currentTripId); // the cities per day may have changed
     } catch (err) {
       setError(err.message);
     } finally {
@@ -105,28 +215,46 @@ export default function Itinerary() {
   }
 
   const days = [...new Set(items.map((i) => i.day))].sort((a, b) => a - b);
-  const itineraryCost = items.reduce((s, i) => s + (i.est_cost || 0), 0);
+  const lastDay = days[days.length - 1] || 0;
+
+  // Same rule the Budget API applies (isBookedFlightLeg): once a round-trip
+  // fare is selected, the AI's own arrival (day 1) and departure (last day)
+  // travel rows must not be charged again — the fare already covers both ways.
+  const AIR_LEG = /\b(flight|flights|fly|flying|airport|airline|airways|plane)\b/i;
+  const isBookedFlightLeg = (item) =>
+    Boolean(trip?.selected_flight) &&
+    item.category === "travel" &&
+    (item.day === 1 || item.day === lastDay) &&
+    ((item.from_city && item.from_city === trip.origin) ||
+      (item.to_city && item.to_city === trip.origin) ||
+      AIR_LEG.test(`${item.activity || ""} ${item.location || ""}`));
+
+  const itineraryCost = items.reduce((s, i) => (isBookedFlightLeg(i) ? s : s + (i.est_cost || 0)), 0);
   const flightCost = trip?.selected_flight?.price || 0;
   let hotelCost = 0;
   if (trip?.multi_city && trip.hotel_selections?.length) {
     // Each day's last activity (items are ordered by day, time, so later
-    // entries win) marks the city slept in that night.
+    // entries win) marks the city slept in that night. The final day is the
+    // day the traveler leaves, so it isn't a night anywhere.
     const cityByDay = {};
     for (const i of items) {
       if (i.city) cityByDay[i.day] = i.city;
     }
+    const sleepDays = Object.keys(cityByDay).map(Number).sort((a, b) => a - b).slice(0, -1);
     const nightsByCity = {};
-    for (const city of Object.values(cityByDay)) {
+    for (const day of sleepDays) {
+      const city = cityByDay[day];
       nightsByCity[city] = (nightsByCity[city] || 0) + 1;
     }
     hotelCost = trip.hotel_selections.reduce((s, sel) => {
       const hotel = sel.hotel_id;
       if (!hotel?.price_per_night) return s;
-      const nights = nightsByCity[sel.city] || 1;
+      const nights = nightsByCity[sel.city] || 0;
       return s + hotel.price_per_night * nights;
     }, 0);
   } else if (trip?.hotel_id) {
-    hotelCost = (trip.hotel_id.price_per_night || 0) * (trip.duration_days || 1);
+    // Nights, not days — a 4-day trip is 3 hotel nights.
+    hotelCost = (trip.hotel_id.price_per_night || 0) * Math.max(1, (trip.duration_days || 1) - 1);
   }
   const totalCost = itineraryCost + flightCost + hotelCost;
 
@@ -174,10 +302,7 @@ export default function Itinerary() {
                     )}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-3">
-                    <button
-                      onClick={handleGenerateAI}
-                      className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
-                    >
+                    <button onClick={handleGenerateAI} className="btn-primary">
                       <Sparkles className="w-4 h-4" /> Generate Itinerary with AI
                     </button>
                     <button
@@ -198,10 +323,21 @@ export default function Itinerary() {
             const dayCities = trip?.multi_city
               ? [...new Set(dayItems.map((i) => i.city).filter(Boolean))]
               : [];
+            const dayCost = dayItems.reduce((s, i) => (isBookedFlightLeg(i) ? s : s + (i.est_cost || 0)), 0);
             return (
-              <div key={day} className="bg-white border border-sand rounded-2xl overflow-hidden">
-                <button onClick={() => setOpenDay(open ? null : day)} className="w-full flex items-center justify-between px-6 py-4">
-                  <div className="flex items-center gap-2.5">
+              <div key={day} className={`card overflow-hidden transition-shadow ${open ? "shadow-lift" : ""}`}>
+                <button
+                  onClick={() => setOpenDay(open ? null : day)}
+                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-paper/60 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-display text-sm shrink-0 transition-colors ${
+                        open ? "bg-teal text-white" : "bg-teal-light text-teal-dark"
+                      }`}
+                    >
+                      {day}
+                    </span>
                     <p className="font-display text-lg text-ink-900">Day {day}</p>
                     {dayCities.length > 0 && (
                       <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-light/40 text-teal-dark">
@@ -209,28 +345,57 @@ export default function Itinerary() {
                       </span>
                     )}
                   </div>
-                  <ChevronDown className={`w-4 h-4 text-ink-900/40 transition-transform ${open ? "rotate-180" : ""}`} />
+                  <div className="flex items-center gap-3">
+                    <WeatherBadge forecast={weatherByDay[day]?.forecast} />
+                    {dayCost > 0 && (
+                      <span className="hidden sm:inline text-xs font-mono text-ink-900/50">৳{dayCost.toLocaleString()}</span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-ink-900/40 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+                  </div>
                 </button>
                 {open && (
                   <div className="px-6 pb-6">
+                    <WeatherDetail forecast={weatherByDay[day]?.forecast} />
+                    {(weatherByDay[day]?.forecast?.alerts || []).map((a, i) => (
+                      <div key={i} className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-xs rounded-xl px-4 py-2.5 mb-4">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>
+                          <strong>{a.headline}.</strong> {a.description}
+                        </span>
+                      </div>
+                    ))}
                     <DayMap items={dayItems} cityCoordinates={cityCoordinates} />
                     <ul className="space-y-4">
                       {dayItems.map((item) => (
                         <li key={item._id} className="flex gap-4">
                           <div className="w-16 shrink-0 text-xs font-mono text-teal-dark pt-0.5">{item.time}</div>
-                          <div className="flex-1 border-l-2 border-teal-light pl-4 pb-1">
+                          <div className="flex-1 border-l-2 border-teal-light pl-4 pb-1 relative">
+                            <span
+                              className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full ring-2 ring-white"
+                              style={{
+                                background:
+                                  { travel: "#1C8C82", meal: "#D9A441", sightseeing: "#146560", rest: "#8A7B6B", shopping: "#D96B3B", checkin: "#123244", checkout: "#123244" }[item.category] || "#EF8354",
+                              }}
+                              aria-hidden
+                            />
                             <p className="text-sm font-semibold text-ink-900">{item.activity}</p>
                             {item.location && (
                               <p className="text-xs text-ink-900/50 flex items-center gap-1 mt-0.5">
                                 <MapPin className="w-3 h-3" /> {item.location}
                               </p>
                             )}
-                            {item.available_transport_options?.length > 0 && (
+                            {!isBookedFlightLeg(item) && item.available_transport_options?.length > 0 && (
                               <div className="mt-3 bg-sand/30 rounded-xl p-3 border border-sand">
                                 <p className="text-xs font-semibold text-ink-900/70 mb-2 uppercase tracking-wide">Select Transport</p>
                                 <div className="space-y-2">
                                   {item.available_transport_options.map((opt, idx) => {
-                                    const isSelected = item.selected_transport_option?.total_fare_bdt === opt.total_fare_bdt && item.selected_transport_option?.fare === opt.fare && (item.selected_transport_option?.flight_number === opt.flight_number || item.selected_transport_option?.code === opt.code);
+                                    const sel = item.selected_transport_option;
+                                    // Live API offers carry a unique id; seeded ground options match on code/fields.
+                                    const isSelected = sel != null && (
+                                      (opt.id && sel.id === opt.id) ||
+                                      (opt.code && sel.code === opt.code) ||
+                                      (!opt.id && !opt.code && sel.flight_number === opt.flight_number && sel.fare === opt.fare)
+                                    );
                                     return (
                                       <button
                                         key={idx}
@@ -261,11 +426,22 @@ export default function Itinerary() {
                             )}
                           </div>
                           <div className="text-xs font-mono text-ink-900/60 pt-0.5 shrink-0">
-                            {item.est_cost > 0 ? `৳${item.est_cost.toLocaleString()}` : "Free"}
+                            {isBookedFlightLeg(item) ? (
+                              <span className="text-teal-dark font-sans font-medium">In flight fare</span>
+                            ) : item.est_cost > 0 ? (
+                              `৳${item.est_cost.toLocaleString()}`
+                            ) : (
+                              "Free"
+                            )}
                           </div>
                         </li>
                       ))}
                     </ul>
+                    <NearbySection
+                      dayItems={dayItems}
+                      cityCoordinates={cityCoordinates}
+                      city={weatherByDay[day]?.city || dayCities[0] || (trip?.multi_city ? trip?.entry_city : trip?.destination)}
+                    />
                   </div>
                 )}
               </div>
@@ -335,14 +511,19 @@ export default function Itinerary() {
         </div>
 
         <aside className="space-y-5">
-          <div className="bg-ink-900 rounded-2xl p-6">
+          <div className="bg-ink-900 bg-ink-glow rounded-2xl p-6 shadow-lift">
             <p className="text-xs font-semibold tracking-wide uppercase text-sunset mb-4">Trip snapshot</p>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between"><dt className="text-paper/50">Route</dt><dd className="text-paper">{trip?.origin} → {trip?.destination}</dd></div>
               <div className="flex justify-between"><dt className="text-paper/50">Travelers</dt><dd className="text-paper">{trip?.travelers}</dd></div>
               <div className="flex justify-between"><dt className="text-paper/50">Activities</dt><dd className="text-paper">৳{itineraryCost.toLocaleString()}</dd></div>
               {flightCost > 0 && (
-                <div className="flex justify-between"><dt className="text-paper/50">Flight</dt><dd className="text-paper">৳{flightCost.toLocaleString()}</dd></div>
+                <div className="flex justify-between">
+                  <dt className="text-paper/50">
+                    Flight{trip?.selected_flight?.tripType === "round_trip" ? " (both ways)" : ""}
+                  </dt>
+                  <dd className="text-paper">৳{flightCost.toLocaleString()}</dd>
+                </div>
               )}
               {hotelCost > 0 && (
                 <div className="flex justify-between"><dt className="text-paper/50">Hotel</dt><dd className="text-paper">৳{hotelCost.toLocaleString()}</dd></div>
@@ -354,7 +535,7 @@ export default function Itinerary() {
             </dl>
           </div>
 
-          <div className="bg-white border border-sand rounded-2xl p-6">
+          <div className="card p-6">
             <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5" /> Budget snapshot
             </p>
@@ -375,27 +556,18 @@ export default function Itinerary() {
             </div>
           </div>
 
-          <Link
-            to="/attractions"
-            className="w-full inline-flex items-center justify-center gap-2 bg-white border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-3 rounded-full transition-colors"
-          >
+          <Link to="/attractions" className="btn-secondary w-full py-3">
             <Landmark className="w-4 h-4" />
             {trip?.must_visit_attraction_ids?.length > 0
               ? `${trip.must_visit_attraction_ids.length} Must-See${trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} Picked`
               : "Pick Must-See Attractions"}
           </Link>
 
-          <Link
-            to="/hotels"
-            className="w-full inline-flex items-center justify-center gap-2 bg-white border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-3 rounded-full transition-colors"
-          >
+          <Link to="/hotels" className="btn-secondary w-full py-3">
             <Building2 className="w-4 h-4" /> Browse Hotels
           </Link>
 
-          <Link
-            to="/chat"
-            className="w-full inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-3 rounded-full transition-colors"
-          >
+          <Link to="/chat" className="btn-primary w-full py-3">
             <MessageCircleMore className="w-4 h-4" /> Ask AI to Adjust
           </Link>
         </aside>

@@ -107,8 +107,16 @@ export const transportApi = {
 };
 
 export const flightApi = {
-  search: ({ origin, destination, date, travelers }) => {
-    const qs = new URLSearchParams({ origin, destination, ...(date && { date }), ...(travelers && { travelers }) }).toString();
+  // With return_date the server quotes ROUND-TRIP fares — one price covering
+  // both directions, counted once in the budget.
+  search: ({ origin, destination, date, return_date, travelers }) => {
+    const qs = new URLSearchParams({
+      origin,
+      destination,
+      ...(date && { date }),
+      ...(return_date && { return_date }),
+      ...(travelers && { travelers }),
+    }).toString();
     return request(`/flights?${qs}`);
   },
 };
@@ -118,6 +126,34 @@ export const routeApi = {
     const qs = new URLSearchParams({ from, to, ...(mode && { mode }) }).toString();
     return request(`/routes?${qs}`, { auth: false });
   },
+};
+
+// FR-11 — per-day forecast aligned to the trip's itinerary.
+export const weatherApi = {
+  trip: (tripId) => request(`/trips/${tripId}/weather`),
+};
+
+// FR-15 — smart packing list, persisted per trip.
+export const packingApi = {
+  get: (tripId) => request(`/trips/${tripId}/packing-list`),
+  generate: (tripId) => request(`/trips/${tripId}/packing-list/generate`, { method: "POST" }),
+  toggle: (tripId, category, name, checked) =>
+    request(`/trips/${tripId}/packing-list/items`, { method: "PATCH", body: { category, name, checked } }),
+};
+
+// FR-13 — nearby services from the 2dsphere index.
+export const nearbyApi = {
+  list: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/nearby?${qs}`, { auth: false });
+  },
+};
+
+// FR-14 — travel documents.
+export const documentApi = {
+  list: () => request("/documents"),
+  add: (payload) => request("/documents", { method: "POST", body: payload }),
+  remove: (id) => request(`/documents/${id}`, { method: "DELETE" }),
 };
 
 export const chatApi = {
