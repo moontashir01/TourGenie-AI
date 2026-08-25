@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Waves, Mountain, Trees, Clock, Users2 } from "lucide-react";
+import { Plus, Waves, Mountain, Trees, Clock, Users2, X } from "lucide-react";
 import AppShell from "../components/AppShell";
 import Skeleton, { CardSkeleton } from "../components/Skeleton";
 import { tripsApi } from "../lib/api";
@@ -31,6 +31,8 @@ export default function Dashboard() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [confirmId, setConfirmId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const { setCurrentTripId } = useCurrentTrip();
   const navigate = useNavigate();
 
@@ -45,6 +47,19 @@ export default function Dashboard() {
   function openTrip(id) {
     setCurrentTripId(id);
     navigate("/itinerary");
+  }
+
+  async function handleDelete(trip) {
+    setDeletingId(trip._id);
+    try {
+      await tripsApi.remove(trip._id);
+      setTrips((prev) => prev.filter((t) => t._id !== trip._id));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
+      setConfirmId(null);
+    }
   }
 
   const next = trips.find((t) => t.status === "planned") || trips[0];
@@ -130,11 +145,52 @@ export default function Dashboard() {
           {trips.map((t, i) => {
             const Icon = coverIcons[i % coverIcons.length];
             return (
-              <button
+              <div
                 key={t._id}
-                onClick={() => openTrip(t._id)}
-                className="group text-left card card-hover overflow-hidden flex flex-col"
+                role="button"
+                tabIndex={0}
+                onClick={() => (confirmId === t._id ? setConfirmId(null) : openTrip(t._id))}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return;
+                  if (confirmId === t._id) setConfirmId(null);
+                  else openTrip(t._id);
+                }}
+                className="group relative text-left card card-hover overflow-hidden flex flex-col cursor-pointer"
               >
+                <div className="absolute top-3 right-3 z-20" onClick={(e) => e.stopPropagation()}>
+                  {confirmId === t._id ? (
+                    <div className="w-40 origin-top-right animate-pop-in bg-white border border-sand rounded-xl shadow-lift p-3">
+                      <p className="text-xs text-ink-900/70 mb-2.5 leading-snug">Delete this trip?</p>
+                      <div className="flex gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setConfirmId(null)}
+                          className="flex-1 text-xs font-semibold px-2 py-1.5 rounded-full border border-sand text-ink-900/70 hover:bg-sand/40 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(t)}
+                          disabled={deletingId === t._id}
+                          className="flex-1 text-xs font-semibold px-2 py-1.5 rounded-full bg-sunset hover:bg-sunset-dark text-ink-900 transition-colors disabled:opacity-60"
+                        >
+                          {deletingId === t._id ? "…" : "Delete"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(t._id)}
+                      title="Delete trip"
+                      aria-label={`Delete trip to ${t.destination}`}
+                      className="p-1.5 rounded-full bg-ink-900/60 text-paper opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-sunset transition-opacity"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
                 <div className={`h-28 bg-gradient-to-br ${coverArt[i % coverArt.length]} flex items-center justify-center relative overflow-hidden`}>
                   <svg className="absolute inset-x-0 bottom-2 w-full h-5 opacity-30" viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true">
                     <path d="M0 14 Q 75 4, 150 12 T 300 8" fill="none" stroke="#0B1F2E" strokeWidth="1.5" strokeDasharray="1 7" strokeLinecap="round" />
@@ -161,7 +217,7 @@ export default function Dashboard() {
                     Open trip <span aria-hidden>→</span>
                   </span>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

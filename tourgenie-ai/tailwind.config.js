@@ -46,11 +46,16 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-8px)" },
         },
+        "pop-in": {
+          "0%": { opacity: "0", transform: "scale(0.85) translateY(-4px)" },
+          "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.45s ease-out both",
         "dot-bounce": "dot-bounce 1.2s infinite ease-in-out",
         drift: "drift 6s ease-in-out infinite",
+        "pop-in": "pop-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },
