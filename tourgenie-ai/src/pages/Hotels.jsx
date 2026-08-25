@@ -25,6 +25,24 @@ export default function Hotels() {
   const [selectingId, setSelectingId] = useState(null);
   const [selectedHotelId, setSelectedHotelId] = useState(null);
 
+  // The stay the prices are for. Without these the API can only quote a rate
+  // for no particular night, which is not a price anyone can act on — and a
+  // stay total with no nights attached is what used to get stored as if it
+  // were a nightly rate.
+  //
+  // On a multi-city trip these are the whole trip's dates rather than the
+  // nights spent in this one city: the per-night rate that comes back is
+  // still the right figure to show and to budget with, only the stay total
+  // would describe a longer stay than this city gets.
+  function stayParams(forTrip) {
+    if (!forTrip?.start_date || !forTrip?.end_date) return {};
+    return {
+      check_in: String(forTrip.start_date).slice(0, 10),
+      check_out: String(forTrip.end_date).slice(0, 10),
+      guests: forTrip.travelers || 2,
+    };
+  }
+
   useEffect(() => {
     if (!currentTripId) {
       setLoading(false);
@@ -60,15 +78,17 @@ export default function Hotels() {
           const initialCity = cityList.includes(trip.entry_city) ? trip.entry_city : cityList[0];
           setActiveCity(initialCity);
           return initialCity
-            ? hotelApi.list({ city: initialCity, ...(sort ? { sort } : {}) })
+            ? hotelApi.list({ city: initialCity, ...stayParams(trip), ...(sort ? { sort } : {}) })
             : null;
         }
 
         setSelectedHotelId(trip.hotel_id?._id || trip.hotel_id || null);
         return hotelApi.list({
-          ...(trip.destination_id?._id
-            ? { destination_id: trip.destination_id._id }
-            : { city: trip.destination }),
+          // The city name goes along with the id: the id filters the seeded
+          // catalogue, the name is what a live lookup can actually search on.
+          ...(trip.destination_id?._id ? { destination_id: trip.destination_id._id } : {}),
+          city: trip.destination_id?.name || trip.destination,
+          ...stayParams(trip),
           ...(sort ? { sort } : {}),
         });
       })
@@ -80,7 +100,7 @@ export default function Hotels() {
   function fetchHotelsFor(city, sortValue) {
     setLoading(true);
     hotelApi
-      .list({ city, ...(sortValue ? { sort: sortValue } : {}) })
+      .list({ city, ...stayParams(trip), ...(sortValue ? { sort: sortValue } : {}) })
       .then(({ hotels }) => setHotels(hotels))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -95,9 +115,9 @@ export default function Hotels() {
     setLoading(true);
     hotelApi
       .list({
-        ...(trip.destination_id?._id
-          ? { destination_id: trip.destination_id._id }
-          : { city: trip.destination }),
+        ...(trip.destination_id?._id ? { destination_id: trip.destination_id._id } : {}),
+        city: trip.destination_id?.name || trip.destination,
+        ...stayParams(trip),
         ...(value ? { sort: value } : {}),
       })
       .then(({ hotels }) => setHotels(hotels))
