@@ -23,6 +23,7 @@ import flightRoutes from "./routes/flightRoutes.js";
 import destinationRoutes from "./routes/destinationRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import routeRoutes from "./routes/routeRoutes.js";
+import tripRouteRoutes from "./routes/tripRouteRoutes.js";
 import referenceRoutes from "./routes/referenceRoutes.js";
 import weatherRoutes from "./routes/weatherRoutes.js";
 import packingRoutes from "./routes/packingRoutes.js";
@@ -53,6 +54,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/flights", flightRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/routes", routeRoutes);
+app.use("/api", tripRouteRoutes); // exposes /api/trips/:tripId/route (FR-06)
 app.use("/api/reference", referenceRoutes); // currencies + expense categories
 app.use("/api", weatherRoutes); // exposes /api/trips/:tripId/weather (FR-11)
 app.use("/api", packingRoutes); // exposes /api/trips/:tripId/packing-list (FR-15)

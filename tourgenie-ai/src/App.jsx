@@ -6,6 +6,9 @@ import Dashboard from "./pages/Dashboard";
 import PlanTrip from "./pages/PlanTrip";
 import Itinerary from "./pages/Itinerary";
 import AttractionPicker from "./pages/AttractionPicker";
+import Destinations from "./pages/Destinations";
+import RouteMap from "./pages/RouteMap";
+import Booking from "./pages/Booking";
 import Hotels from "./pages/Hotels";
 import Budget from "./pages/Budget";
 import Chat from "./pages/Chat";
@@ -26,6 +29,9 @@ export default function App() {
         <Route path="/plan" element={<ProtectedRoute><PlanTrip /></ProtectedRoute>} />
         <Route path="/itinerary" element={<ProtectedRoute><Itinerary /></ProtectedRoute>} />
         <Route path="/attractions" element={<ProtectedRoute><AttractionPicker /></ProtectedRoute>} />
+        <Route path="/destinations" element={<ProtectedRoute><Destinations /></ProtectedRoute>} />
+        <Route path="/map" element={<ProtectedRoute><RouteMap /></ProtectedRoute>} />
+        <Route path="/booking" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
         <Route path="/hotels" element={<ProtectedRoute><Hotels /></ProtectedRoute>} />
         <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />

@@ -184,6 +184,9 @@ export async function persistItinerary(trip, items) {
       est_cost: i.est_cost || 0,
       category: i.category || "activity",
       attraction_id: i.attraction_id || null,
+      // Carried through so the rainy-day rewriter works on generated
+      // itineraries too, not only seeded ones.
+      weather_dependent: Boolean(i.weather_dependent),
       available_transport_options: i.available_transport_options || [],
     }))
   );

@@ -6,6 +6,7 @@ import DayMap from "../components/DayMap";
 import FlightSearch from "../components/FlightSearch";
 import WeatherBadge, { WeatherDetail } from "../components/WeatherBadge";
 import GenerationProgress from "../components/GenerationProgress";
+import RainyDayPlan from "../components/RainyDayPlan";
 import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, itineraryApi, weatherApi, nearbyApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
@@ -455,6 +456,12 @@ export default function Itinerary() {
 
           {!generating && items.length > 0 && !showForm && (
             <div className="flex flex-wrap items-center gap-4">
+              <RainyDayPlan
+                tripId={currentTripId}
+                onApplied={() =>
+                  itineraryApi.get(currentTripId).then((res) => setItems(res.items))
+                }
+              />
               <button
                 onClick={() => setShowForm(true)}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal"

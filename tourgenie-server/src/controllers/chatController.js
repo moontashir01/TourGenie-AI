@@ -12,6 +12,7 @@ import ChatIntent from "../models/ChatIntent.js";
 import Trip from "../models/Trip.js";
 import ItineraryItem from "../models/ItineraryItem.js";
 import { adjustItineraryWithAI } from "../services/aiPlanner.js";
+import { planWeatherSwaps } from "../services/weatherRewriter.js";
 import { getVirtualExpenses } from "./expenseController.js";
 import { loadAttractionContext, augmentTravelItems, persistItinerary } from "./itineraryController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -22,7 +23,6 @@ const MUTATING_ACTIONS = new Set([
   "add_day",
   "remove_day",
   "filter_food",
-  "swap_weather_dependent",
   "reorder_day",
   "add_activity",
 ]);
@@ -104,6 +104,22 @@ async function applyItineraryEdit(trip, instruction) {
   };
 }
 
+function buildWeatherReply(result) {
+  const lines = [result.summary];
+
+  for (const swap of result.swaps.slice(0, 6)) {
+    lines.push(`• Day ${swap.day}, ${swap.time} — "${swap.from.activity}" → ${swap.to.activity} (${swap.to.detail})`);
+  }
+  if (result.swaps.length > 6) {
+    lines.push(`• …and ${result.swaps.length - 6} more`);
+  }
+  for (const miss of result.unmatched.slice(0, 3)) {
+    lines.push(`• Day ${miss.day}, ${miss.time} — "${miss.activity}": ${miss.reason}`);
+  }
+
+  return lines.join("\n");
+}
+
 async function findOrCreateSession({ userId, tripId, sessionId }) {
   if (sessionId) {
     const existing = await ChatSession.findOne({ _id: sessionId, user_id: userId });
@@ -159,6 +175,22 @@ export const sendMessage = asyncHandler(async (req, res) => {
 
   if (intent.requires_trip && !trip) {
     replyText = "I need an active trip to work with first — open one from your dashboard, then tell me what you'd like to change.";
+  } else if (intent.action.type === "swap_weather_dependent" && trip) {
+    // FR-05 × FR-11 × FR-12, answered from stored data: the forecast picks
+    // the days, weather_dependent picks the activities, is_indoor picks the
+    // replacements. dry_run false means the traveler asked to apply it.
+    const result = await planWeatherSwaps(trip, { apply: intent.action.params?.dry_run === false });
+    replyText = buildWeatherReply(result);
+    if (result.applied) {
+      vars.total_cost = await totalCostFor(trip);
+      appliedChanges = {
+        action: "swap_weather_dependent",
+        items_added: 0,
+        items_removed: 0,
+        items_updated: result.swaps.length,
+        cost_delta: Math.round(result.cost_delta || 0),
+      };
+    }
   } else if (MUTATING_ACTIONS.has(intent.action.type) && trip) {
     try {
       const result = await applyItineraryEdit(trip, message);

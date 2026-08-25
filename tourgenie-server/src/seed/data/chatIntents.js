@@ -51,6 +51,19 @@ export const chatIntents = [
     action: { type: "swap_weather_dependent", params: { prefer_indoor: true, dry_run: true } },
   },
 
+  {
+    // Higher priority than weather_contingency: "swap the rainy days now"
+    // also matches that intent's broader rain pattern, and the traveler
+    // asking to apply it should not get the preview a second time.
+    code: "swap_weather_apply", label: "Apply the rainy-day plan", priority: 91,
+    patterns: ["swap (the )?(rainy|wet|rain) days?( now)?", "apply (the )?(rainy|rain|wet)[- ]?(day )?plan", "swap them( now)?", "(yes|ok|go ahead),? ?swap"],
+    keywords: ["swap the rainy days", "apply the rain plan", "swap them now"],
+    requires_trip: true,
+    response_template:
+      "Swapping the weather-dependent activities on your rainy days for indoor alternatives, keeping the same times.",
+    followup_suggestions: ["Show me the updated itinerary", "What did you change?", "Show the forecast"],
+    action: { type: "swap_weather_dependent", params: { prefer_indoor: true, dry_run: false } },
+  },
   // ── Non-chip intents ──
   {
     code: "increase_budget", label: "Upgrade the trip", priority: 80,

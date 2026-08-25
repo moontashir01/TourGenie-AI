@@ -66,6 +66,16 @@ export const destinationsApi = {
     return request(`/destinations${qs ? `?${qs}` : ""}`, { auth: false });
   },
   get: (idOrSlug) => request(`/destinations/${idOrSlug}`, { auth: false }),
+  // Best time to visit — 12 monthly climate normals plus a summary.
+  climate: (idOrSlug) => request(`/destinations/${idOrSlug}/climate`, { auth: false }),
+  // Side-by-side comparison of up to four destinations, in one request.
+  compare: (slugs, origin) => {
+    const qs = new URLSearchParams({
+      slugs: Array.isArray(slugs) ? slugs.join(",") : slugs,
+      ...(origin && { origin }),
+    }).toString();
+    return request(`/destinations/compare?${qs}`, { auth: false });
+  },
 };
 
 export const itineraryApi = {
@@ -129,11 +139,21 @@ export const routeApi = {
     const qs = new URLSearchParams({ from, to, ...(mode && { mode }) }).toString();
     return request(`/routes?${qs}`, { auth: false });
   },
+  // FR-06 — every seeded variant for a pair (fastest / scenic / cheapest).
+  options: (from, to) => {
+    const qs = new URLSearchParams({ from, to }).toString();
+    return request(`/routes/options?${qs}`, { auth: false });
+  },
+  // FR-06 — the whole journey for a trip, leg by leg, variants included.
+  trip: (tripId) => request(`/trips/${tripId}/route`),
 };
 
 // FR-11 — per-day forecast aligned to the trip's itinerary.
 export const weatherApi = {
   trip: (tripId) => request(`/trips/${tripId}/weather`),
+  // Preview by default; apply:true writes the swaps to the itinerary.
+  swap: (tripId, apply = false) =>
+    request(`/trips/${tripId}/weather-swap${apply ? "?apply=true" : ""}`, { method: "POST" }),
 };
 
 // FR-15 — smart packing list, persisted per trip.
@@ -167,6 +187,31 @@ export const chatApi = {
       method: "POST",
       body: { message, trip_id: tripId || undefined, session_id: sessionId || undefined },
     }),
+};
+
+// FR-08 — mock ticket booking. Demonstration records: no carrier API and
+// no payment gateway is involved at any point.
+export const bookingApi = {
+  create: (payload) => request("/bookings", { method: "POST", body: payload }),
+  forTrip: (tripId) => request(`/bookings/trips/${tripId}`),
+  cancel: (tripId, bookingId) =>
+    request(`/bookings/trips/${tripId}/${bookingId}/cancel`, { method: "PATCH" }),
+  // Which seats are already sold on a given departure.
+  availability: (transportId, date) =>
+    request(`/transport/${transportId}/availability${date ? `?date=${date}` : ""}`, { auth: false }),
+};
+
+// FR-18 — reading the list is what runs the rule sweep server-side.
+export const notificationApi = {
+  list: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/notifications${qs ? `?${qs}` : ""}`);
+  },
+  unreadCount: () => request("/notifications/unread-count"),
+  refresh: () => request("/notifications/refresh", { method: "POST" }),
+  markRead: (id) => request(`/notifications/${id}/read`, { method: "PATCH" }),
+  markAllRead: () => request("/notifications/read-all", { method: "PATCH" }),
+  remove: (id) => request(`/notifications/${id}`, { method: "DELETE" }),
 };
 
 export const communityApi = {

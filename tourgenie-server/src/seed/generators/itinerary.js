@@ -119,6 +119,9 @@ export function buildItineraryItems(template, trip, attractionBySlug = new Map()
         time: item.time,
         activity: item.activity,
         location: item.location || "",
+        // Single-destination trips take the trip's own city; the field is
+        // what weather and nearby lookups key off.
+        city: item.city || trip.destination || "",
         est_cost: item.est_cost || 0,
         duration_min: item.duration_min || 60,
         category: item.category || "activity",
