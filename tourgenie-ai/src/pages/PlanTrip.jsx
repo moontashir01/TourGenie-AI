@@ -4,8 +4,25 @@ import { Sparkles, AlertCircle, MapPin, Globe2, Wallet, Loader2, Plane } from "l
 import AppShell from "../components/AppShell";
 import { destinationsApi, referenceApi, tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import { useAuth } from "../context/AuthContext";
 
 const interests = ["Beaches", "Hills & nature", "History", "Food", "Nightlife", "Shopping", "Adventure", "Family-friendly"];
+
+// Mirrors MAX_TRIP_DAYS / MAX_TRAVELERS in the API's trip controller. Both
+// used to be enforced server-side only, so an over-long trip was rejected
+// after a full round-trip instead of while the dates were being picked.
+const MAX_TRIP_DAYS = 60;
+const MAX_TRAVELERS = 20;
+
+// Ground modes only exist between cities we have seeded transport for, which
+// is domestic travel. Offering "Launch" for a Bangkok trip made the form look
+// like it wasn't reading its own inputs.
+const DOMESTIC_TRANSPORT = ["No preference", "Flight", "Bus", "Train", "Launch"];
+const INTERNATIONAL_TRANSPORT = ["No preference", "Flight"];
+
+// A half-filled trip form is a lot of typing to lose to a stray refresh or a
+// tapped back button, so it is kept until the trip is actually created.
+const DRAFT_KEY = "tourgenie_trip_draft";
 
 // One control now drives both the cost model (budget_tier, which CostBenchmark
 // and the hotel catalogue key off) and the wording the AI planner sees
@@ -44,30 +61,96 @@ function money(amount, currency) {
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
+const EMPTY_FORM = {
+  origin_destination_id: "",
+  origin: "",
+  destination_id: "",
+  country_code: "",
+  start_date: "",
+  end_date: "",
+  travelers: "2",
+  budget: "",
+  budget_currency: "BDT",
+  budget_tier: "mid",
+  budget_includes_flights: true,
+  transport_preference: "No preference",
+  food_preference: "No preference",
+  destination: "", // free-text fallback when the catalogue hasn't loaded
+};
+
+function readDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    // A draft whose start date has already passed is worse than no draft.
+    if (draft?.form?.start_date && draft.form.start_date < todayISO()) return null;
+    // The form saves on every keystroke, so simply opening the page once
+    // writes a draft. Treating that as "the traveler has work in progress"
+    // would suppress the preference prefill from then on — a draft only
+    // counts once one of the trip's own answers is in it.
+    const f = draft?.form || {};
+    const started =
+      f.destination_id || f.country_code || f.destination || f.start_date || f.end_date || f.budget;
+    return started ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+// User.preferences exists specifically to seed this form — currency, travel
+// style, home city — and was being ignored, so every traveler retyped the
+// same three answers on every trip.
+function preferenceDefaults(user) {
+  const preferences = user?.preferences || {};
+  const seeded = {};
+  if (preferences.currency) seeded.budget_currency = preferences.currency;
+  if (preferences.default_budget_tier) seeded.budget_tier = preferences.default_budget_tier;
+  if (user?.city) seeded.origin = user.city;
+  return seeded;
+}
+
+/** Saved interests are free text; only chips this form offers can be shown. */
+function preferredInterests(user) {
+  const saved = user?.preferences?.interests || [];
+  return interests.filter((i) => saved.includes(i));
+}
+
 export default function PlanTrip() {
   const navigate = useNavigate();
   const { setCurrentTripId } = useCurrentTrip();
-  const [selectedInterests, setSelectedInterests] = useState([]);
+  const { user } = useAuth();
+  const draft = useRef(readDraft()).current;
+  const [selectedInterests, setSelectedInterests] = useState(draft?.selectedInterests || []);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [destinations, setDestinations] = useState([]);
   const [countries, setCountries] = useState([]);
   const [currencies, setCurrencies] = useState([FALLBACK_CURRENCY]);
-  const [destinationMode, setDestinationMode] = useState("city"); // "city" | "country"
+  const [destinationMode, setDestinationMode] = useState(draft?.destinationMode || "city"); // "city" | "country"
 
-  const [form, setForm] = useState({
-    destination_id: "",
-    country_code: "",
-    start_date: "",
-    end_date: "",
-    travelers: "2",
-    budget: "",
-    budget_currency: "BDT",
-    budget_tier: "mid",
-    budget_includes_flights: true,
-  });
+  const [form, setForm] = useState({ ...EMPTY_FORM, ...(draft?.form || {}) });
+  const [draftRestored, setDraftRestored] = useState(Boolean(draft));
+
+  function clearDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // Nothing stored to clear.
+    }
+    // Back to a blank form, but still the traveler's own defaults — starting
+    // over shouldn't mean retyping their currency and travel style either.
+    setForm({ ...EMPTY_FORM, ...preferenceDefaults(user) });
+    setSelectedInterests(preferredInterests(user));
+    setSelectedCities([]);
+    setDestinationMode("city");
+    setDraftRestored(false);
+  }
 
   const [estimate, setEstimate] = useState(null);
+  // What reaching the destination costs, and whether that is inside the
+  // estimate — the form has to say so, not imply it.
+  const [travel, setTravel] = useState(null);
   const [estimating, setEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState("");
 
@@ -75,14 +158,31 @@ export default function PlanTrip() {
   // traveler picked. Every pick becomes mandatory for the AI plan; leaving
   // it empty lets the AI choose.
   const [countryCities, setCountryCities] = useState([]);
-  const [selectedCities, setSelectedCities] = useState([]);
+  const [selectedCities, setSelectedCities] = useState(draft?.selectedCities || []);
 
   function setField(name, value) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
+  // A restored draft is the traveler's own newer choice, so it wins over
+  // their saved preferences — only a blank form gets seeded.
+  const prefilled = useRef(Boolean(draft));
+
   useEffect(() => {
-    setSelectedCities([]);
+    if (prefilled.current || !user) return;
+    prefilled.current = true;
+    setForm((prev) => ({ ...prev, ...preferenceDefaults(user) }));
+    const chosen = preferredInterests(user);
+    if (chosen.length) setSelectedInterests(chosen);
+  }, [user]);
+
+  // Switching country wipes the city picks — except on the very first run,
+  // where a restored draft's picks would be thrown away before they render.
+  const citiesRestored = useRef(Boolean(draft?.selectedCities?.length));
+
+  useEffect(() => {
+    if (citiesRestored.current) citiesRestored.current = false;
+    else setSelectedCities([]);
     if (destinationMode !== "country" || !form.country_code) {
       setCountryCities([]);
       return;
@@ -158,6 +258,30 @@ export default function PlanTrip() {
       .catch(() => setCurrencies([FALLBACK_CURRENCY]));
   }, []);
 
+  // Keep the draft in step with the form. Cleared only once a trip is
+  // actually created.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ form, selectedInterests, selectedCities, destinationMode })
+      );
+    } catch {
+      // Private browsing / quota — losing a draft is not worth an error.
+    }
+  }, [form, selectedInterests, selectedCities, destinationMode]);
+
+  // Turn the traveler's saved city into a real origin id once the catalogue
+  // has loaded. Falls back to Dhaka so the field is never empty.
+  useEffect(() => {
+    if (!destinations.length || form.origin_destination_id) return;
+    const wanted = (form.origin || "").trim().toLowerCase();
+    const match =
+      (wanted && destinations.find((d) => d.name.toLowerCase() === wanted)) ||
+      destinations.find((d) => d.slug === "dhaka");
+    if (match) setField("origin_destination_id", match._id);
+  }, [destinations, form.origin, form.origin_destination_id]);
+
   const destinationsByCountry = useMemo(() => {
     return destinations.reduce((groups, destination) => {
       (groups[destination.country] ||= []).push(destination);
@@ -170,6 +294,49 @@ export default function PlanTrip() {
   const multiCityCountries = useMemo(
     () => countries.filter((c) => c.destinations >= 2),
     [countries]
+  );
+
+  const selectedOrigin = useMemo(
+    () => destinations.find((d) => d._id === form.origin_destination_id) || null,
+    [destinations, form.origin_destination_id]
+  );
+  const selectedDestination = useMemo(
+    () => destinations.find((d) => d._id === form.destination_id) || null,
+    [destinations, form.destination_id]
+  );
+
+  // Does this trip cross a border? Decides which transport modes are worth
+  // offering, and whether an airfare warning applies.
+  const crossesBorder = useMemo(() => {
+    if (!selectedOrigin) return false;
+    if (destinationMode === "country") {
+      const country = countries.find((c) => c.country_code === form.country_code);
+      return Boolean(country) && country.country_code !== selectedOrigin.country_code;
+    }
+    return Boolean(selectedDestination) && selectedDestination.country_code !== selectedOrigin.country_code;
+  }, [selectedOrigin, selectedDestination, destinationMode, countries, form.country_code]);
+
+  const transportOptions = crossesBorder ? INTERNATIONAL_TRANSPORT : DOMESTIC_TRANSPORT;
+
+  // Dropping to the international list can strand a ground mode in state.
+  useEffect(() => {
+    if (!transportOptions.includes(form.transport_preference)) {
+      setField("transport_preference", "No preference");
+    }
+  }, [transportOptions, form.transport_preference]);
+
+  // Hard-stop the date picker at the server's limit rather than letting a
+  // 90-day range be typed and rejected on submit.
+  const maxEndDate = useMemo(() => {
+    if (!form.start_date) return undefined;
+    const last = new Date(form.start_date);
+    if (Number.isNaN(last.getTime())) return undefined;
+    last.setDate(last.getDate() + MAX_TRIP_DAYS - 1);
+    return last.toISOString().slice(0, 10);
+  }, [form.start_date]);
+
+  const sameOriginAndDestination = Boolean(
+    destinationMode === "city" && selectedOrigin && selectedDestination && selectedOrigin._id === selectedDestination._id
   );
 
   const currency = useMemo(
@@ -193,12 +360,16 @@ export default function PlanTrip() {
       country_code: destinationMode === "country" ? form.country_code : "",
       // Which cities a country trip visits changes what it costs.
       preferred_cities: destinationMode === "country" ? selectedCities : [],
+      // Getting there is part of the cost, so where you start from matters —
+      // and so does whether the budget is meant to cover the journey.
+      origin_destination_id: form.origin_destination_id,
+      budget_includes_flights: form.budget_includes_flights,
       start_date: form.start_date,
       end_date: form.end_date,
       travelers: form.travelers,
       budget_tier: form.budget_tier,
     }),
-    [destinationMode, form.destination_id, form.country_code, selectedCities, form.start_date, form.end_date, form.travelers, form.budget_tier]
+    [destinationMode, form.destination_id, form.country_code, selectedCities, form.origin_destination_id, form.budget_includes_flights, form.start_date, form.end_date, form.travelers, form.budget_tier]
   );
 
   const estimateRequest = useRef(0);
@@ -213,6 +384,7 @@ export default function PlanTrip() {
 
     if (!ready) {
       setEstimate(null);
+      setTravel(null);
       setEstimateError("");
       return;
     }
@@ -225,6 +397,8 @@ export default function PlanTrip() {
           ...(estimateInputs.country_code
             ? { country_code: estimateInputs.country_code, preferred_cities: estimateInputs.preferred_cities }
             : { destination_id: estimateInputs.destination_id }),
+          origin_destination_id: estimateInputs.origin_destination_id || undefined,
+          budget_includes_flights: estimateInputs.budget_includes_flights,
           start_date: estimateInputs.start_date,
           end_date: estimateInputs.end_date,
           travelers: Number(estimateInputs.travelers),
@@ -233,11 +407,13 @@ export default function PlanTrip() {
         .then((data) => {
           if (requestId !== estimateRequest.current) return; // a newer request won
           setEstimate(data.estimate);
+          setTravel(data.travel || null);
           setEstimateError("");
         })
         .catch((err) => {
           if (requestId !== estimateRequest.current) return;
           setEstimate(null);
+          setTravel(null);
           setEstimateError(err.message);
         })
         .finally(() => {
@@ -271,14 +447,24 @@ export default function PlanTrip() {
   // Each field gets its own message — the old single check treated a budget
   // of 0 as "not filled in" and reported a missing destination instead.
   function validate(payload) {
+    if (!payload.origin) return "Please choose where you're travelling from.";
     if (!payload.destination) return "Please choose a destination.";
+    if (sameOriginAndDestination) {
+      return `You're already in ${payload.destination} — pick a different destination.`;
+    }
     if (!payload.start_date) return "Please pick a start date.";
     if (!payload.end_date) return "Please pick an end date.";
     if (new Date(payload.end_date) < new Date(payload.start_date)) {
       return "The end date must be on or after the start date.";
     }
+    if (tripDays > MAX_TRIP_DAYS) {
+      return `Trips longer than ${MAX_TRIP_DAYS} days can't be planned in one go — this one is ${tripDays} days.`;
+    }
     if (!Number.isInteger(payload.travelers) || payload.travelers < 1) {
       return "Number of travelers must be a whole number of at least 1.";
+    }
+    if (payload.travelers > MAX_TRAVELERS) {
+      return `Groups larger than ${MAX_TRAVELERS} need to be planned as separate trips.`;
     }
     if (form.budget === "" || form.budget === null) return "Please enter a budget.";
     if (!Number.isFinite(payload.budget)) return "Budget must be a number.";
@@ -289,17 +475,13 @@ export default function PlanTrip() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    const formData = new FormData(e.target);
 
-    const originId = formData.get("origin_destination_id");
-    const selectedOrigin = destinations.find((destination) => destination._id === originId);
-    const selectedDestination = destinations.find((destination) => destination._id === form.destination_id);
     const selectedCountry = countries.find((c) => c.country_code === form.country_code);
     const tier = TIERS.find((t) => t.value === form.budget_tier) || TIERS[1];
 
     const payload = {
-      origin: selectedOrigin?.name || formData.get("origin"),
-      origin_destination_id: originId || undefined,
+      origin: selectedOrigin?.name || form.origin,
+      origin_destination_id: form.origin_destination_id || undefined,
       start_date: form.start_date,
       end_date: form.end_date,
       travelers: Number(form.travelers),
@@ -307,14 +489,14 @@ export default function PlanTrip() {
       budget_currency: form.budget_currency,
       budget_tier: tier.value,
       budget_includes_flights: form.budget_includes_flights,
-      transport_preference: formData.get("transport_preference"),
+      transport_preference: form.transport_preference,
       hotel_preference: tier.hotel,
-      food_preference: formData.get("food_preference"),
+      food_preference: form.food_preference,
       interests: selectedInterests,
       ...(destinationMode === "country"
         ? { country_code: form.country_code, destination: selectedCountry?.name, preferred_cities: selectedCities }
         : {
-            destination: selectedDestination?.name || formData.get("destination"),
+            destination: selectedDestination?.name || form.destination,
             destination_id: form.destination_id || undefined,
           }),
     };
@@ -328,6 +510,11 @@ export default function PlanTrip() {
     setSubmitting(true);
     try {
       const { trip } = await tripsApi.create(payload);
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // Nothing to do — the trip exists either way.
+      }
       setCurrentTripId(trip._id);
       navigate("/itinerary");
     } catch (err) {
@@ -349,19 +536,43 @@ export default function PlanTrip() {
             </div>
           )}
 
+          {draftRestored && (
+            <div className="flex items-start justify-between gap-3 bg-teal/10 border border-teal/30 text-teal-dark text-sm rounded-lg px-3 py-2.5">
+              <span>We kept what you'd filled in last time.</span>
+              <button
+                type="button"
+                onClick={clearDraft}
+                className="font-semibold underline underline-offset-2 shrink-0 hover:text-teal"
+              >
+                Start over
+              </button>
+            </div>
+          )}
+
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Origin">
               {destinations.length ? (
                 <DestinationSelect
                   name="origin_destination_id"
                   groups={destinationsByCountry}
-                  defaultValue={destinations.find((destination) => destination.slug === "dhaka")?._id}
+                  value={form.origin_destination_id}
+                  onChange={(e) => setField("origin_destination_id", e.target.value)}
                 />
               ) : (
-                <input name="origin" type="text" defaultValue="Dhaka" className="input" />
+                <input
+                  name="origin"
+                  type="text"
+                  className="input"
+                  value={form.origin}
+                  onChange={(e) => setField("origin", e.target.value)}
+                />
               )}
             </Field>
-            <Field label="Destination">
+            {/* Not a <Field>: this group holds several buttons as well as the
+                select, and a <label> wrapping more than one control sends
+                every click on its text to the first button. */}
+            <fieldset className="block min-w-0">
+              <legend className="text-xs font-medium text-ink-900/60 mb-1.5">Destination</legend>
               <div className="space-y-2">
                 {multiCityCountries.length > 0 && (
                   <div className="flex gap-1.5 text-xs">
@@ -415,7 +626,21 @@ export default function PlanTrip() {
                     onChange={(e) => setField("destination_id", e.target.value)}
                   />
                 ) : (
-                  <input name="destination" type="text" placeholder="e.g. Bangkok or Kuala Lumpur" className="input" required />
+                  <input
+                    name="destination"
+                    type="text"
+                    placeholder="e.g. Bangkok or Kuala Lumpur"
+                    className="input"
+                    required
+                    value={form.destination}
+                    onChange={(e) => setField("destination", e.target.value)}
+                  />
+                )}
+
+                {sameOriginAndDestination && (
+                  <p className="text-xs text-sunset-dark">
+                    That's where you're starting from — pick somewhere else to travel to.
+                  </p>
                 )}
 
                 {destinationMode === "country" && countryCities.length > 0 && (
@@ -476,7 +701,7 @@ export default function PlanTrip() {
                   </p>
                 )}
               </div>
-            </Field>
+            </fieldset>
             <Field label="Start date">
               <input
                 name="start_date"
@@ -495,21 +720,38 @@ export default function PlanTrip() {
                 className="input"
                 required
                 min={form.start_date || todayISO()}
+                max={maxEndDate}
                 value={form.end_date}
                 onChange={(e) => setField("end_date", e.target.value)}
               />
+              {tripDays > MAX_TRIP_DAYS && (
+                <p className="text-xs text-sunset-dark mt-1.5">
+                  {tripDays} days — trips longer than {MAX_TRIP_DAYS} days can't be planned in one go. Shorten the
+                  range or split it into two trips.
+                </p>
+              )}
+              {tripDays > 0 && tripDays <= MAX_TRIP_DAYS && (
+                <p className="text-xs text-ink-900/40 mt-1.5">
+                  {tripDays} day{tripDays > 1 ? "s" : ""}
+                </p>
+              )}
             </Field>
             <Field label="Number of travelers">
               <input
                 name="travelers"
                 type="number"
                 min="1"
-                max="20"
+                max={MAX_TRAVELERS}
                 step="1"
                 className="input"
                 value={form.travelers}
                 onChange={(e) => setField("travelers", e.target.value)}
               />
+              {Number(form.travelers) > MAX_TRAVELERS && (
+                <p className="text-xs text-sunset-dark mt-1.5">
+                  Groups larger than {MAX_TRAVELERS} need to be planned as separate trips.
+                </p>
+              )}
             </Field>
             <Field label="Travel style">
               <select
@@ -539,20 +781,34 @@ export default function PlanTrip() {
             presets={presets}
             verdict={verdict}
             verdictStyle={verdictStyle}
+            travel={travel}
           />
 
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Transport preference">
-              <select name="transport_preference" className="input" defaultValue="No preference">
-                <option>No preference</option>
-                <option>Flight</option>
-                <option>Bus</option>
-                <option>Train</option>
-                <option>Launch</option>
+              <select
+                name="transport_preference"
+                className="input"
+                value={form.transport_preference}
+                onChange={(e) => setField("transport_preference", e.target.value)}
+              >
+                {transportOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </select>
+              {crossesBorder && (
+                <p className="text-xs text-ink-900/40 mt-1.5">
+                  Crossing a border — buses, trains and launches don't run this route.
+                </p>
+              )}
             </Field>
             <Field label="Food preference">
-              <select name="food_preference" className="input" defaultValue="No preference">
+              <select
+                name="food_preference"
+                className="input"
+                value={form.food_preference}
+                onChange={(e) => setField("food_preference", e.target.value)}
+              >
                 <option>No preference</option>
                 <option>Vegetarian</option>
                 <option>Halal only</option>
@@ -616,8 +872,12 @@ function BudgetSection({
   presets,
   verdict,
   verdictStyle,
+  travel,
 }) {
   const showBdt = currency.code !== "BDT" && budgetBdt > 0;
+  // The estimate can't price an international hop, so say so instead of
+  // letting the traveler read the figure as a full trip cost.
+  const airfareMissing = Boolean(travel?.excluded_from_estimate && estimate?.has_benchmark);
 
   return (
     <div className="border border-sand rounded-xl p-5 space-y-4 bg-paper/40">
@@ -699,6 +959,22 @@ function BudgetSection({
               </li>
             ))}
           </ul>
+          {travel?.counted && travel.fare > 0 && (
+            <p className="text-xs text-ink-900/50">
+              Includes the {travel.mode || "journey"} there and back
+              {travel.operator ? ` (${travel.operator})` : ""} at ৳{travel.fare.toLocaleString()} per person each way.
+            </p>
+          )}
+          {airfareMissing && (
+            <p className="text-xs text-gold flex items-start gap-1.5">
+              <Plane className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              <span>
+                <span className="font-semibold">Airfare is not in this figure.</span> You've said your budget covers
+                the flights, so leave room for them on top — real fares are searched on the Budget page once the trip
+                exists.
+              </span>
+            </p>
+          )}
         </div>
       )}
 
@@ -727,8 +1003,8 @@ function BudgetSection({
             <Plane className="w-3.5 h-3.5" /> This budget covers the flights in and out
           </span>
           <span className="block text-xs text-ink-900/50">
-            Untick if you've already booked (or budgeted) airfare separately — the fare is still shown on the Budget
-            page, it just won't count against this number.
+            Untick if you've already booked (or budgeted) the journey separately — it's still shown on the Budget
+            page, it just stops counting against the estimate above.
           </span>
         </span>
       </label>

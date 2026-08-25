@@ -1,6 +1,7 @@
 import Trip from "../models/Trip.js";
 import Destination from "../models/Destination.js";
 import Country from "../models/Country.js";
+import TransportOption from "../models/TransportOption.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { toBdt, normalizeCode } from "../utils/currency.js";
 import { estimateTripBudget, resolveBudgetTier, verdictFor } from "../services/budgetEstimator.js";
@@ -31,6 +32,57 @@ async function resolveDestination({ id, name, required = false }) {
     throw badRequest(`Unsupported destination: ${name || id || "not provided"}`);
   }
   return destination;
+}
+
+// ── getting to the destination ───────────────────────────────────────
+// The cost estimate used to price only what happens *at* the destination:
+// beds, food, local transport. The form meanwhile asked whether the budget
+// "covers the flights in and out", so a traveler could tick that box, set
+// their budget to the quoted figure and be over it the moment a real fare
+// appeared on the Budget page. Now the trip in and out is priced too —
+// from the seeded TransportOption fare where one exists, and flagged as
+// missing where it doesn't, so the form can say which it is.
+
+/** Cheapest seeded fare between two cities, per passenger, one way. */
+async function seededFare(origin, destination) {
+  if (!origin || !destination) return null;
+  const byId =
+    origin._id && destination._id
+      ? { from_destination_id: origin._id, to_destination_id: destination._id }
+      : null;
+  const byName = {
+    from_city: new RegExp(`^${escapeRegex(origin.name)}$`, "i"),
+    to_city: new RegExp(`^${escapeRegex(destination.name)}$`, "i"),
+  };
+  const option = await TransportOption.findOne({
+    is_active: true,
+    ...(byId ? { $or: [byId, byName] } : byName),
+  })
+    .sort({ fare: 1 })
+    .lean();
+  return option ? { fare: option.fare, mode: option.mode, operator: option.operator } : null;
+}
+
+/**
+ * What it costs to reach the trip and come home, per passenger one way.
+ *
+ * `fare: null` with `needs_airfare: true` is the honest answer for an
+ * international hop: we have no seeded ground fare and won't invent one, and
+ * live flight pricing is far too slow to sit behind a debounced estimate that
+ * re-runs as the traveler types. The form surfaces it as "airfare not
+ * included" rather than quietly costing the trip at zero.
+ */
+async function resolveTravelFare({ origin, arrivalCity }) {
+  if (!origin || !arrivalCity) return { fare: null, mode: "", needs_airfare: false, known: false };
+  if (String(origin._id) === String(arrivalCity._id)) {
+    return { fare: 0, mode: "none", needs_airfare: false, known: true };
+  }
+  const international = (origin.country_code || "") !== (arrivalCity.country_code || "");
+  if (!international) {
+    const ground = await seededFare(origin, arrivalCity);
+    if (ground) return { ...ground, needs_airfare: false, known: true };
+  }
+  return { fare: null, mode: international ? "flight" : "", needs_airfare: international, known: false };
 }
 
 function allowedTripFields(body) {
@@ -136,11 +188,16 @@ function likelyCitiesForCountryTrip(cities, entryCity, days) {
  * Everything both trip creation and the live estimate need: validated
  * inputs, the destination(s) being costed, and the resulting BDT estimate.
  */
-async function buildTripPlan(body, { budgetOptional = false } = {}) {
+async function buildTripPlan(body, { budgetOptional = false, user = null } = {}) {
   const { start, end, days } = parseTripDates(body);
   const travelers = parseTravelers(body);
   const budget = await parseBudget(body, { optional: budgetOptional });
   const tier = resolveBudgetTier(body);
+
+  const origin = await resolveDestination({
+    id: body.origin_destination_id,
+    name: body.origin || user?.city,
+  });
 
   let scope;
   if (body.country_code) {
@@ -171,6 +228,11 @@ async function buildTripPlan(body, { budgetOptional = false } = {}) {
       name: body.destination,
       required: true,
     });
+    // A trip that starts and ends in the same place isn't a trip — it used to
+    // be accepted and then priced with a zero-length journey.
+    if (origin && String(origin._id) === String(destination._id)) {
+      throw badRequest(`You're already in ${destination.name} — pick a different destination.`);
+    }
     scope = {
       multi_city: false,
       destination,
@@ -180,11 +242,22 @@ async function buildTripPlan(body, { budgetOptional = false } = {}) {
     };
   }
 
+  // Where the traveler physically arrives: the gateway city on a country
+  // trip, the destination itself otherwise.
+  const arrivalCity = scope.multi_city ? scope.entryCity : scope.destination;
+  const travel = await resolveTravelFare({ origin, arrivalCity });
+
+  // Only charge the journey against the budget when the traveler said the
+  // budget is meant to cover it — that checkbox now changes the number it
+  // sits next to instead of being decorative.
+  const fareInBudget = budget.budget_includes_flights ? travel.fare : null;
+
   const estimate = await estimateTripBudget({
     destinations: scope.costDestinations,
     days,
     travelers,
     tier,
+    transportFare: fareInBudget,
   });
 
   return {
@@ -192,7 +265,15 @@ async function buildTripPlan(body, { budgetOptional = false } = {}) {
     travelers,
     budget,
     tier,
+    origin,
     scope,
+    travel: {
+      ...travel,
+      // Airfare is missing from the figure above: either we have no fare for
+      // this hop, or the traveler said their budget doesn't cover it.
+      counted: fareInBudget != null,
+      excluded_from_estimate: travel.needs_airfare && budget.budget_includes_flights,
+    },
     estimate,
     verdict: budget.budget == null ? "unknown" : verdictFor(budget.budget, estimate),
   };
@@ -215,7 +296,7 @@ function assertBudgetIsPlannable(plan) {
 // POST /api/trips/estimate — what the trip costs, without creating anything.
 // Drives the live figure under the budget field on the Plan a trip form.
 export const estimateTrip = asyncHandler(async (req, res) => {
-  const plan = await buildTripPlan(req.body, { budgetOptional: true });
+  const plan = await buildTripPlan(req.body, { budgetOptional: true, user: req.user });
   res.json({
     estimate: plan.estimate,
     verdict: plan.verdict,
@@ -224,15 +305,17 @@ export const estimateTrip = asyncHandler(async (req, res) => {
     budget_tier: plan.tier,
     destination: plan.scope.label,
     cities_costed: plan.scope.costDestinations.map((c) => c.name),
+    // What getting there costs, and whether it is inside the figure above.
+    travel: plan.travel,
   });
 });
 
 // FR-03 — Trip Creation
 export const createTrip = asyncHandler(async (req, res) => {
-  const plan = await buildTripPlan(req.body);
+  const plan = await buildTripPlan(req.body, { user: req.user });
   assertBudgetIsPlannable(plan);
 
-  const origin = await resolveDestination({ id: req.body.origin_destination_id, name: req.body.origin });
+  const origin = plan.origin;
 
   const common = {
     ...allowedTripFields(req.body),
@@ -307,6 +390,10 @@ const COST_FIELDS = [
   "hotel_preference",
   "budget_includes_flights",
   "preferred_cities", // which cities a country trip visits moves the cost model too
+  // The journey in and out is priced into the breakdown now, so moving the
+  // starting point changes the total.
+  "origin",
+  "origin_destination_id",
 ];
 
 export const updateTrip = asyncHandler(async (req, res) => {
@@ -356,6 +443,10 @@ export const updateTrip = asyncHandler(async (req, res) => {
       budget_includes_flights: updates.budget_includes_flights ?? existing.budget_includes_flights,
       destination_id: updates.destination_id ?? existing.destination_id,
       destination: updates.destination ?? existing.destination,
+      // The journey in and out is part of the cost now, so the re-run needs
+      // to know where the traveler is starting from.
+      origin_destination_id: updates.origin_destination_id ?? existing.origin_destination_id,
+      origin: updates.origin ?? existing.origin,
       ...(existing.multi_city
         ? {
             country_code: existing.country_code,
@@ -363,7 +454,7 @@ export const updateTrip = asyncHandler(async (req, res) => {
           }
         : {}),
     };
-    const plan = await buildTripPlan(merged);
+    const plan = await buildTripPlan(merged, { user: req.user });
     assertBudgetIsPlannable(plan);
     Object.assign(updates, plan.budget, {
       travelers: plan.travelers,
