@@ -17,6 +17,7 @@ export function TripProvider({ children }) {
   );
   const [currentTrip, setCurrentTrip] = useState(null);
   const [loadingTrip, setLoadingTrip] = useState(false);
+  const [tripError, setTripError] = useState(false);
 
   const setCurrentTripId = useCallback((id) => {
     if (id) localStorage.setItem("tourgenie_current_trip", id);
@@ -31,15 +32,25 @@ export function TripProvider({ children }) {
       return;
     }
     setLoadingTrip(true);
+    setTripError(false);
     tripsApi
       .get(currentTripId)
-      .then(({ trip }) => setCurrentTrip(trip))
+      .then(({ trip }) => {
+        setCurrentTrip(trip);
+        setTripError(false);
+      })
       .catch((err) => {
         setCurrentTrip(null);
         // A trip id left in localStorage after the trip was deleted made
         // every trip-scoped page render "Trip not found" with no way back.
         // Clearing it turns that into an ordinary "pick a trip" state.
-        if (err.status === 404) setCurrentTripId(null);
+        if (err.status === 404) {
+          setCurrentTripId(null);
+          return;
+        }
+        // Anything else (server restarting, network blip) is temporary. The
+        // id is still valid, so say so rather than claiming no trip is open.
+        setTripError(true);
       })
       .finally(() => setLoadingTrip(false));
   }, [currentTripId, setCurrentTripId]);
@@ -50,7 +61,7 @@ export function TripProvider({ children }) {
 
   return (
     <TripContext.Provider
-      value={{ currentTripId, setCurrentTripId, currentTrip, loadingTrip, refreshCurrentTrip: loadTrip }}
+      value={{ currentTripId, setCurrentTripId, currentTrip, loadingTrip, tripError, refreshCurrentTrip: loadTrip }}
     >
       {children}
     </TripContext.Provider>

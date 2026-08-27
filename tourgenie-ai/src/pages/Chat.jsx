@@ -12,6 +12,40 @@ const GREETING = {
     "Hello. I can adjust your itinerary, answer questions about the destination, weather, budget or transport, and rework the plan in plain language. Try one of the chips below, or just tell me what you'd like to change.",
 };
 
+
+// The assistant's replies carry structure — a headline, a costed breakdown,
+// an assumptions note. Not full markdown: just the line breaks and the two
+// emphasis marks the replies actually use, so a stray asterisk in a place
+// name can never turn into markup.
+function RichText({ text }) {
+  return text.split("\n").map((line, i) => {
+    if (line.trim() === "") return <div key={i} className="h-2" />;
+
+    const parts = line.split(/(\*\*[^*]+\*\*|_[^_]+_)/g).filter(Boolean);
+    return (
+      <p key={i} className="min-w-0">
+        {parts.map((part, j) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            return (
+              <strong key={j} className="font-display text-[15px] text-ink-900">
+                {part.slice(2, -2)}
+              </strong>
+            );
+          }
+          if (part.startsWith("_") && part.endsWith("_")) {
+            return (
+              <em key={j} className="text-ink-900/65 not-italic text-xs">
+                {part.slice(1, -1)}
+              </em>
+            );
+          }
+          return <span key={j}>{part}</span>;
+        })}
+      </p>
+    );
+  });
+}
+
 export default function Chat() {
   const { t } = useLanguage();
   const { currentTripId } = useCurrentTrip();
@@ -78,7 +112,7 @@ export default function Chat() {
   return (
     <AppShell title={t("chat.title", "AI Chat Assistant")} subtitle="Edit your itinerary or ask travel questions in plain language.">
       {!currentTripId && (
-        <div className="max-w-2xl mx-auto mb-4 flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">
+        <div className="max-w-3xl mx-auto mb-4 flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
             No trip selected — I can still answer general questions, but itinerary edits need a trip.{" "}
@@ -87,7 +121,7 @@ export default function Chat() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto card shadow-lift flex flex-col h-[70vh] overflow-hidden">
+      <div className="max-w-3xl mx-auto card shadow-lift flex flex-col h-[calc(100vh-13rem)] overflow-hidden">
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-paper-texture">
           {messages.map((m, i) => (
             <div key={i} className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -97,13 +131,13 @@ export default function Chat() {
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-soft ${
+                className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-soft space-y-0.5 ${
                   m.role === "user"
                     ? "bg-gradient-to-br from-teal to-teal-dark text-white rounded-br-sm"
                     : "bg-white text-ink-900 rounded-bl-sm border border-sand"
                 }`}
               >
-                {m.content}
+                <RichText text={m.content} />
                 {m.applied_changes && (
                   <div className="mt-2 pt-2 border-t border-sand/70 flex items-center gap-1.5 text-xs text-teal-dark font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5" />

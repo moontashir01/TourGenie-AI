@@ -64,6 +64,30 @@ export const chatIntents = [
     followup_suggestions: ["Show me the updated itinerary", "What did you change?", "Show the forecast"],
     action: { type: "swap_weather_dependent", params: { prefer_indoor: true, dry_run: false } },
   },
+  {
+    // Above add_activity (70), which owns "i want to (visit|see|go to)" and
+    // therefore used to swallow every question about a destination and turn
+    // it into an edit of whatever itinerary was open.
+    code: "plan_enquiry", label: "Estimate a trip to somewhere", priority: 82,
+    requires_trip: false,
+    patterns: [
+      "(plan|planning|organi[sz]e) (a |an )?(trip|tour|holiday|vacation)",
+      "how much .{0,30}(cost|budget|spend|taka|tk|৳)",
+      "(what|whats|what's) the (budget|cost|price)",
+      "budget for",
+      "thinking (of|about) (going|visiting|travel)",
+      "(can|could) i (afford|do)",
+      "\\bcost of (a |the )?(trip|tour|travel)",
+      "\\d+\\s*(day|night)s?\\s+(in|at|to)\\b",
+      "(take|bring) me to",
+      "i (want|wanna|would like) to (go|travel)",
+    ],
+    keywords: ["how much", "budget", "cost", "plan a trip", "afford", "estimate"],
+    response_template:
+      "Here's what a trip like that costs, based on the destination's own cost data.",
+    followup_suggestions: ["Make it cheaper", "What's the weather like?", "Show me hotels there"],
+    action: { type: "plan_enquiry", params: {} },
+  },
   // ── Non-chip intents ──
   {
     code: "increase_budget", label: "Upgrade the trip", priority: 80,
@@ -177,8 +201,8 @@ export const chatIntents = [
     patterns: [],
     keywords: [],
     response_template:
-      "I didn't quite catch that. I can change your itinerary — make it cheaper, add or remove a day, adjust the pace, or swap in rainy-day alternatives — and answer questions about the destination, weather, budget, transport, packing or carbon footprint. What would you like to do?",
-    followup_suggestions: ["Make it cheaper", "Add one more day", "What if it rains?", "How much will this cost?"],
+      "I didn't quite catch that. Two things I'm good at: tell me where you'd like to go and for how long — \"3 days in Sajek for 4 people\" — and I'll estimate what it costs; or, with a trip open, ask me to make it cheaper, add a day, go vegetarian, or plan around rain.",
+    followup_suggestions: ["3 days in Sajek for 4 people", "How much is a week in Cox's Bazar?", "Make it cheaper", "What if it rains?"],
     action: { type: "none", params: {} },
   },
 ];

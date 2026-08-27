@@ -40,6 +40,7 @@ const chatIntentSchema = new mongoose.Schema(
           "reorder_day",
           "add_activity",
           "explain",
+          "plan_enquiry",
         ],
         default: "none",
       },

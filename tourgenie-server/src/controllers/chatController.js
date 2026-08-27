@@ -13,6 +13,7 @@ import Trip from "../models/Trip.js";
 import ItineraryItem from "../models/ItineraryItem.js";
 import { adjustItineraryWithAI } from "../services/aiPlanner.js";
 import { planWeatherSwaps } from "../services/weatherRewriter.js";
+import { parseTripQuery, buildTripEstimate, describeEstimate } from "../services/tripEstimator.js";
 import { getVirtualExpenses } from "./expenseController.js";
 import { loadAttractionContext, augmentTravelItems, persistItinerary } from "./itineraryController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -120,6 +121,69 @@ function buildWeatherReply(result) {
   return lines.join("\n");
 }
 
+
+/**
+ * "I want to go to Sajek for 3 days" — a question about a place, not an
+ * instruction to edit a plan.
+ *
+ * This runs before every other branch because the failure it prevents is the
+ * worst one available: the add-an-activity pattern matches "i want to go
+ * to…", so naming any destination used to rewrite whatever itinerary
+ * happened to be open. A first-time user with no trip got that too, against
+ * whichever trip id was left in their browser.
+ *
+ * Returns null when the message is genuinely about the open trip, so normal
+ * editing is untouched.
+ */
+async function tryPlanEnquiry({ message, trip, user, intent }) {
+  const explicit = intent.action?.type === "plan_enquiry";
+  const parsed = await parseTripQuery(message, { defaultOrigin: user.city || "Dhaka" });
+
+  if (!parsed.destination) {
+    // "How much will this cost?" with a trip open is a question about that
+    // trip. plan_enquiry outranks ask_budget in the match, so it has to hand
+    // the message over rather than just decline.
+    if (trip) return { delegateTo: "ask_budget" };
+    if (!explicit) return null;
+    const examples = parsed.known_destinations
+      .filter((d) => !d.is_international)
+      .slice(0, 4)
+      .map((d) => d.name)
+      .join(", ");
+    return {
+      reply:
+        "Tell me where you're thinking of going and I'll work out what it costs — " +
+        `something like "3 days in Cox's Bazar for 2 people". I have figures for ${parsed.known_destinations.length} destinations, including ${examples}.`,
+      source: "database",
+    };
+  }
+
+  // A message about the trip already open belongs to the normal edit flow.
+  if (!explicit && trip) {
+    const tripPlaces = [trip.destination, trip.entry_city].filter(Boolean).map((n) => n.toLowerCase());
+    if (tripPlaces.includes(parsed.destination.name.toLowerCase())) return null;
+  }
+
+  const estimate = await buildTripEstimate({
+    destination: parsed.destination,
+    days: parsed.days,
+    travelers: parsed.travelers,
+    tier: parsed.tier,
+    origin: parsed.origin,
+  });
+
+  const { reply, source } = await describeEstimate(estimate);
+
+  // Naming a different place while a trip is open is ambiguous — answer the
+  // question, then say plainly that nothing was changed.
+  const note =
+    trip && trip.destination.toLowerCase() !== parsed.destination.name.toLowerCase()
+      ? `\n\n_Your ${trip.destination} trip hasn't been changed. Use Plan New Trip to start a ${parsed.destination.name} one._`
+      : "\n\n_Ready to book it? Use Plan New Trip and I'll build the day-by-day plan._";
+
+  return { reply: reply + note, source, estimate };
+}
+
 async function findOrCreateSession({ userId, tripId, sessionId }) {
   if (sessionId) {
     const existing = await ChatSession.findOne({ _id: sessionId, user_id: userId });
@@ -157,7 +221,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
     if (!trip) return res.status(404).json({ message: "Trip not found" });
   }
 
-  const intent = await matchIntent(message);
+  let intent = await matchIntent(message);
   if (!intent) return res.status(500).json({ message: "No chat intents are configured — run the seed script." });
 
   const vars = {
@@ -173,7 +237,19 @@ export const sendMessage = asyncHandler(async (req, res) => {
   let source = "database";
   let appliedChanges = null;
 
-  if (intent.requires_trip && !trip) {
+  let enquiry = await tryPlanEnquiry({ message, trip, user: req.user, intent });
+
+  // A handover replaces the matched intent and re-enters the normal flow.
+  if (enquiry?.delegateTo) {
+    const delegate = await ChatIntent.findOne({ code: enquiry.delegateTo, is_active: true });
+    if (delegate) intent = delegate;
+    enquiry = null;
+  }
+
+  if (enquiry) {
+    replyText = enquiry.reply;
+    source = enquiry.source;
+  } else if (intent.requires_trip && !trip) {
     replyText = "I need an active trip to work with first — open one from your dashboard, then tell me what you'd like to change.";
   } else if (intent.action.type === "swap_weather_dependent" && trip) {
     // FR-05 × FR-11 × FR-12, answered from stored data: the forecast picks
