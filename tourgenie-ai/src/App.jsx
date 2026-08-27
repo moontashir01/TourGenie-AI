@@ -9,6 +9,7 @@ import AttractionPicker from "./pages/AttractionPicker";
 import Destinations from "./pages/Destinations";
 import RouteMap from "./pages/RouteMap";
 import Booking from "./pages/Booking";
+import TripPrint from "./pages/TripPrint";
 import Hotels from "./pages/Hotels";
 import Budget from "./pages/Budget";
 import Chat from "./pages/Chat";
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/destinations" element={<ProtectedRoute><Destinations /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><RouteMap /></ProtectedRoute>} />
         <Route path="/booking" element={<ProtectedRoute><Booking /></ProtectedRoute>} />
+        <Route path="/itinerary/print" element={<ProtectedRoute><TripPrint /></ProtectedRoute>} />
         <Route path="/hotels" element={<ProtectedRoute><Hotels /></ProtectedRoute>} />
         <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />

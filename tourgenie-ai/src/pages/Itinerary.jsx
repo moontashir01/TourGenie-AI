@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer } from "lucide-react";
 import AppShell from "../components/AppShell";
 import DayMap from "../components/DayMap";
 import FlightSearch from "../components/FlightSearch";
 import WeatherBadge, { WeatherDetail } from "../components/WeatherBadge";
 import GenerationProgress from "../components/GenerationProgress";
 import RainyDayPlan from "../components/RainyDayPlan";
+import Money from "../components/Money";
 import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, itineraryApi, weatherApi, nearbyApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
@@ -456,6 +457,12 @@ export default function Itinerary() {
 
           {!generating && items.length > 0 && !showForm && (
             <div className="flex flex-wrap items-center gap-4">
+              <Link
+                to="/itinerary/print"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-teal-dark"
+              >
+                <Printer className="w-4 h-4" /> Print / save as PDF
+              </Link>
               <RainyDayPlan
                 tripId={currentTripId}
                 onApplied={() =>
@@ -540,7 +547,7 @@ export default function Itinerary() {
               )}
               <div className="flex justify-between border-t border-ink-700 pt-3">
                 <dt className="text-paper/50">Trip cost so far</dt>
-                <dd className="text-sunset font-mono font-semibold">৳{totalCost.toLocaleString()}</dd>
+                <dd className="text-sunset font-mono font-semibold"><Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-paper/50" /></dd>
               </div>
             </dl>
           </div>
@@ -549,7 +556,7 @@ export default function Itinerary() {
             <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5" /> Budget snapshot
             </p>
-            <p className={`text-2xl font-display mb-1 ${totalCost > (trip?.budget || 0) ? "text-sunset-dark" : "text-ink-900"}`}>৳{totalCost.toLocaleString()}</p>
+            <p className={`text-2xl font-display mb-1 ${totalCost > (trip?.budget || 0) ? "text-sunset-dark" : "text-ink-900"}`}><Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-base" /></p>
             <p className="text-xs text-ink-900/50">
               of ৳{trip?.budget?.toLocaleString()} planned budget
               {trip?.budget > 0 && totalCost > trip.budget && (

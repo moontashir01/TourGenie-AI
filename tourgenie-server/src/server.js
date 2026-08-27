@@ -13,6 +13,7 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import expenseRoutes from "./routes/expenseRoutes.js";
 import attractionRoutes from "./routes/attractionRoutes.js";
 import hotelRoutes from "./routes/hotelRoutes.js";
+import hotelBookingRoutes from "./routes/hotelBookingRoutes.js";
 import transportRoutes from "./routes/transportRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
@@ -45,6 +46,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api", expenseRoutes); // exposes /api/trips/:tripId/expenses & /budget
 app.use("/api/attractions", attractionRoutes);
 app.use("/api/hotels", hotelRoutes);
+app.use("/api/hotel-bookings", hotelBookingRoutes); // FR-08 for accommodation
 app.use("/api/transport", transportRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/notifications", notificationRoutes);

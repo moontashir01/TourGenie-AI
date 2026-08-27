@@ -93,3 +93,52 @@
       radial-gradient(ellipse 50% 50% at 10% 90%, rgba(28, 140, 130, 0.16), transparent 60%);
   }
 }
+
+/* ── Print ────────────────────────────────────────────────────────────
+   The itinerary is the one thing people need off-screen: on a bus, at a
+   hotel desk, on a hill road with no signal. Browsers can already turn a
+   page into a PDF, so the job here is to make the page worth printing —
+   drop the chrome, force black on white, and stop days breaking across
+   pages mid-activity. */
+@media print {
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Anything interactive is noise on paper. */
+  .no-print,
+  nav,
+  aside,
+  button {
+    display: none !important;
+  }
+
+  .print-surface {
+    background: #fff !important;
+    box-shadow: none !important;
+    border-color: #ccc !important;
+  }
+
+  /* A day split across a page break is the main thing that makes a printed
+     itinerary hard to follow. */
+  .print-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  /* Links print as text; the URL after them is clutter on a schedule. */
+  a[href]::after {
+    content: "" !important;
+  }
+}

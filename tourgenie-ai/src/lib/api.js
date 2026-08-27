@@ -201,6 +201,19 @@ export const bookingApi = {
     request(`/transport/${transportId}/availability${date ? `?date=${date}` : ""}`, { auth: false }),
 };
 
+// FR-08 for accommodation — demonstration reservations. No payment is
+// taken and nothing is reserved with the property.
+export const hotelBookingApi = {
+  availability: (hotelId, checkIn, checkOut) => {
+    const qs = new URLSearchParams({ ...(checkIn && { check_in: checkIn }), ...(checkOut && { check_out: checkOut }) }).toString();
+    return request(`/hotels/${hotelId}/availability${qs ? `?${qs}` : ""}`, { auth: false });
+  },
+  create: (payload) => request("/hotel-bookings", { method: "POST", body: payload }),
+  forTrip: (tripId) => request(`/hotel-bookings/trips/${tripId}`),
+  cancel: (tripId, bookingId) =>
+    request(`/hotel-bookings/trips/${tripId}/${bookingId}/cancel`, { method: "PATCH" }),
+};
+
 // FR-18 — reading the list is what runs the rule sweep server-side.
 export const notificationApi = {
   list: (params = {}) => {

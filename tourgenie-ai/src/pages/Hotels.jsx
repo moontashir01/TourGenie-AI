@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Star, Wifi, Loader2, CheckCircle2, ArrowUpDown, AlertCircle, MapPin } from "lucide-react";
 import AppShell from "../components/AppShell";
 import { CardSkeleton } from "../components/Skeleton";
+import Money from "../components/Money";
+import HotelBookingModal from "../components/HotelBookingModal";
 import { tripsApi, hotelApi, itineraryApi, destinationsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
@@ -24,6 +26,9 @@ export default function Hotels() {
   const [sort, setSort] = useState("");
   const [selectingId, setSelectingId] = useState(null);
   const [selectedHotelId, setSelectedHotelId] = useState(null);
+  const localCurrency = trip?.destination_id?.currency;
+  const [bookingHotel, setBookingHotel] = useState(null);
+  const [bookedHotelIds, setBookedHotelIds] = useState([]);
 
   // The stay the prices are for. Without these the API can only quote a rate
   // for no particular night, which is not a price anyone can act on — and a
@@ -243,37 +248,72 @@ export default function Hotels() {
                     <Star className="w-3.5 h-3.5 fill-gold" />
                     <span className="text-xs font-semibold text-ink-900/70">{h.rating.toFixed(1)}</span>
                   </div>
-                  <p className="font-mono text-lg text-ink-900 mb-3">৳{h.price_per_night.toLocaleString()}<span className="text-xs text-ink-900/40 font-sans"> /night</span></p>
+                  <p className="font-mono text-lg text-ink-900 mb-3">
+                    <Money bdt={h.price_per_night} local={localCurrency} localClassName="text-sm" />
+                    <span className="text-xs text-ink-900/40 font-sans"> /night</span>
+                  </p>
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {h.facilities.map((f) => (
                       <span key={f} className="text-[11px] bg-paper text-ink-900/60 px-2 py-0.5 rounded-full">{f}</span>
                     ))}
                   </div>
-                  <button
-                    onClick={() => handleSelect(h._id)}
-                    disabled={selectingId === h._id || isSelected}
-                    className={`mt-auto w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full transition-colors ${
-                      isSelected
-                        ? "bg-teal-light text-teal-dark cursor-default"
-                        : "bg-sunset hover:bg-sunset-dark text-ink-900 disabled:opacity-60"
-                    }`}
-                  >
-                    {isSelected ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" /> Selected
-                      </>
-                    ) : selectingId === h._id ? (
-                      "Selecting…"
-                    ) : (
-                      "Select Hotel"
-                    )}
-                  </button>
+                  <div className="mt-auto flex flex-col gap-1.5">
+                    <button
+                      onClick={() => setBookingHotel(h)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full bg-sunset hover:bg-sunset-dark text-ink-900 transition-colors"
+                    >
+                      {bookedHotelIds.includes(h._id) ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" /> Booked — book again
+                        </>
+                      ) : (
+                        "Book (demo)"
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleSelect(h._id)}
+                      disabled={selectingId === h._id || isSelected}
+                      className={`w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
+                        isSelected
+                          ? "bg-teal-light text-teal-dark cursor-default"
+                          : "bg-white border border-sand hover:border-teal text-ink-900/70 disabled:opacity-60"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" /> Selected for this trip
+                        </>
+                      ) : selectingId === h._id ? (
+                        "Selecting…"
+                      ) : (
+                        "Set as my stay"
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+      {bookingHotel && (
+
+        <HotelBookingModal
+
+          hotel={bookingHotel}
+
+          trip={trip}
+
+          localCurrency={localCurrency}
+
+          onClose={() => setBookingHotel(null)}
+
+          onBooked={(b) => setBookedHotelIds((prev) => [...new Set([...prev, b.hotel_id?._id || b.hotel_id])])}
+
+        />
+
+      )}
+
     </AppShell>
   );
 }
