@@ -142,8 +142,11 @@ export const createBooking = asyncHandler(async (req, res) => {
 
   const serviceCharge = (await AppSetting.findOne({ key: "booking.service_charge_bdt" }).lean())?.value ?? 0;
 
-  // A reference collides about never, but the field is uniquely indexed and
-  // a duplicate would 500 on an otherwise valid booking.
+  // Two things here are uniquely indexed: the reference, which collides
+  // about never and is worth retrying, and the (departure, seat) pair, which
+  // collides when someone else confirmed the same seat in the moment between
+  // the check above and this write. Only the first is a retry — the second is
+  // the answer to a question the traveller has to re-answer.
   let booking;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
@@ -181,7 +184,19 @@ export const createBooking = asyncHandler(async (req, res) => {
       });
       break;
     } catch (err) {
-      if (err?.code === 11000 && attempt < 4) continue;
+      if (err?.code === 11000) {
+        // Which unique index rejected it? A seat clash names the seat fields.
+        const clashedOnSeat = Object.keys(err.keyPattern || {}).includes("seats");
+        if (clashedOnSeat) {
+          return res.status(409).json({
+            message: `Seat${seats.length > 1 ? "s" : ""} ${seats.join(", ")} ${
+              seats.length > 1 ? "were" : "was"
+            } taken a moment ago. Pick another.`,
+            taken: [...taken, ...seats],
+          });
+        }
+        if (attempt < 4) continue; // reference collision — try another one
+      }
       throw err;
     }
   }

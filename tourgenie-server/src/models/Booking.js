@@ -64,4 +64,24 @@ bookingSchema.index({ trip_id: 1, created_at: -1 });
 bookingSchema.index({ user_id: 1, status: 1 });
 bookingSchema.index({ travel_date: 1 });
 
+// One seat, one live booking. The controller checks which seats are taken
+// before it writes, but two people confirming in the same instant both pass
+// that check and both save — only the database can settle it. Multikey over
+// `seats`, so the pair (departure, seat label) is unique across every
+// booking on that date.
+//
+// Cancelled rows leave the index, which is what lets a released seat be sold
+// again; the `seats.0` clause keeps a seatless row (older demo data) from
+// colliding with every other seatless row on a null key.
+bookingSchema.index(
+  { transport_id: 1, travel_date: 1, seats: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      "seats.0": { $exists: true },
+      status: { $in: ["pending", "confirmed"] },
+    },
+  }
+);
+
 export default mongoose.model("Booking", bookingSchema);
