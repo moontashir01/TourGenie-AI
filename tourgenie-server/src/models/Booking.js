@@ -47,6 +47,12 @@ const bookingSchema = new mongoose.Schema(
     service_charge: { type: Number, default: 0 },
     currency: { type: String, default: "BDT" },
 
+    // How many seats this booking actually took off the schedule's counter.
+    // Usually the passenger count, but less when the counter was already
+    // lower than that — and cancelling gives back exactly this many, so the
+    // two directions can never disagree.
+    inventory_held: { type: Number, default: 0 },
+
     is_mock: { type: Boolean, default: true }, // always true — FR-08
     payment_status: { type: String, enum: ["not_required", "simulated"], default: "not_required" },
     cancelled_at: { type: Date, default: null },

@@ -187,11 +187,25 @@ export const createBooking = asyncHandler(async (req, res) => {
   }
 
   // Inventory is per-schedule rather than per-date in the seeded model, so
-  // this is indicative: the authoritative check is the seat clash above.
-  await TransportOption.updateOne(
-    { _id: option._id, seats_available: { $gte: names.length } },
-    { $inc: { seats_available: -names.length } }
+  // this is indicative: the authoritative check is the seat clash above and
+  // the unique index behind it.
+  //
+  // It still has to add up. The old guard skipped the whole decrement when
+  // the counter was lower than the party size, while cancelling added the
+  // full party back — so booking and then cancelling handed the schedule
+  // seats it never had, over and over. Now the write clamps at zero and
+  // reports what it actually took, and the cancellation gives back exactly
+  // that. Done at driver level because Mongoose rejects a pipeline in
+  // updateOne, and because the clamp has to happen inside the write to stay
+  // atomic.
+  const before = await TransportOption.collection.findOneAndUpdate(
+    { _id: option._id },
+    [{ $set: { seats_available: { $max: [0, { $subtract: ["$seats_available", names.length] }] } } }],
+    { returnDocument: "before" }
   );
+  const previous = before?.seats_available ?? before?.value?.seats_available ?? 0;
+  booking.inventory_held = Math.max(0, Math.min(names.length, previous));
+  await booking.save();
 
   const populated = await Booking.findById(booking._id).populate("transport_id");
   res.status(201).json({
@@ -224,11 +238,27 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   booking.cancelled_at = new Date();
   await booking.save();
 
-  // Give the seats back.
-  await TransportOption.updateOne(
-    { _id: booking.transport_id },
-    { $inc: { seats_available: booking.passengers.length } }
-  );
+  // Give back exactly what the booking took. Bookings made before that was
+  // recorded fall back to their seat count, still capped at the coach's own
+  // capacity so the counter can't exceed the seats that physically exist.
+  // `??`, not `||`: a booking that legitimately held zero — because the
+  // counter was already at zero when it was made — must give back zero, not
+  // fall through to its seat count and invent seats. Only a booking from
+  // before the field existed has no number at all.
+  const released = booking.inventory_held ?? (booking.seats?.length || booking.passengers.length);
+  await TransportOption.collection.updateOne({ _id: booking.transport_id }, [
+    {
+      $set: {
+        seats_available: {
+          $min: [
+            { $add: ["$seats_available", released] },
+            // No declared capacity on the schedule — nothing to clamp to.
+            { $ifNull: ["$total_seats", { $add: ["$seats_available", released] }] },
+          ],
+        },
+      },
+    },
+  ]);
 
   res.json({ booking, message: "Booking cancelled and seats released." });
 });
