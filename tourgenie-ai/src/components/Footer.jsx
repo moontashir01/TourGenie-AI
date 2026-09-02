@@ -2,7 +2,7 @@ import { Compass } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer id="about" className="bg-ink-900 text-paper/70 border-t border-ink-700">
+    <footer id="about" className="theme-ink bg-ink-900 text-paper/70 border-t border-ink-700">
       <div className="max-w-6xl mx-auto px-6 py-12 grid gap-10 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-2 text-paper mb-3">

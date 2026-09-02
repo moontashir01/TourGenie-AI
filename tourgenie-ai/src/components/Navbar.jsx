@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import { Compass } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navbar() {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ export default function Navbar() {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 bg-ink-900/95 backdrop-blur border-b border-ink-700">
+    <header className="theme-ink sticky top-0 z-40 bg-ink-900/95 backdrop-blur border-b border-ink-700">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 text-paper">
           <Compass className="w-6 h-6 text-sunset" strokeWidth={1.75} />
@@ -24,10 +25,12 @@ export default function Navbar() {
           <a href="/#about" className="text-sm font-medium text-paper/80 hover:text-paper transition-colors">About</a>
         </nav>
         <div className="flex items-center gap-3">
+          {/* The navbar is pinned dark, so the toggle wears the ink tone here. */}
+          <ThemeToggle tone="ink" />
           {user ? (
             <Link
               to="/dashboard"
-              className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-900 px-4 py-2 rounded-full transition-colors"
+              className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-fixed px-4 py-2 rounded-full transition-colors"
             >
               Dashboard
             </Link>
@@ -38,7 +41,7 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/register"
-                className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-900 px-4 py-2 rounded-full transition-colors"
+                className="text-sm font-semibold bg-sunset hover:bg-sunset-dark text-ink-fixed px-4 py-2 rounded-full transition-colors"
               >
                 Register
               </Link>

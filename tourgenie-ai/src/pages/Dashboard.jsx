@@ -90,7 +90,7 @@ export default function Dashboard() {
       )}
 
       {next && (
-        <div className="bg-ink-900 bg-ink-glow rounded-2xl p-8 mb-10 relative overflow-hidden shadow-lift">
+        <div className="theme-ink bg-ink-900 bg-ink-glow rounded-2xl p-8 mb-10 relative overflow-hidden shadow-lift">
           <svg className="absolute right-0 top-0 h-full w-1/2 opacity-25" viewBox="0 0 300 150" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 120 Q 100 40, 200 90 T 300 60" fill="none" stroke="#EF8354" strokeWidth="2" strokeDasharray="1 9" strokeLinecap="round" />
             <circle cx="8" cy="118" r="4" fill="#EF8354" />
@@ -131,11 +131,11 @@ export default function Dashboard() {
       </div>
 
       {trips.length === 0 ? (
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 mb-4">You haven't planned a trip yet.</p>
           <Link
             to="/plan"
-            className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
+            className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
           >
             <Plus className="w-4 h-4" /> Plan your first trip
           </Link>
@@ -159,7 +159,7 @@ export default function Dashboard() {
               >
                 <div className="absolute top-3 right-3 z-20" onClick={(e) => e.stopPropagation()}>
                   {confirmId === t._id ? (
-                    <div className="w-40 origin-top-right animate-pop-in bg-white border border-sand rounded-xl shadow-lift p-3">
+                    <div className="w-40 origin-top-right animate-pop-in bg-surface border border-sand rounded-xl shadow-lift p-3">
                       <p className="text-xs text-ink-900/70 mb-2.5 leading-snug">Delete this trip?</p>
                       <div className="flex gap-1.5">
                         <button
@@ -173,7 +173,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => handleDelete(t)}
                           disabled={deletingId === t._id}
-                          className="flex-1 text-xs font-semibold px-2 py-1.5 rounded-full bg-sunset hover:bg-sunset-dark text-ink-900 transition-colors disabled:opacity-60"
+                          className="flex-1 text-xs font-semibold px-2 py-1.5 rounded-full bg-sunset hover:bg-sunset-dark text-ink-fixed transition-colors disabled:opacity-60"
                         >
                           {deletingId === t._id ? "…" : "Delete"}
                         </button>

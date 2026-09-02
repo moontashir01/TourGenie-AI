@@ -55,14 +55,14 @@ export default function Overview() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {metrics.map((m) => (
-          <div key={m.label} className="bg-white border border-sand rounded-2xl p-5">
+          <div key={m.label} className="bg-surface border border-sand rounded-2xl p-5">
             <p className="text-xs font-medium text-ink-900/50 mb-2">{m.label}</p>
             <p className="font-mono text-2xl font-semibold text-ink-900">{m.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h3 className="font-display text-lg text-ink-900 mb-6">Trips created (last {monthEntries.length || 0} months with activity)</h3>
         {monthEntries.length === 0 ? (
           <p className="text-sm text-ink-900/50">No trips created yet.</p>
@@ -78,7 +78,7 @@ export default function Overview() {
         )}
       </div>
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h3 className="font-display text-lg text-ink-900 mb-5">Recent trips across all travelers</h3>
         {trips.length === 0 ? (
           <p className="text-sm text-ink-900/50">No trips yet.</p>
@@ -106,7 +106,7 @@ export default function Overview() {
         )}
       </div>
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h3 className="font-display text-lg text-ink-900 mb-5">Attractions</h3>
         <table className="w-full text-sm">
           <thead>

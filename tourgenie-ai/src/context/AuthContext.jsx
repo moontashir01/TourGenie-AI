@@ -32,6 +32,14 @@ export function AuthProvider({ children }) {
     return login(email, password);
   }
 
+  // The settings page saves one section at a time and the API answers with
+  // the whole account — this keeps the sidebar, Plan Trip pre-fill and every
+  // other reader in step without a second round trip.
+  function applyUser(next) {
+    setUser(next);
+    return next;
+  }
+
   function logout() {
     localStorage.removeItem("tourgenie_token");
     localStorage.removeItem("tourgenie_current_trip");
@@ -39,7 +47,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, applyUser }}>
       {children}
     </AuthContext.Provider>
   );

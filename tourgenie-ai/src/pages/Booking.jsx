@@ -176,7 +176,7 @@ export default function Booking() {
   if (!currentTripId) {
     return (
       <AppShell title={t("booking.title", "Ticket Booking")}>
-        <div className="max-w-md p-6 bg-white border border-sand rounded-2xl shadow-soft">
+        <div className="max-w-md p-6 bg-surface border border-sand rounded-2xl shadow-soft">
           <p className="text-sm text-ink-900/70">Open a trip first — bookings are made against a trip.</p>
           <Link to="/dashboard" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-teal-dark hover:underline">
             Go to my trips <ArrowRight className="w-4 h-4" />
@@ -250,7 +250,7 @@ export default function Booking() {
           <section>
             <h2 className="font-display text-lg text-ink-900 mb-3">Available departures</h2>
             {options.length === 0 ? (
-              <p className="text-sm text-ink-900/55 p-4 bg-white border border-sand rounded-xl">
+              <p className="text-sm text-ink-900/55 p-4 bg-surface border border-sand rounded-xl">
                 No transport is recorded between {trip?.origin} and {trip?.destination} yet. An admin can add
                 services from the Transport console.
               </p>
@@ -265,8 +265,8 @@ export default function Booking() {
                       onClick={() => setSelectedId(isSelected ? null : o._id)}
                       className={`w-full p-4 rounded-xl border text-left transition-all ${
                         isSelected
-                          ? "bg-white border-teal shadow-soft ring-1 ring-teal/20"
-                          : "bg-white/70 border-sand hover:border-teal/30"
+                          ? "bg-surface border-teal shadow-soft ring-1 ring-teal/20"
+                          : "bg-surface/70 border-sand hover:border-teal/30"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -311,7 +311,7 @@ export default function Booking() {
 
             {/* Seat map for the selected departure */}
             {selected && (
-              <div className="mt-5 p-4 bg-white border border-sand rounded-2xl">
+              <div className="mt-5 p-4 bg-surface border border-sand rounded-2xl">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h3 className="font-display text-base text-ink-900">Choose seats</h3>
                   <span className="text-xs text-ink-900/50">
@@ -377,7 +377,7 @@ export default function Booking() {
                     <div
                       key={b._id}
                       className={`p-4 rounded-xl border ${
-                        b.status === "cancelled" ? "bg-paper border-sand opacity-60" : "bg-white border-sand"
+                        b.status === "cancelled" ? "bg-paper border-sand opacity-60" : "bg-surface border-sand"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -423,7 +423,7 @@ export default function Booking() {
           </section>
 
           {/* Passenger panel */}
-          <aside className="p-4 bg-white border border-sand rounded-2xl shadow-soft lg:sticky lg:top-6">
+          <aside className="p-4 bg-surface border border-sand rounded-2xl shadow-soft lg:sticky lg:top-6">
             <h2 className="flex items-center gap-2 font-display text-base text-ink-900 mb-3">
               <Users className="w-4 h-4 text-teal-dark" />
               {t("booking.passenger_details", "Passenger details")}
@@ -446,7 +446,7 @@ export default function Booking() {
                     value={p.name}
                     onChange={(e) => updatePassenger(i, "name", e.target.value)}
                     placeholder="Full name"
-                    className="w-full px-2.5 py-1.5 mb-1.5 bg-white border border-sand rounded-lg text-sm text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal/50"
+                    className="w-full px-2.5 py-1.5 mb-1.5 bg-surface border border-sand rounded-lg text-sm text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal/50"
                   />
                   <div className="flex gap-1.5">
                     <input
@@ -454,12 +454,12 @@ export default function Booking() {
                       onChange={(e) => updatePassenger(i, "age", e.target.value.replace(/\D/g, "").slice(0, 3))}
                       placeholder="Age"
                       inputMode="numeric"
-                      className="w-20 px-2.5 py-1.5 bg-white border border-sand rounded-lg text-sm text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal/50"
+                      className="w-20 px-2.5 py-1.5 bg-surface border border-sand rounded-lg text-sm text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal/50"
                     />
                     <select
                       value={p.gender}
                       onChange={(e) => updatePassenger(i, "gender", e.target.value)}
-                      className="flex-1 px-2.5 py-1.5 bg-white border border-sand rounded-lg text-sm text-ink-900 focus:outline-none focus:border-teal/50"
+                      className="flex-1 px-2.5 py-1.5 bg-surface border border-sand rounded-lg text-sm text-ink-900 focus:outline-none focus:border-teal/50"
                     >
                       <option value="">Gender</option>
                       <option value="male">Male</option>
@@ -497,7 +497,7 @@ export default function Booking() {
             <button
               onClick={confirm}
               disabled={!canConfirm}
-              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-sunset text-white hover:bg-sunset-dark disabled:bg-sand disabled:text-ink-900/35 transition-colors"
+              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-sunset text-white hover:bg-sunset-dark disabled:bg-sand disabled:text-ink-fixed/35 transition-colors"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {t("booking.confirm", "Confirm Booking (Demo)")}

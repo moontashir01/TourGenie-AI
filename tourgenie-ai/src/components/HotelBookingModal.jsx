@@ -100,7 +100,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-ink-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-paper rounded-t-2xl sm:rounded-2xl shadow-lift animate-fade-up">
         <header className="sticky top-0 z-10 flex items-start justify-between gap-3 px-5 py-4 bg-paper/95 backdrop-blur border-b border-sand">
@@ -112,7 +112,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-ink-900 hover:bg-white"
+            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-ink-900 hover:bg-surface"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -225,8 +225,8 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                           soldOut
                             ? "bg-sand/30 border-sand text-ink-900/35 cursor-not-allowed"
                             : r.name === roomType
-                              ? "bg-white border-teal ring-1 ring-teal/20"
-                              : "bg-white/70 border-sand hover:border-teal/40"
+                              ? "bg-surface border-teal ring-1 ring-teal/20"
+                              : "bg-surface/70 border-sand hover:border-teal/40"
                         }`}
                       >
                         <div className="flex items-baseline justify-between gap-2">
@@ -313,7 +313,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
             {/* Total */}
             {room && nights >= 1 && (
-              <div className="p-3 bg-white border border-sand rounded-xl space-y-1 text-sm">
+              <div className="p-3 bg-surface border border-sand rounded-xl space-y-1 text-sm">
                 <div className="flex justify-between text-ink-900/65">
                   <span>
                     ৳{room.price_per_night.toLocaleString()} × {nights} night{nights > 1 ? "s" : ""} × {rooms} room{rooms > 1 ? "s" : ""}

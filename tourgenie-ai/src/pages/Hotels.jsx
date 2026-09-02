@@ -159,7 +159,7 @@ export default function Hotels() {
   if (!currentTripId) {
     return (
       <AppShell title="Hotel Recommendations">
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
           <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
         </div>
@@ -194,7 +194,7 @@ export default function Hotels() {
                 className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-full border transition-colors ${
                   activeCity === city
                     ? "bg-teal text-white border-teal"
-                    : "bg-white text-ink-900/70 border-sand hover:border-teal/40"
+                    : "bg-surface text-ink-900/70 border-sand hover:border-teal/40"
                 }`}
               >
                 <MapPin className="w-3.5 h-3.5" /> {city}
@@ -212,7 +212,7 @@ export default function Hotels() {
           <select
             value={sort}
             onChange={(e) => changeSort(e.target.value)}
-            className="text-sm bg-white border border-sand rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal"
+            className="text-sm bg-surface border border-sand rounded-lg px-3 py-1.5 focus:outline-none focus:border-teal"
           >
             {sortOptions.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -228,7 +228,7 @@ export default function Hotels() {
           ))}
         </div>
       ) : hotels.length === 0 ? (
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 text-sm">
             No seeded hotels for {trip?.multi_city ? activeCity : trip?.destination} yet — add some via the admin console or the seed script.
           </p>
@@ -260,7 +260,7 @@ export default function Hotels() {
                   <div className="mt-auto flex flex-col gap-1.5">
                     <button
                       onClick={() => setBookingHotel(h)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full bg-sunset hover:bg-sunset-dark text-ink-900 transition-colors"
+                      className="w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-full bg-sunset hover:bg-sunset-dark text-ink-fixed transition-colors"
                     >
                       {bookedHotelIds.includes(h._id) ? (
                         <>
@@ -276,7 +276,7 @@ export default function Hotels() {
                       className={`w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-full transition-colors ${
                         isSelected
                           ? "bg-teal-light text-teal-dark cursor-default"
-                          : "bg-white border border-sand hover:border-teal text-ink-900/70 disabled:opacity-60"
+                          : "bg-surface border border-sand hover:border-teal text-ink-900/70 disabled:opacity-60"
                       }`}
                     >
                       {isSelected ? (

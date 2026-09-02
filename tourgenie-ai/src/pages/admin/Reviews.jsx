@@ -58,7 +58,7 @@ export default function Reviews() {
     <div className="space-y-8">
       {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h3 className="font-display text-lg text-ink-900 mb-5">Community posts ({posts.length})</h3>
         {posts.length === 0 ? (
           <p className="text-sm text-ink-900/50">No posts yet.</p>
@@ -93,7 +93,7 @@ export default function Reviews() {
         )}
       </div>
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h3 className="font-display text-lg text-ink-900 mb-5">Attraction reviews ({reviews.length})</h3>
         {reviews.length === 0 ? (
           <p className="text-sm text-ink-900/50">No reviews yet.</p>

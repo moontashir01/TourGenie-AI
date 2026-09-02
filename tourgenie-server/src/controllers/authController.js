@@ -10,9 +10,39 @@ import PasswordReset, {
   SEND_WINDOW_SECONDS,
   MAX_VERIFY_ATTEMPTS,
 } from "../models/PasswordReset.js";
+import Translation from "../models/Translation.js";
 import { sendMail, passwordResetEmail } from "../services/mailer.js";
 import { generateToken } from "../utils/generateToken.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { loadRates, normalizeCode } from "../utils/currency.js";
+
+// Login, /me and the settings save all describe the account the same way.
+// They used to each pick their own subset, which is why the Plan Trip form's
+// `user.preferences` pre-fill never fired: nothing ever sent `preferences`.
+function publicUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    language: user.language,
+    country: user.country,
+    country_code: user.country_code,
+    phone: user.phone,
+    city: user.city,
+    avatar_url: user.avatar_url,
+    date_of_birth: user.date_of_birth,
+    email_verified: user.email_verified,
+    created_at: user.created_at,
+    last_login_at: user.last_login_at,
+    preferences: user.preferences,
+    // Kept alongside preferences.currency because callers written before the
+    // full object was returned still read it.
+    currency: user.preferences?.currency,
+  };
+}
+
+const MIN_PASSWORD_LENGTH = 6;
 
 // FR-01 — User Registration
 export const register = asyncHandler(async (req, res) => {
@@ -63,26 +93,18 @@ export const login = asyncHandler(async (req, res) => {
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
+  // Recorded here or nowhere — the field existed from the start and nothing
+  // ever wrote it, so "last seen" was unanswerable.
+  user.last_login_at = new Date();
+  await user.save();
+
   const token = generateToken(user._id);
-  res.json({
-    token,
-    user: {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      language: user.language,
-      country: user.country,
-      country_code: user.country_code,
-      currency: user.preferences.currency,
-    },
-  });
+  res.json({ token, user: publicUser(user) });
 });
 
 // Returns the logged-in user's own profile
 export const getMe = asyncHandler(async (req, res) => {
-  const { _id, name, email, role, language, country, country_code, preferences } = req.user;
-  res.json({ user: { id: _id, name, email, role, language, country, country_code, currency: preferences.currency } });
+  res.json({ user: publicUser(req.user) });
 });
 
 // FR-02 (password recovery) — "forgot password" by emailed one-time code.
@@ -265,4 +287,151 @@ export const resetPassword = asyncHandler(async (req, res) => {
   );
 
   res.json({ message: "Password updated — you can now log in." });
+});
+
+// ── Account settings ─────────────────────────────────────────────────
+//
+// The profile and preference fields have been on the User model since the
+// start, and until now nothing could edit them: a traveller's currency,
+// travel style and saved interests could only be changed with a database
+// write, even though the Plan Trip form reads all three to pre-fill itself.
+
+const BUDGET_TIERS = ["budget", "mid", "luxury"];
+const THEMES = ["light", "dark", "system"];
+const MAX_INTERESTS = 20;
+
+function trimmed(value, max) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+/**
+ * Only the fields the client sent are touched. A missing key means "leave
+ * it alone", which is what lets the page save one section at a time without
+ * blanking the others.
+ */
+function has(body, key) {
+  return Object.prototype.hasOwnProperty.call(body, key);
+}
+
+export const updateMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) return res.status(404).json({ message: "Account not found" });
+
+  const body = req.body || {};
+
+  if (has(body, "name")) {
+    const name = trimmed(body.name, 80);
+    if (!name) return res.status(400).json({ message: "Name can't be empty" });
+    user.name = name;
+  }
+  if (has(body, "phone")) user.phone = trimmed(body.phone, 32);
+  if (has(body, "city")) user.city = trimmed(body.city, 80);
+  if (has(body, "avatar_url")) user.avatar_url = trimmed(body.avatar_url, 500) || null;
+
+  if (has(body, "date_of_birth")) {
+    if (!body.date_of_birth) {
+      user.date_of_birth = null;
+    } else {
+      const dob = new Date(body.date_of_birth);
+      if (Number.isNaN(dob.getTime())) {
+        return res.status(400).json({ message: "That date of birth isn't a valid date" });
+      }
+      if (dob.getTime() > Date.now()) {
+        return res.status(400).json({ message: "Date of birth can't be in the future" });
+      }
+      user.date_of_birth = dob;
+    }
+  }
+
+  if (has(body, "language")) {
+    const lang = trimmed(body.language, 8).toLowerCase();
+    const known = await Translation.exists({ lang, is_active: true });
+    if (!known) return res.status(400).json({ message: `Unsupported language: ${lang}` });
+    user.language = lang;
+  }
+
+  if (has(body, "country_code")) {
+    const code = trimmed(body.country_code, 2).toUpperCase();
+    const country = await Country.findOne({ code, is_core: true, is_active: true });
+    if (!country) return res.status(400).json({ message: "Please choose a supported country" });
+    user.country = country.name;
+    user.country_code = country.code;
+  }
+
+  const prefs = body.preferences;
+  if (prefs && typeof prefs === "object") {
+    if (has(prefs, "currency")) {
+      const code = normalizeCode(prefs.currency);
+      const rates = await loadRates();
+      if (!rates[code]) return res.status(400).json({ message: `Unsupported currency: ${code}` });
+      user.preferences.currency = code;
+    }
+    if (has(prefs, "default_budget_tier")) {
+      const tier = trimmed(prefs.default_budget_tier, 10).toLowerCase();
+      if (!BUDGET_TIERS.includes(tier)) {
+        return res.status(400).json({ message: `Travel style must be one of: ${BUDGET_TIERS.join(", ")}` });
+      }
+      user.preferences.default_budget_tier = tier;
+    }
+    if (has(prefs, "interests")) {
+      if (!Array.isArray(prefs.interests)) {
+        return res.status(400).json({ message: "Interests must be a list" });
+      }
+      // Deduplicated and capped — this list is pasted into the AI planner's
+      // prompt, so it can't be an unbounded free-text field.
+      const cleaned = [...new Set(prefs.interests.map((i) => trimmed(i, 40)).filter(Boolean))];
+      if (cleaned.length > MAX_INTERESTS) {
+        return res.status(400).json({ message: `Pick at most ${MAX_INTERESTS} interests` });
+      }
+      user.preferences.interests = cleaned;
+    }
+    for (const key of ["notify_departure", "notify_weather", "notify_budget"]) {
+      if (has(prefs, key)) user.preferences[key] = Boolean(prefs[key]);
+    }
+    if (has(prefs, "theme")) {
+      const theme = trimmed(prefs.theme, 10).toLowerCase();
+      if (!THEMES.includes(theme)) {
+        return res.status(400).json({ message: `Theme must be one of: ${THEMES.join(", ")}` });
+      }
+      user.preferences.theme = theme;
+    }
+  }
+
+  await user.save();
+  res.json({ message: "Settings saved", user: publicUser(user) });
+});
+
+// Changing a password while logged in — the reset-by-email flow is for
+// people who can't. The current password is required so a walk-up on an
+// unlocked laptop can't lock the owner out of their own account.
+export const changePassword = asyncHandler(async (req, res) => {
+  const { current_password, new_password } = req.body || {};
+  if (!current_password || !new_password) {
+    return res.status(400).json({ message: "Current and new password are both required" });
+  }
+  if (String(new_password).length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ message: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+  }
+
+  const user = await User.findById(req.user._id).select("+password_hash");
+  if (!user) return res.status(404).json({ message: "Account not found" });
+
+  const match = await bcrypt.compare(current_password, user.password_hash);
+  if (!match) return res.status(401).json({ message: "That isn't your current password" });
+
+  if (await bcrypt.compare(new_password, user.password_hash)) {
+    return res.status(400).json({ message: "The new password is the same as the current one" });
+  }
+
+  user.password_hash = await bcrypt.hash(new_password, 10);
+  await user.save();
+
+  // Any outstanding reset code is void — the password it was issued for is
+  // gone.
+  await PasswordReset.updateMany(
+    { user_id: user._id, consumed_at: null },
+    { $set: { expires_at: new Date() } }
+  );
+
+  res.json({ message: "Password changed." });
 });

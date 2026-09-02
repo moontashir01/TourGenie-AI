@@ -91,7 +91,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
   const sourceInfo = SOURCES[meta?.source] || null;
 
   return (
-    <div className="bg-white border border-sand rounded-2xl p-6 space-y-5">
+    <div className="bg-surface border border-sand rounded-2xl p-6 space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Plane className="w-5 h-5 text-teal" strokeWidth={1.75} />

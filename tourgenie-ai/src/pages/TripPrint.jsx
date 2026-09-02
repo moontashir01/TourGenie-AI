@@ -113,12 +113,12 @@ export default function TripPrint() {
   const itineraryTotal = items.reduce((sum, i) => sum + (i.est_cost || 0), 0);
 
   return (
-    <div className="min-h-screen bg-paper py-8 px-4 print:p-0 print:bg-white">
+    <div className="min-h-screen bg-paper py-8 px-4 print:p-0 print:bg-surface">
       {/* Toolbar — never printed */}
       <div className="no-print max-w-3xl mx-auto mb-5 flex flex-wrap items-center gap-3">
         <Link
           to="/itinerary"
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-sand rounded-xl text-sm font-medium text-ink-900/70 hover:border-teal/40"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface border border-sand rounded-xl text-sm font-medium text-ink-900/70 hover:border-teal/40"
         >
           <ArrowLeft className="w-4 h-4" /> Back to itinerary
         </Link>
@@ -130,7 +130,7 @@ export default function TripPrint() {
         </p>
       </div>
 
-      <article className="print-surface max-w-3xl mx-auto bg-white border border-sand rounded-2xl shadow-soft p-8 print:border-0 print:rounded-none print:shadow-none print:p-0">
+      <article className="print-surface max-w-3xl mx-auto bg-surface border border-sand rounded-2xl shadow-soft p-8 print:border-0 print:rounded-none print:shadow-none print:p-0">
         {/* Masthead */}
         <header className="print-block flex items-start justify-between gap-4 pb-4 mb-5 border-b-2 border-ink-900">
           <div className="min-w-0">

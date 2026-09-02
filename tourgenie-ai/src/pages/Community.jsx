@@ -49,7 +49,7 @@ function CommunityBody() {
     <div className="grid lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-5">
         {user ? (
-          <form onSubmit={handlePost} className="bg-white border border-sand rounded-2xl p-5">
+          <form onSubmit={handlePost} className="bg-surface border border-sand rounded-2xl p-5">
             <select value={place} onChange={(e) => setPlace(e.target.value)} className="input mb-2 w-auto">
               {places.slice(1).map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -66,14 +66,14 @@ function CommunityBody() {
               <button
                 type="submit"
                 disabled={posting}
-                className="bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-900 text-sm font-semibold px-4 py-2 rounded-full transition-colors"
+                className="bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-fixed text-sm font-semibold px-4 py-2 rounded-full transition-colors"
               >
                 {posting ? "Posting…" : "Post"}
               </button>
             </div>
           </form>
         ) : (
-          <div className="bg-white border border-sand rounded-2xl p-5 text-sm text-ink-900/60">
+          <div className="bg-surface border border-sand rounded-2xl p-5 text-sm text-ink-900/60">
             <Link to="/login" className="text-teal-dark font-semibold hover:text-teal">Log in</Link> to share a tip or review.
           </div>
         )}
@@ -88,7 +88,7 @@ function CommunityBody() {
           <p className="text-sm text-ink-900/50 text-center py-8">No posts yet for {filter === "All places" ? "any place" : filter}.</p>
         ) : (
           posts.map((p) => (
-            <div key={p._id} className="bg-white border border-sand rounded-2xl p-5">
+            <div key={p._id} className="bg-surface border border-sand rounded-2xl p-5">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-full bg-teal-light text-teal-dark flex items-center justify-center text-xs font-semibold shrink-0">
                   {(p.user_id?.name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
@@ -107,7 +107,7 @@ function CommunityBody() {
       </div>
 
       <aside className="space-y-5">
-        <div className="bg-white border border-sand rounded-2xl p-5">
+        <div className="bg-surface border border-sand rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/50 mb-3">Filter by place</p>
           <div className="flex flex-col gap-1.5">
             {places.map((p) => (

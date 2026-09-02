@@ -62,7 +62,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
   const hasSwaps = plan?.swaps?.length > 0;
 
   return (
-    <div className="w-full p-4 bg-white border border-sand rounded-2xl">
+    <div className="w-full p-4 bg-surface border border-sand rounded-2xl">
       <div className="flex items-start gap-3">
         <span className="w-8 h-8 rounded-lg bg-teal-light flex items-center justify-center shrink-0">
           <CloudRain className="w-4 h-4 text-teal-dark" strokeWidth={1.75} />

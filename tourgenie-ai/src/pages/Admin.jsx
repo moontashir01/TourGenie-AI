@@ -42,7 +42,7 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen flex bg-paper">
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-sand bg-ink-900 py-6 px-4">
+      <aside className="theme-ink hidden md:flex w-60 shrink-0 flex-col border-r border-sand bg-ink-900 py-6 px-4">
         <Link to="/dashboard" className="flex items-center gap-2 px-2 mb-8">
           <Compass className="w-6 h-6 text-sunset" strokeWidth={1.75} />
           <span className="font-display text-lg text-paper">Admin console</span>
@@ -70,7 +70,7 @@ export default function Admin() {
       </aside>
 
       <div className="flex-1 min-w-0">
-        <header className="border-b border-sand bg-white/40 px-6 md:px-10 py-6">
+        <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6">
           <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
           <p className="text-sm text-ink-900/60 mt-1">
             {activeTab === "overview" && "Platform health at a glance."}

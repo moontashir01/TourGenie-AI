@@ -152,11 +152,11 @@ export default function Destinations() {
           <div className="flex flex-wrap items-center gap-3 mb-5">
             <button
               onClick={() => setComparison(null)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-sand rounded-xl text-sm font-medium text-ink-900/70 hover:border-teal/40"
+              className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-sand rounded-xl text-sm font-medium text-ink-900/70 hover:border-teal/40"
             >
               <ArrowLeft className="w-4 h-4" /> {t("destination.back", "Back to browse")}
             </button>
-            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-sand rounded-xl text-sm">
+            <label className="flex items-center gap-2 px-3 py-2 bg-surface border border-sand rounded-xl text-sm">
               <Navigation className="w-4 h-4 text-teal-dark shrink-0" />
               <span className="text-ink-900/50 text-xs">{t("destination.travelling_from", "Travelling from")}</span>
               <input
@@ -179,7 +179,7 @@ export default function Destinations() {
                 const d = col.destination;
                 const JourneyIcon = MODE_ICON[col.journey?.mode] || Navigation;
                 return (
-                  <article key={d.slug} className="p-4 bg-white border border-sand rounded-2xl shadow-soft">
+                  <article key={d.slug} className="p-4 bg-surface border border-sand rounded-2xl shadow-soft">
                     <header className="mb-3">
                       <div className="flex items-start justify-between gap-2">
                         <h2 className="font-display text-lg text-ink-900 leading-tight">{d.name}</h2>
@@ -299,7 +299,7 @@ export default function Destinations() {
         <>
           {/* Filters */}
           <div className="flex flex-wrap gap-3 mb-6">
-            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-sand rounded-xl flex-1 min-w-[200px] max-w-sm">
+            <label className="flex items-center gap-2 px-3 py-2 bg-surface border border-sand rounded-xl flex-1 min-w-[200px] max-w-sm">
               <Search className="w-4 h-4 text-ink-900/35 shrink-0" />
               <input
                 value={query}
@@ -316,7 +316,7 @@ export default function Destinations() {
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="px-3 py-2 bg-white border border-sand rounded-xl text-sm text-ink-900 focus:outline-none cursor-pointer"
+              className="px-3 py-2 bg-surface border border-sand rounded-xl text-sm text-ink-900 focus:outline-none cursor-pointer"
             >
               <option value="">{t("common.all", "All")} countries</option>
               {countries.map((c) => (
@@ -341,7 +341,7 @@ export default function Destinations() {
                 return (
                   <article
                     key={d.slug}
-                    className={`p-4 bg-white rounded-2xl border transition-all ${
+                    className={`p-4 bg-surface rounded-2xl border transition-all ${
                       isSelected ? "border-teal ring-1 ring-teal/20 shadow-soft" : "border-sand hover:shadow-soft"
                     }`}
                   >

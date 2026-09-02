@@ -89,7 +89,7 @@ export default function AttractionPicker() {
   if (!currentTripId) {
     return (
       <AppShell title="Pick Your Attractions">
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
           <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
         </div>
@@ -118,7 +118,7 @@ export default function AttractionPicker() {
               className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-full border transition-colors ${
                 activeCity === city
                   ? "bg-teal text-white border-teal"
-                  : "bg-white text-ink-900/70 border-sand hover:border-teal/40"
+                  : "bg-surface text-ink-900/70 border-sand hover:border-teal/40"
               }`}
             >
               <MapPin className="w-3.5 h-3.5" /> {city}
@@ -132,7 +132,7 @@ export default function AttractionPicker() {
           <button
             onClick={() => setCategory("")}
             className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-              !category ? "bg-ink-900 text-white border-ink-900" : "bg-white text-ink-900/60 border-sand hover:border-ink-900/30"
+              !category ? "bg-ink-900 text-paper border-ink-900" : "bg-surface text-ink-900/60 border-sand hover:border-ink-900/30"
             }`}
           >
             All
@@ -142,7 +142,7 @@ export default function AttractionPicker() {
               key={c}
               onClick={() => setCategory(c)}
               className={`text-xs font-medium px-3 py-1.5 rounded-full border capitalize transition-colors ${
-                category === c ? "bg-ink-900 text-white border-ink-900" : "bg-white text-ink-900/60 border-sand hover:border-ink-900/30"
+                category === c ? "bg-ink-900 text-paper border-ink-900" : "bg-surface text-ink-900/60 border-sand hover:border-ink-900/30"
               }`}
             >
               {c}
@@ -156,7 +156,7 @@ export default function AttractionPicker() {
           <Loader2 className="w-4 h-4 animate-spin" /> Loading attractions…
         </div>
       ) : visible.length === 0 ? (
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 text-sm">No seeded attractions for {activeCity} yet.</p>
         </div>
       ) : (
@@ -167,7 +167,7 @@ export default function AttractionPicker() {
               <button
                 key={a._id}
                 onClick={() => toggle(a._id)}
-                className={`group text-left bg-white border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col ${
+                className={`group text-left bg-surface border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col ${
                   isSelected
                     ? "border-teal shadow-lift ring-1 ring-teal -translate-y-0.5"
                     : "border-sand shadow-soft hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5"
@@ -202,7 +202,7 @@ export default function AttractionPicker() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-sand px-6 md:px-10 py-4 flex items-center justify-between">
+      <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-surface border-t border-sand px-6 md:px-10 py-4 flex items-center justify-between">
         <p className="text-sm text-ink-900/60">
           {selected.size} attraction{selected.size !== 1 ? "s" : ""} picked
           {saved && <span className="text-teal-dark font-medium ml-2">· Saved</span>}

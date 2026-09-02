@@ -126,7 +126,7 @@ export default function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={toggle}
-        className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-900/60 hover:bg-white hover:text-ink-900 hover:shadow-soft transition-all"
+        className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-900/60 hover:bg-surface hover:text-ink-900 hover:shadow-soft transition-all"
         aria-label={t("notification.title", "Notifications")}
       >
         <Bell className="w-4 h-4 text-ink-900/40" strokeWidth={1.75} />
@@ -140,7 +140,7 @@ export default function NotificationBell() {
 
       {open && (
         <div className="absolute bottom-full left-0 mb-2 z-50 w-[22rem] max-w-[calc(100vw-2rem)] bg-paper border border-sand rounded-2xl shadow-lift overflow-hidden animate-pop-in">
-          <header className="flex items-center justify-between gap-2 px-4 py-3 border-b border-sand bg-white/60">
+          <header className="flex items-center justify-between gap-2 px-4 py-3 border-b border-sand bg-surface/60">
             <span className="font-display text-sm text-ink-900">
               {t("notification.title", "Notifications")}
             </span>
@@ -183,7 +183,7 @@ export default function NotificationBell() {
                     <li key={n._id}>
                       <button
                         onClick={() => openItem(n)}
-                        className={`w-full flex items-start gap-2.5 px-4 py-3 text-left transition-colors hover:bg-white ${
+                        className={`w-full flex items-start gap-2.5 px-4 py-3 text-left transition-colors hover:bg-surface ${
                           n.is_read ? "opacity-60" : ""
                         }`}
                       >

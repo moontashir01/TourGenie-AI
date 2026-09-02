@@ -6,16 +6,21 @@ import { AuthProvider } from "./context/AuthContext.jsx";
 import { TripProvider } from "./context/TripContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { CurrencyProvider } from "./context/CurrencyContext.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <LanguageProvider>
       <AuthProvider>
-        <TripProvider>
-          <CurrencyProvider>
-            <App />
-          </CurrencyProvider>
-        </TripProvider>
+        {/* Inside AuthProvider: the theme is saved to the account, so it
+            needs to know who is logged in. */}
+        <ThemeProvider>
+          <TripProvider>
+            <CurrencyProvider>
+              <App />
+            </CurrencyProvider>
+          </TripProvider>
+        </ThemeProvider>
       </AuthProvider>
     </LanguageProvider>
   </StrictMode>

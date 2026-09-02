@@ -134,7 +134,7 @@ export default function Chat() {
                 className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-soft space-y-0.5 ${
                   m.role === "user"
                     ? "bg-gradient-to-br from-teal to-teal-dark text-white rounded-br-sm"
-                    : "bg-white text-ink-900 rounded-bl-sm border border-sand"
+                    : "bg-surface text-ink-900 rounded-bl-sm border border-sand"
                 }`}
               >
                 <RichText text={m.content} />
@@ -163,7 +163,7 @@ export default function Chat() {
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sunset to-sunset-dark flex items-center justify-center shrink-0 shadow-soft">
                 <Sparkles className="w-3.5 h-3.5 text-white" />
               </div>
-              <div className="bg-white border border-sand rounded-2xl rounded-bl-sm px-4 py-3 shadow-soft flex items-center gap-1.5">
+              <div className="bg-surface border border-sand rounded-2xl rounded-bl-sm px-4 py-3 shadow-soft flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce" />
                 <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce [animation-delay:0.15s]" />
                 <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce [animation-delay:0.3s]" />
@@ -211,7 +211,7 @@ export default function Chat() {
           <button
             type="submit"
             disabled={sending || !text.trim()}
-            className="w-10 h-10 shrink-0 rounded-full bg-sunset hover:bg-sunset-dark disabled:opacity-50 text-ink-900 flex items-center justify-center transition-colors"
+            className="w-10 h-10 shrink-0 rounded-full bg-sunset hover:bg-sunset-dark disabled:opacity-50 text-ink-fixed flex items-center justify-center transition-colors"
             aria-label="Send message"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

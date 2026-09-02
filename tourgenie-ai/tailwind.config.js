@@ -1,27 +1,48 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
+  // The palette below switches on this class; `dark:` utilities are
+  // available too for the few places a variable can't express the change.
+  darkMode: "class",
   theme: {
     extend: {
+      // Every colour that changes between light and dark is a CSS variable
+      // rather than a hex, so the ~1,300 palette classes already written
+      // across the app switch theme without being touched. The channels are
+      // bare numbers ("11 31 46") so Tailwind's opacity modifiers — the
+      // text-ink-900/60 the app leans on constantly — keep working.
+      //
+      // src/index.css holds the two value sets, plus `.theme-ink`, which pins
+      // a subtree to the light-mode values so surfaces that are *meant* to be
+      // dark (the auth screens, the landing hero) don't inverse into light
+      // ones when the rest of the app goes dark.
       colors: {
         ink: {
-          900: "#0B1F2E",
-          800: "#123244",
-          700: "#1A4358",
+          900: "rgb(var(--tg-ink-900) / <alpha-value>)",
+          800: "rgb(var(--tg-ink-800) / <alpha-value>)",
+          700: "rgb(var(--tg-ink-700) / <alpha-value>)",
+          // Never themed: text sitting on a brand colour (the sunset CTA,
+          // the teal brand mark) needs the same dark ink in both themes.
+          fixed: "#0B1F2E",
         },
-        paper: "#F7F2E7",
+        paper: {
+          DEFAULT: "rgb(var(--tg-paper) / <alpha-value>)",
+          fixed: "#F7F2E7",
+        },
+        // Cards and panels — what `bg-white` used to mean.
+        surface: "rgb(var(--tg-surface) / <alpha-value>)",
         teal: {
           DEFAULT: "#1C8C82",
-          dark: "#146560",
-          light: "#DCEFEC",
+          dark: "rgb(var(--tg-teal-dark) / <alpha-value>)",
+          light: "rgb(var(--tg-teal-light) / <alpha-value>)",
         },
         sunset: {
           DEFAULT: "#EF8354",
-          dark: "#D96B3B",
-          light: "#FCE3D3",
+          dark: "rgb(var(--tg-sunset-dark) / <alpha-value>)",
+          light: "rgb(var(--tg-sunset-light) / <alpha-value>)",
         },
         gold: "#D9A441",
-        sand: "#E4D9C4",
+        sand: "rgb(var(--tg-sand) / <alpha-value>)",
       },
       fontFamily: {
         display: ["'Fraunces'", "serif"],

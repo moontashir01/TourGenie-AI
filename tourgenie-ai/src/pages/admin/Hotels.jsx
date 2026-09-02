@@ -106,7 +106,7 @@ export default function Hotels() {
       </div>
 
       {editing !== null && (
-        <form onSubmit={handleSubmit} className="bg-white border border-sand rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-surface border border-sand rounded-2xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-display text-base text-ink-900">{editing._id ? "Edit hotel" : "New hotel"}</h4>
             <button type="button" onClick={() => setEditing(null)} className="text-ink-900/40 hover:text-ink-900">
@@ -132,7 +132,7 @@ export default function Hotels() {
         </form>
       )}
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         {loading ? (
           <div className="flex items-center gap-2 text-ink-900/50 text-sm py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading…

@@ -198,7 +198,7 @@ export default function Itinerary() {
   if (!currentTripId) {
     return (
       <AppShell title="Itinerary">
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
           <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">
             ← Go to your trips
@@ -301,7 +301,7 @@ export default function Itinerary() {
           {generating && <GenerationProgress trip={trip} />}
 
           {!generating && items.length === 0 && !showForm && (
-            <div className="bg-white border border-dashed border-sand rounded-2xl p-10 text-center">
+            <div className="bg-surface border border-dashed border-sand rounded-2xl p-10 text-center">
               <p className="text-ink-900/60 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
               <p className="text-ink-900/50 mb-5 text-xs">
                 {trip?.must_visit_attraction_ids?.length > 0 ? (
@@ -378,7 +378,7 @@ export default function Itinerary() {
                           <div className="w-16 shrink-0 text-xs font-mono text-teal-dark pt-0.5">{item.time}</div>
                           <div className="flex-1 border-l-2 border-teal-light pl-4 pb-1 relative">
                             <span
-                              className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full ring-2 ring-white"
+                              className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full ring-2 ring-surface"
                               style={{
                                 background:
                                   { travel: "#1C8C82", meal: "#D9A441", sightseeing: "#146560", rest: "#8A7B6B", shopping: "#D96B3B", checkin: "#123244", checkout: "#123244" }[item.category] || "#EF8354",
@@ -417,7 +417,7 @@ export default function Itinerary() {
                                         className={`w-full text-left text-xs p-2.5 rounded-lg border flex justify-between items-center transition-all duration-200 ${
                                           isSelected
                                             ? "bg-teal-light/20 border-teal shadow-sm text-teal-dark font-medium"
-                                            : "bg-white border-sand hover:border-teal/40 text-ink-900 hover:shadow-sm"
+                                            : "bg-surface border-sand hover:border-teal/40 text-ink-900 hover:shadow-sm"
                                         }`}
                                       >
                                         <span>
@@ -485,7 +485,7 @@ export default function Itinerary() {
           )}
 
           {showForm && (
-            <form onSubmit={handleAddItem} className="bg-white border border-sand rounded-2xl p-6 space-y-4">
+            <form onSubmit={handleAddItem} className="bg-surface border border-sand rounded-2xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-display text-base text-ink-900">Add activity</h4>
                 <button type="button" onClick={() => setShowForm(false)} className="text-ink-900/40 hover:text-ink-900">
@@ -528,7 +528,7 @@ export default function Itinerary() {
         </div>
 
         <aside className="space-y-5">
-          <div className="bg-ink-900 bg-ink-glow rounded-2xl p-6 shadow-lift">
+          <div className="theme-ink bg-ink-900 bg-ink-glow rounded-2xl p-6 shadow-lift">
             <p className="text-xs font-semibold tracking-wide uppercase text-sunset mb-4">Trip snapshot</p>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between"><dt className="text-paper/50">Route</dt><dd className="text-paper">{trip?.origin} → {trip?.destination}</dd></div>

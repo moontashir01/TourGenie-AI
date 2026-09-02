@@ -17,6 +17,7 @@ import Chat from "./pages/Chat";
 import Community from "./pages/Community";
 import Documents from "./pages/Documents";
 import Admin from "./pages/Admin";
+import Settings from "./pages/Settings";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/budget" element={<ProtectedRoute><Budget /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
         <Route path="/documents" element={<ProtectedRoute><Documents /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
 
         {/* Community is browsable by anyone; posting/liking requires login (handled in-page) */}

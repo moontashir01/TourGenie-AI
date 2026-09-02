@@ -2,12 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme ────────────────────────────────────────────────────────────
+   Light is the default and dark is the same palette re-pointed: the app's
+   classes (bg-paper, bg-surface, text-ink-900, border-sand…) never change,
+   only what those names resolve to. Channels are bare RGB triples so
+   Tailwind's /opacity modifiers still work.
+
+   `.theme-ink` pins a subtree to the light values. Some surfaces are dark
+   *by design* — the login screens, the landing hero, the trip snapshot
+   panel — and they'd otherwise flip to light exactly when the rest of the
+   app goes dark. */
+:root,
+.theme-ink {
+  --tg-paper: 247 242 231; /* page background */
+  --tg-surface: 255 255 255; /* cards and panels */
+  --tg-sand: 228 217 196; /* borders and dividers */
+  --tg-ink-900: 11 31 46; /* primary text, and the dark brand surface */
+  --tg-ink-800: 18 50 68;
+  --tg-ink-700: 26 67 88;
+  --tg-teal-dark: 20 101 96; /* accent text on a light ground */
+  --tg-teal-light: 220 239 236;
+  --tg-sunset-dark: 217 107 59;
+  --tg-sunset-light: 252 227 211;
+  --tg-sheen: rgba(255, 255, 255, 0.65); /* the skeleton's sweep */
+  --tg-scrollbar: 228 217 196;
+  color-scheme: light;
+}
+
+.dark {
+  --tg-paper: 14 26 34;
+  --tg-surface: 22 36 46;
+  --tg-sand: 38 58 71;
+  --tg-ink-900: 242 239 231; /* warm off-white, not a clinical #fff */
+  --tg-ink-800: 216 211 200;
+  --tg-ink-700: 169 180 188;
+  /* The two accent texts have to lighten too — at their light-mode values
+     they'd be unreadable on a dark card. */
+  --tg-teal-dark: 111 211 198;
+  --tg-teal-light: 18 58 58;
+  --tg-sunset-dark: 240 161 119;
+  --tg-sunset-light: 58 35 24;
+  --tg-sheen: rgba(255, 255, 255, 0.06);
+  --tg-scrollbar: 45 66 80;
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
   }
   body {
     @apply bg-paper text-ink-900 font-body antialiased;
+    /* The theme flip is a whole-page repaint; easing it stops the switch
+       reading as a flash. */
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
   ::selection {
     @apply bg-sunset/30;
@@ -20,14 +68,15 @@
   /* Slim scrollbar in the app palette (WebKit + Firefox). */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #e4d9c4 transparent;
+    scrollbar-color: rgb(var(--tg-scrollbar)) transparent;
   }
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-sand rounded-full;
+    background-color: rgb(var(--tg-scrollbar));
+    @apply rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-ink-900/20;
@@ -42,16 +91,18 @@
     @apply w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/15 transition-all;
   }
   .card {
-    @apply bg-white border border-sand rounded-2xl shadow-soft;
+    @apply bg-surface border border-sand rounded-2xl shadow-soft;
   }
   .card-hover {
     @apply transition-all duration-200 hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5;
   }
+  /* text-ink-fixed, not text-ink-900: the sunset fill is the same orange in
+     both themes, so its label has to stay dark ink in both. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-all shadow-sm hover:shadow-glow disabled:opacity-60 disabled:shadow-none active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-all shadow-sm hover:shadow-glow disabled:opacity-60 disabled:shadow-none active:scale-[0.98];
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-white border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-all hover:shadow-soft active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 bg-surface border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-all hover:shadow-soft active:scale-[0.98];
   }
   /* Loading placeholder with a light sweep. Size it with w-/h- utilities. */
   .skeleton {
@@ -62,7 +113,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    background: linear-gradient(90deg, transparent, var(--tg-sheen), transparent);
     animation: skeleton-sweep 1.5s infinite;
   }
 }
@@ -71,6 +122,29 @@
   100% {
     transform: translateX(100%);
   }
+}
+
+/* ── Map in dark mode ─────────────────────────────────────────────────
+   OpenStreetMap has no dark tile set here, so an untouched map is a white
+   slab in the middle of a dark page. Inverting the tiles (and rotating the
+   hue back so water stays blue-ish) is the standard trick; it deliberately
+   applies to the tiles alone, leaving route lines and markers in their real
+   brand colours. */
+.dark .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+}
+.dark .leaflet-container {
+  background: rgb(var(--tg-paper));
+}
+.dark .leaflet-popup-content-wrapper,
+.dark .leaflet-popup-tip {
+  background: rgb(var(--tg-surface));
+  color: rgb(var(--tg-ink-900));
+}
+.dark .leaflet-bar a,
+.dark .leaflet-control-attribution {
+  background: rgb(var(--tg-surface));
+  color: rgb(var(--tg-ink-900) / 0.7);
 }
 
 @layer utilities {
@@ -103,6 +177,21 @@
 @media print {
   @page {
     margin: 14mm 12mm;
+  }
+
+  /* Paper is always light. Without this, printing while the app is in dark
+     mode puts dark cards on a white page. */
+  :root {
+    --tg-paper: 255 255 255;
+    --tg-surface: 255 255 255;
+    --tg-sand: 204 204 204;
+    --tg-ink-900: 0 0 0;
+    --tg-ink-800: 34 34 34;
+    --tg-ink-700: 68 68 68;
+    --tg-teal-dark: 20 101 96;
+    --tg-teal-light: 220 239 236;
+    --tg-sunset-dark: 217 107 59;
+    --tg-sunset-light: 252 227 211;
   }
 
   html,

@@ -42,6 +42,11 @@ export const authApi = {
   register: (payload) => request("/auth/register", { method: "POST", body: payload, auth: false }),
   login: (payload) => request("/auth/login", { method: "POST", body: payload, auth: false }),
   me: () => request("/auth/me"),
+  // Account settings — send only the keys being changed; anything omitted
+  // is left as it is.
+  updateMe: (payload) => request("/auth/me", { method: "PATCH", body: payload }),
+  changePassword: (current_password, new_password) =>
+    request("/auth/change-password", { method: "POST", body: { current_password, new_password } }),
   // Password recovery. forgotPassword is also the resend — the server applies
   // its own cooldown, so the UI only has to mirror it.
   forgotPassword: (email) => request("/auth/forgot-password", { method: "POST", body: { email }, auth: false }),

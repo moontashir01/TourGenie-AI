@@ -83,7 +83,7 @@ export default function Reports() {
         <BreakdownCard title="Users by role" rows={Object.entries(usersByRole)} total={users.length} />
       </div>
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h4 className="font-display text-base text-ink-900 mb-5">Top destinations</h4>
         {topDestinations.length === 0 ? (
           <p className="text-sm text-ink-900/50">No trips yet.</p>
@@ -105,7 +105,7 @@ export default function Reports() {
         )}
       </div>
 
-      <div className="bg-white border border-sand rounded-2xl p-6">
+      <div className="bg-surface border border-sand rounded-2xl p-6">
         <h4 className="font-display text-base text-ink-900 mb-4">Moderation summary</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
           <MiniStat label="Hidden posts" value={analytics?.hiddenPosts ?? 0} />
@@ -119,7 +119,7 @@ export default function Reports() {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-white border border-sand rounded-2xl p-5">
+    <div className="bg-surface border border-sand rounded-2xl p-5">
       <p className="text-xs font-medium text-ink-900/50 mb-2">{label}</p>
       <p className="font-mono text-2xl font-semibold text-ink-900">{value}</p>
     </div>
@@ -137,7 +137,7 @@ function MiniStat({ label, value }) {
 
 function BreakdownCard({ title, rows, total }) {
   return (
-    <div className="bg-white border border-sand rounded-2xl p-6">
+    <div className="bg-surface border border-sand rounded-2xl p-6">
       <h4 className="font-display text-base text-ink-900 mb-4">{title}</h4>
       {rows.length === 0 ? (
         <p className="text-sm text-ink-900/50">No data yet.</p>

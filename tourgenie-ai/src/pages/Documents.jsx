@@ -293,7 +293,7 @@ export default function Documents() {
               <Loader2 className="w-4 h-4 animate-spin" /> Loading documents…
             </div>
           ) : docs.length === 0 ? (
-            <div className="bg-white border border-dashed border-sand rounded-2xl p-10 text-center">
+            <div className="bg-surface border border-dashed border-sand rounded-2xl p-10 text-center">
               <FileText className="w-7 h-7 text-teal mx-auto mb-3" strokeWidth={1.5} />
               <p className="text-sm text-ink-900/60">
                 No documents yet. Keep scans of your passport, visa, tickets and bookings here so they travel with the

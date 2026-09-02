@@ -152,7 +152,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-900 flex items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="theme-ink min-h-screen bg-ink-900 flex items-center justify-center px-6 py-12 relative overflow-hidden">
       <svg className="absolute -bottom-10 -left-10 w-72 h-72 opacity-20" viewBox="0 0 200 200" aria-hidden="true">
         <circle cx="100" cy="100" r="90" fill="none" stroke="#1C8C82" strokeWidth="1" strokeDasharray="1 8" />
       </svg>
@@ -224,7 +224,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-900 font-semibold text-sm py-3 rounded-lg transition-colors"
+                className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-fixed font-semibold text-sm py-3 rounded-lg transition-colors"
               >
                 {loading ? "Sending code…" : "Send code"}
               </button>
@@ -263,7 +263,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading || expired || otp.length !== OTP_LENGTH}
-                className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-900 font-semibold text-sm py-3 rounded-lg transition-colors"
+                className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-fixed font-semibold text-sm py-3 rounded-lg transition-colors"
               >
                 {loading ? "Checking…" : "Verify code"}
               </button>
@@ -315,7 +315,7 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-900 font-semibold text-sm py-3 rounded-lg transition-colors"
+                className="w-full bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-fixed font-semibold text-sm py-3 rounded-lg transition-colors"
               >
                 {loading ? "Saving…" : "Reset password"}
               </button>
@@ -330,7 +330,7 @@ export default function ForgotPassword() {
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="w-full bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm py-3 rounded-lg transition-colors"
+                className="w-full bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm py-3 rounded-lg transition-colors"
               >
                 Back to log in
               </button>

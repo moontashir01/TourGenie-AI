@@ -71,7 +71,7 @@ export default function Budget() {
   if (!currentTripId) {
     return (
       <AppShell title={t("budget.title", "Budget & Expenses")}>
-        <div className="bg-white border border-dashed border-sand rounded-2xl p-12 text-center">
+        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
           <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
           <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
         </div>
@@ -144,7 +144,7 @@ export default function Budget() {
 
       <div className="w-full h-2 bg-sand rounded-full overflow-hidden mb-2 flex">
         <div className={overBudget ? "h-full bg-sunset-dark" : "h-full bg-sunset"} style={{ width: `${spentPercent}%` }} />
-        {overBudget && <div className="h-full bg-sunset/40 border-l border-white" style={{ width: `${overPercent}%` }} />}
+        {overBudget && <div className="h-full bg-sunset/40 border-l border-surface" style={{ width: `${overPercent}%` }} />}
       </div>
       <p className="text-xs text-ink-900/50 mb-10">
         {symbol}{(summary?.logged_total || 0).toLocaleString()} logged ·{" "}
@@ -161,7 +161,7 @@ export default function Budget() {
       </p>
 
       {summary?.planned_breakdown?.length > 0 && (
-        <div className="bg-white border border-sand rounded-2xl p-6 mb-8">
+        <div className="bg-surface border border-sand rounded-2xl p-6 mb-8">
           <div className="flex items-baseline justify-between mb-4">
             <h3 className="font-display text-lg text-ink-900">Planned split</h3>
             <p className="text-xs text-ink-900/50">
@@ -193,7 +193,7 @@ export default function Budget() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <div className="bg-white border border-sand rounded-2xl p-6">
+        <div className="bg-surface border border-sand rounded-2xl p-6">
           <h3 className="font-display text-lg text-ink-900 mb-6">Spending by category</h3>
           {segments.length === 0 ? (
             <p className="text-sm text-ink-900/50">No expenses logged yet.</p>
@@ -235,7 +235,7 @@ export default function Budget() {
           )}
         </div>
 
-        <div className="bg-white border border-sand rounded-2xl p-6">
+        <div className="bg-surface border border-sand rounded-2xl p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-lg text-ink-900">Expense log</h3>
             <button
@@ -300,7 +300,7 @@ export default function Budget() {
 function SummaryCard({ label, value, symbol, tone }) {
   const toneClass = { ink: "text-ink-900", sunset: "text-sunset-dark", teal: "text-teal-dark" }[tone];
   return (
-    <div className="bg-white border border-sand rounded-2xl p-6">
+    <div className="bg-surface border border-sand rounded-2xl p-6">
       <p className="text-xs font-medium text-ink-900/50 mb-2">{label}</p>
       <p className={`font-mono text-2xl font-semibold ${toneClass}`}>{symbol}{value.toLocaleString()}</p>
     </div>

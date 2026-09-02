@@ -49,7 +49,7 @@ export default function Landing() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative bg-ink-900 bg-ink-glow overflow-hidden">
+      <section className="theme-ink relative bg-ink-900 bg-ink-glow overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 pt-20 pb-28 relative z-10">
           <div className="max-w-2xl animate-fade-up">
             <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-sunset bg-sunset/10 border border-sunset/20 px-3 py-1.5 rounded-full">
@@ -77,7 +77,7 @@ export default function Landing() {
               </div>
               <Link
                 to="/plan"
-                className="bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold text-sm px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-glow shrink-0 active:scale-[0.98]"
+                className="bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-glow shrink-0 active:scale-[0.98]"
               >
                 Plan My Trip with AI <ArrowRight className="w-4 h-4" />
               </Link>
@@ -191,7 +191,7 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="bg-ink-900 bg-ink-glow relative overflow-hidden">
+      <section className="theme-ink bg-ink-900 bg-ink-glow relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 py-20 text-center relative z-10">
           <ShieldCheck className="w-8 h-8 text-sunset mx-auto mb-5" strokeWidth={1.5} />
           <h2 className="font-display text-3xl md:text-4xl text-paper mb-4">
@@ -202,7 +202,7 @@ export default function Landing() {
           </p>
           <Link
             to="/register"
-            className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-900 font-semibold px-6 py-3 rounded-full transition-colors"
+            className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold px-6 py-3 rounded-full transition-colors"
           >
             Create your free account <ArrowRight className="w-4 h-4" />
           </Link>

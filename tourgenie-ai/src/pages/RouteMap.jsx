@@ -179,7 +179,7 @@ export default function RouteMap() {
   if (!currentTripId) {
     return (
       <AppShell title={t("route.title", "Route & Map")}>
-        <div className="max-w-md p-6 bg-white border border-sand rounded-2xl shadow-soft">
+        <div className="max-w-md p-6 bg-surface border border-sand rounded-2xl shadow-soft">
           <p className="text-sm text-ink-900/70">
             Pick a trip first — the map draws the journey for whichever trip you have open.
           </p>
@@ -206,7 +206,7 @@ export default function RouteMap() {
       ) : (
         <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
           {/* Map — the majority of the screen, per the wireframe */}
-          <div className="rounded-2xl overflow-hidden border border-sand shadow-soft h-[420px] lg:h-[calc(100vh-13rem)] bg-white">
+          <div className="rounded-2xl overflow-hidden border border-sand shadow-soft h-[420px] lg:h-[calc(100vh-13rem)] bg-surface">
             {boundsPositions.length > 0 ? (
               <MapContainer center={boundsPositions[0]} zoom={8} scrollWheelZoom className="w-full h-full">
                 <TileLayer
@@ -279,7 +279,7 @@ export default function RouteMap() {
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors ${
                           i === legIndex
                             ? "bg-teal-light border-teal/40 text-teal-dark"
-                            : "bg-white border-sand text-ink-900/70 hover:border-teal/30"
+                            : "bg-surface border-sand text-ink-900/70 hover:border-teal/30"
                         }`}
                       >
                         <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
@@ -313,8 +313,8 @@ export default function RouteMap() {
                         onClick={() => setVariantIndex(i)}
                         className={`p-3 rounded-xl border text-left transition-all ${
                           selected
-                            ? "bg-white border-teal shadow-soft ring-1 ring-teal/20"
-                            : "bg-white/60 border-sand hover:border-teal/30"
+                            ? "bg-surface border-teal shadow-soft ring-1 ring-teal/20"
+                            : "bg-surface/60 border-sand hover:border-teal/30"
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1.5">
@@ -359,7 +359,7 @@ export default function RouteMap() {
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-ink-900/50 p-3 bg-white border border-sand rounded-xl">
+                <p className="text-xs text-ink-900/50 p-3 bg-surface border border-sand rounded-xl">
                   No route is recorded for this leg yet — the map shows a direct line between the two points instead.
                 </p>
               )}
@@ -371,7 +371,7 @@ export default function RouteMap() {
                 <h2 className="font-display text-base text-ink-900 mb-2">Directions</h2>
                 <ol className="space-y-2">
                   {variant.legs.map((step) => (
-                    <li key={step.sequence} className="flex gap-3 p-3 bg-white border border-sand rounded-xl">
+                    <li key={step.sequence} className="flex gap-3 p-3 bg-surface border border-sand rounded-xl">
                       <span className="w-6 h-6 shrink-0 rounded-full bg-teal-light text-teal-dark text-xs font-bold flex items-center justify-center">
                         {step.sequence}
                       </span>
@@ -411,7 +411,7 @@ export default function RouteMap() {
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                         on
                           ? "bg-gold/20 border-gold/50 text-ink-900"
-                          : "bg-white border-sand text-ink-900/60 hover:border-gold/40"
+                          : "bg-surface border-sand text-ink-900/60 hover:border-gold/40"
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -436,7 +436,7 @@ export default function RouteMap() {
               {services.length > 0 && (
                 <ul className="mt-3 space-y-1.5">
                   {services.map((s) => (
-                    <li key={s._id} className="flex items-start gap-2 p-2.5 bg-white border border-sand rounded-lg">
+                    <li key={s._id} className="flex items-start gap-2 p-2.5 bg-surface border border-sand rounded-lg">
                       <MapPin className="w-3.5 h-3.5 text-gold shrink-0 mt-0.5" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-ink-900 truncate">{s.name}</p>

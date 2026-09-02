@@ -55,7 +55,7 @@ export default function Users() {
   }
 
   return (
-    <div className="bg-white border border-sand rounded-2xl p-6">
+    <div className="bg-surface border border-sand rounded-2xl p-6">
       {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-5">{error}</div>}
       <h3 className="font-display text-lg text-ink-900 mb-5">All users ({users.length})</h3>
       <table className="w-full text-sm">

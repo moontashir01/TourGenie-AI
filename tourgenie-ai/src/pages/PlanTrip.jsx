@@ -841,7 +841,7 @@ export default function PlanTrip() {
           </button>
         </form>
 
-        <aside className="bg-ink-900 bg-ink-glow rounded-2xl p-6 h-fit sticky top-24 shadow-lift">
+        <aside className="theme-ink bg-ink-900 bg-ink-glow rounded-2xl p-6 h-fit sticky top-24 shadow-lift">
           <Sparkles className="w-6 h-6 text-sunset mb-4" strokeWidth={1.5} />
           <h3 className="font-display text-lg text-paper mb-3">How the AI plans your trip</h3>
           <ol className="space-y-3 text-sm text-paper/60">

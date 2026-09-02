@@ -124,7 +124,7 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
       )}
 
       {detail && (
-        <div className="mt-2 p-3 rounded-xl bg-white border border-sand animate-pop-in">
+        <div className="mt-2 p-3 rounded-xl bg-surface border border-sand animate-pop-in">
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="font-semibold text-sm text-ink-900">{MONTH_NAMES[detail.month - 1]}</span>
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${BAND_STYLE[band(detail)].chip}`}>
