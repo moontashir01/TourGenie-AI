@@ -29,6 +29,9 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
     // Structured context the API attached (e.g. the cost estimate behind a
     // rejected budget) so callers can show numbers, not just the sentence.
     error.details = data?.details;
+    // The whole error body, for handlers that read fields the API puts at the
+    // top level (e.g. `retry_after` on a rate-limited reset request).
+    error.body = data;
     throw error;
   }
 
@@ -39,6 +42,12 @@ export const authApi = {
   register: (payload) => request("/auth/register", { method: "POST", body: payload, auth: false }),
   login: (payload) => request("/auth/login", { method: "POST", body: payload, auth: false }),
   me: () => request("/auth/me"),
+  // Password recovery. forgotPassword is also the resend — the server applies
+  // its own cooldown, so the UI only has to mirror it.
+  forgotPassword: (email) => request("/auth/forgot-password", { method: "POST", body: { email }, auth: false }),
+  verifyOtp: (email, otp) => request("/auth/verify-otp", { method: "POST", body: { email, otp }, auth: false }),
+  resetPassword: (reset_token, password) =>
+    request("/auth/reset-password", { method: "POST", body: { reset_token, password }, auth: false }),
 };
 
 export const tripsApi = {
