@@ -331,19 +331,47 @@ export const adminApi = {
   seatMap: (transport_id, date) =>
     request(`/admin/bookings/seat-map?transport_id=${transport_id}&date=${encodeURIComponent(String(date || "").slice(0, 10))}`),
 
-  createAttraction: (payload) => request("/admin/attractions", { method: "POST", body: payload }),
-  updateAttraction: (id, payload) => request(`/admin/attractions/${id}`, { method: "PATCH", body: payload }),
-  deleteAttraction: (id) => request(`/admin/attractions/${id}`, { method: "DELETE" }),
+  // The catalogue: seven collections, one set of routes. Deleting is soft by
+  // default — pass { hard: true } only after reading the references.
+  catalogue: {
+    list: (resource, params) => adminList(`catalogue/${resource}`, params),
+    create: (resource, payload) => request(`/admin/catalogue/${resource}`, { method: "POST", body: payload }),
+    update: (resource, id, payload) =>
+      request(`/admin/catalogue/${resource}/${id}`, { method: "PATCH", body: payload }),
+    remove: (resource, id, { reason, hard } = {}) =>
+      request(`/admin/catalogue/${resource}/${id}${hard ? "?hard=true" : ""}`, {
+        method: "DELETE",
+        body: { reason },
+      }),
+    restore: (resource, id, reason) =>
+      request(`/admin/catalogue/${resource}/${id}/restore`, { method: "POST", body: { reason } }),
+    references: (resource, id) => request(`/admin/catalogue/${resource}/${id}/references`),
+    bulk: (resource, ids, action, reason) =>
+      request(`/admin/catalogue/${resource}/bulk`, { method: "POST", body: { ids, action, reason } }),
+    rateCache: () => request("/admin/catalogue/hotel-rates"),
+    clearRateCache: (city) =>
+      request(`/admin/catalogue/hotel-rates${city ? `?city=${encodeURIComponent(city)}` : ""}`, {
+        method: "DELETE",
+      }),
+  },
 
-  transport: (params) => adminList("transport", params),
-  createTransport: (payload) => request("/admin/transport", { method: "POST", body: payload }),
-  updateTransport: (id, payload) => request(`/admin/transport/${id}`, { method: "PATCH", body: payload }),
-  deleteTransport: (id) => request(`/admin/transport/${id}`, { method: "DELETE" }),
+  // The three screens that already had bespoke forms keep their method names
+  // and now go through the shared catalogue routes.
+  createAttraction: (payload) => request("/admin/catalogue/attractions", { method: "POST", body: payload }),
+  updateAttraction: (id, payload) =>
+    request(`/admin/catalogue/attractions/${id}`, { method: "PATCH", body: payload }),
+  deleteAttraction: (id) => request(`/admin/catalogue/attractions/${id}`, { method: "DELETE" }),
+  attractions: (params) => adminList("catalogue/attractions", params),
 
-  hotels: (params) => adminList("hotels", params),
-  createHotel: (payload) => request("/admin/hotels", { method: "POST", body: payload }),
-  updateHotel: (id, payload) => request(`/admin/hotels/${id}`, { method: "PATCH", body: payload }),
-  deleteHotel: (id) => request(`/admin/hotels/${id}`, { method: "DELETE" }),
+  transport: (params) => adminList("catalogue/transport", params),
+  createTransport: (payload) => request("/admin/catalogue/transport", { method: "POST", body: payload }),
+  updateTransport: (id, payload) => request(`/admin/catalogue/transport/${id}`, { method: "PATCH", body: payload }),
+  deleteTransport: (id) => request(`/admin/catalogue/transport/${id}`, { method: "DELETE" }),
+
+  hotels: (params) => adminList("catalogue/hotels", params),
+  createHotel: (payload) => request("/admin/catalogue/hotels", { method: "POST", body: payload }),
+  updateHotel: (id, payload) => request(`/admin/catalogue/hotels/${id}`, { method: "PATCH", body: payload }),
+  deleteHotel: (id) => request(`/admin/catalogue/hotels/${id}`, { method: "DELETE" }),
 
   communityPosts: (params) => adminList("community-posts", params),
   moderatePost: (id, action, reason) =>

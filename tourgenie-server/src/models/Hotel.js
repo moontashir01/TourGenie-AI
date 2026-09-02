@@ -5,7 +5,7 @@
 // count maps to a real nightly rate, and `distance_to_landmark` — the
 // "0.2 km to beach" line the wireframe's hotel cards show.
 import mongoose from "mongoose";
-import { geoPointSchema, latLngSchema, withGeoSync } from "./_shared.js";
+import { geoPointSchema, latLngSchema, withGeoSync, withSoftDelete } from "./_shared.js";
 
 const roomTypeSchema = new mongoose.Schema(
   {
@@ -76,5 +76,7 @@ hotelSchema.index({ city: 1, price_per_night: 1 });
 hotelSchema.index({ city: 1, rating: -1 });
 hotelSchema.index({ destination_id: 1, budget_tier: 1 });
 hotelSchema.index({ name: "text", description: "text", facilities: "text" });
+
+withSoftDelete(hotelSchema);
 
 export default mongoose.model("Hotel", hotelSchema);

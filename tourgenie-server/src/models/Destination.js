@@ -6,7 +6,7 @@
 // destination_id, so adding a new city is a single insert here plus its
 // related rows.
 import mongoose from "mongoose";
-import { geoPointSchema, latLngSchema, withGeoSync, TIMESTAMPS } from "./_shared.js";
+import { geoPointSchema, latLngSchema, withGeoSync, TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const destinationSchema = new mongoose.Schema(
   {
@@ -60,5 +60,7 @@ destinationSchema.index({ location: "2dsphere" });
 destinationSchema.index({ name: "text", aliases: "text", summary: "text", tags: "text" });
 destinationSchema.index({ country_code: 1, is_active: 1, popularity: -1 });
 destinationSchema.index({ type: 1, is_active: 1 });
+
+withSoftDelete(destinationSchema);
 
 export default mongoose.model("Destination", destinationSchema);

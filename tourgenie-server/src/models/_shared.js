@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+
 // Shared sub-schema pieces reused across the new collections.
 //
 // Every place-like document carries BOTH shapes on purpose:
@@ -55,3 +57,26 @@ export function withGeoSync(schema) {
 export const TIMESTAMPS = {
   timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
 };
+
+// ── Soft delete ──────────────────────────────────────────────────────
+//
+// Catalogue records are referenced by things that outlive them: a trip names
+// a destination, a ticket names a schedule, a review names an attraction.
+// Deleting one outright strands those, so an admin delete marks the row
+// instead and the record can be brought back.
+//
+// `is_active: false` is set at the same time on purpose. Every public query
+// already filters on it, so one flag makes a soft-deleted record vanish from
+// the traveller app without a single read path having to learn about
+// deletion.
+export function withSoftDelete(schema) {
+  schema.add({
+    deleted_at: { type: Date, default: null },
+    deleted_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    // Where the row came from, so a screen can say whether it is seed data
+    // (and will come back on the next reseed) or was created in the portal.
+    source_kind: { type: String, enum: ["seed", "admin"], default: "seed" },
+  });
+  schema.index({ deleted_at: 1 });
+  return schema;
+}

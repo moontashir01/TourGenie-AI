@@ -6,7 +6,7 @@
 // the traveller asked about. That keeps the collection small and means a new
 // travel date never needs new rows.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const flightOptionSchema = new mongoose.Schema(
   {
@@ -50,5 +50,7 @@ const flightOptionSchema = new mongoose.Schema(
 flightOptionSchema.index({ from_iata: 1, to_iata: 1, is_active: 1 });
 flightOptionSchema.index({ from_city: 1, to_city: 1 });
 flightOptionSchema.index({ total_fare_bdt: 1 });
+
+withSoftDelete(flightOptionSchema);
 
 export default mongoose.model("FlightOption", flightOptionSchema);

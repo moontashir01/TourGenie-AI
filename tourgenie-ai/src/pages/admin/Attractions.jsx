@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Pencil, Trash2, X } from "lucide-react";
-import { adminApi, attractionApi } from "../../lib/api";
+import { adminApi } from "../../lib/api";
 
 const blankForm = { name: "", city: "", category: "", entry_fee: 0, lat: "", lng: "", open_hours: "" };
 
@@ -14,9 +14,9 @@ export default function Attractions() {
 
   function load() {
     setLoading(true);
-    attractionApi
-      .list()
-      .then(({ attractions }) => setAttractions(attractions))
+    adminApi
+      .attractions({ limit: 100 })
+      .then(({ rows }) => setAttractions(rows))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }

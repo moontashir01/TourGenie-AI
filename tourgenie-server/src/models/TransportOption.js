@@ -4,6 +4,7 @@
 // detail a booking needs to assign seats, and the class/fare breakdown that
 // makes the mock booking screen look like a real one.
 import mongoose from "mongoose";
+import { withSoftDelete } from "./_shared.js";
 
 const transportOptionSchema = new mongoose.Schema(
   {
@@ -52,5 +53,7 @@ const transportOptionSchema = new mongoose.Schema(
 transportOptionSchema.index({ from_city: 1, to_city: 1, mode: 1 });
 transportOptionSchema.index({ mode: 1, fare: 1 });
 transportOptionSchema.index({ is_active: 1, depart_time: 1 });
+
+withSoftDelete(transportOptionSchema);
 
 export default mongoose.model("TransportOption", transportOptionSchema);

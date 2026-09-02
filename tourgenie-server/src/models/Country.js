@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 // Country-level metadata is kept separate from destinations so locale,
 // currency, and airport defaults have one canonical source.
@@ -21,5 +21,7 @@ const countrySchema = new mongoose.Schema(
 );
 
 countrySchema.index({ is_core: -1, name: 1 });
+
+withSoftDelete(countrySchema);
 
 export default mongoose.model("Country", countrySchema);

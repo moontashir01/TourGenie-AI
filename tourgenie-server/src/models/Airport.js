@@ -2,7 +2,7 @@
 // flight search previously carried in code, so the admin can add an airport
 // without a redeploy.
 import mongoose from "mongoose";
-import { geoPointSchema, latLngSchema, withGeoSync, TIMESTAMPS } from "./_shared.js";
+import { geoPointSchema, latLngSchema, withGeoSync, TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const airportSchema = new mongoose.Schema(
   {
@@ -31,5 +31,7 @@ withGeoSync(airportSchema);
 airportSchema.index({ city: 1 });
 airportSchema.index({ location: "2dsphere" });
 airportSchema.index({ city: "text", name: "text", city_aliases: "text" });
+
+withSoftDelete(airportSchema);
 
 export default mongoose.model("Airport", airportSchema);

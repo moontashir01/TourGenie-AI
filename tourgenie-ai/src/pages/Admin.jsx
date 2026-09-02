@@ -12,6 +12,7 @@ import {
   ScrollText,
   CalendarRange,
   Ticket,
+  Library,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Overview from "./admin/Overview";
@@ -24,6 +25,7 @@ import Reports from "./admin/Reports";
 import Activity from "./admin/Activity";
 import Trips from "./admin/Trips";
 import Bookings from "./admin/Bookings";
+import Catalogue from "./admin/Catalogue";
 import GlobalSearch from "../components/admin/GlobalSearch";
 import UserDetail from "../components/admin/UserDetail";
 import TripDetail from "../components/admin/TripDetail";
@@ -38,6 +40,7 @@ const tabs = [
   { key: "users", label: "Users", icon: Users, component: UsersTab, roles: STAFF },
   { key: "trips", label: "Trips", icon: CalendarRange, component: Trips, roles: STAFF },
   { key: "bookings", label: "Bookings", icon: Ticket, component: Bookings, roles: STAFF },
+  { key: "catalogue", label: "Catalogue", icon: Library, component: Catalogue, roles: ADMIN },
   { key: "attractions", label: "Attractions", icon: MapPinned, component: Attractions, roles: ADMIN },
   { key: "hotels", label: "Hotels", icon: Building2, component: Hotels, roles: ADMIN },
   { key: "transport", label: "Transport", icon: Bus, component: Transport, roles: ADMIN },
@@ -104,6 +107,7 @@ export default function Admin() {
           <p className="text-sm text-ink-900/60 mt-1">
             {activeTab === "overview" && "Platform health at a glance."}
             {activeTab === "users" && "Manage traveler and admin accounts."}
+            {activeTab === "catalogue" && "Destinations, countries, flights and airports — deleting is reversible."}
             {activeTab === "attractions" && "Manage the curated attractions database."}
             {activeTab === "hotels" && "Manage the hotel database used for recommendations."}
             {activeTab === "transport" && "Manage bus, train, and launch options."}

@@ -6,7 +6,7 @@
 // itinerary planner needs (visit duration, best time of day, indoor/outdoor
 // for rainy-day swaps).
 import mongoose from "mongoose";
-import { geoPointSchema, latLngSchema, withGeoSync } from "./_shared.js";
+import { geoPointSchema, latLngSchema, withGeoSync, withSoftDelete } from "./_shared.js";
 
 const attractionSchema = new mongoose.Schema(
   {
@@ -67,5 +67,7 @@ attractionSchema.index({ city: 1, category: 1 });
 attractionSchema.index({ destination_id: 1, is_active: 1 });
 attractionSchema.index({ name: "text", description: "text", tags: "text" });
 attractionSchema.index({ rating: -1 });
+
+withSoftDelete(attractionSchema);
 
 export default mongoose.model("Attraction", attractionSchema);

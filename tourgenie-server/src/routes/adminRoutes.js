@@ -6,17 +6,6 @@ import {
   getUserFootprint,
   deleteUser,
   listTrips,
-  createAttraction,
-  updateAttraction,
-  deleteAttraction,
-  listHotels,
-  createHotel,
-  updateHotel,
-  deleteHotel,
-  listTransportOptions,
-  createTransportOption,
-  updateTransportOption,
-  deleteTransportOption,
   listCommunityPosts,
   moderatePost,
   listReviews,
@@ -34,6 +23,17 @@ import {
   getDepartureSeatMap,
   globalSearch,
 } from "../controllers/adminDetailController.js";
+import {
+  listResource,
+  createResource,
+  updateResource,
+  deleteResource,
+  restoreResource,
+  getReferences,
+  bulkAction,
+  getRateCacheStats,
+  clearRateCache,
+} from "../controllers/adminCatalogueController.js";
 import { protect, requireRole } from "../middleware/auth.js";
 
 const router = Router();
@@ -75,19 +75,19 @@ router.get("/hotel-bookings", staffRead, listHotelBookings);
 router.patch("/hotel-bookings/:id/cancel", adminWrite, cancelHotelBookingForTraveller);
 
 // — catalogue —
-router.post("/attractions", adminWrite, createAttraction);
-router.patch("/attractions/:id", adminWrite, updateAttraction);
-router.delete("/attractions/:id", adminWrite, deleteAttraction);
+// Seven collections behind one set of routes: destinations, countries,
+// attractions, hotels, transport, flights and airports. Deleting is soft by
+// default and refused outright while anything still points at the record.
+router.get("/catalogue/hotel-rates", staffRead, getRateCacheStats);
+router.delete("/catalogue/hotel-rates", adminWrite, clearRateCache);
 
-router.get("/hotels", staffRead, listHotels);
-router.post("/hotels", adminWrite, createHotel);
-router.patch("/hotels/:id", adminWrite, updateHotel);
-router.delete("/hotels/:id", adminWrite, deleteHotel);
-
-router.get("/transport", staffRead, listTransportOptions);
-router.post("/transport", adminWrite, createTransportOption);
-router.patch("/transport/:id", adminWrite, updateTransportOption);
-router.delete("/transport/:id", adminWrite, deleteTransportOption);
+router.get("/catalogue/:resource", staffRead, listResource);
+router.post("/catalogue/:resource", adminWrite, createResource);
+router.post("/catalogue/:resource/bulk", adminWrite, bulkAction);
+router.get("/catalogue/:resource/:id/references", staffRead, getReferences);
+router.patch("/catalogue/:resource/:id", adminWrite, updateResource);
+router.delete("/catalogue/:resource/:id", adminWrite, deleteResource);
+router.post("/catalogue/:resource/:id/restore", adminWrite, restoreResource);
 
 // — moderation —
 router.get("/community-posts", staffRead, listCommunityPosts);
