@@ -12,7 +12,9 @@
     "seed:reference": "node src/seed/index.js --no-demo",
     "seed:validate": "node src/seed/validateCatalog.js",
     "seed:weather": "node src/seed/index.js --no-demo --weather-days=365",
-    "db:verify": "node src/scripts/verify.js"
+    "db:verify": "node src/scripts/verify.js",
+    "make-owner": "node src/scripts/makeOwner.js",
+    "db:orphans": "node src/scripts/findOrphans.js"
   },
   "keywords": [],
   "author": "",

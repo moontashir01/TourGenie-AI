@@ -295,32 +295,50 @@ export const communityApi = {
   like: (id) => request(`/community-posts/${id}/like`, { method: "POST" }),
 };
 
+// Admin lists all speak the same query language — see utils/adminList.js on
+// the server. `params` is {q, page, limit, sort, ...filters}; the answer is
+// always { rows, page, limit, total, pages }.
+function adminList(resource, params = {}) {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== "" && v !== null && v !== undefined)
+  ).toString();
+  return request(`/admin/${resource}${qs ? `?${qs}` : ""}`);
+}
+
 export const adminApi = {
   analytics: () => request("/admin/analytics"),
-  users: () => request("/admin/users"),
-  setUserStatus: (id, is_active) => request(`/admin/users/${id}/status`, { method: "PATCH", body: { is_active } }),
-  deleteUser: (id) => request(`/admin/users/${id}`, { method: "DELETE" }),
+  auditLogs: (params) => adminList("audit-logs", params),
 
-  trips: () => request("/admin/trips"),
+  users: (params) => adminList("users", params),
+  userFootprint: (id) => request(`/admin/users/${id}/footprint`),
+  setUserStatus: (id, is_active, reason) =>
+    request(`/admin/users/${id}/status`, { method: "PATCH", body: { is_active, reason } }),
+  setUserRole: (id, role, reason) =>
+    request(`/admin/users/${id}/role`, { method: "PATCH", body: { role, reason } }),
+  deleteUser: (id, reason) => request(`/admin/users/${id}`, { method: "DELETE", body: { reason } }),
+
+  trips: (params) => adminList("trips", params),
 
   createAttraction: (payload) => request("/admin/attractions", { method: "POST", body: payload }),
   updateAttraction: (id, payload) => request(`/admin/attractions/${id}`, { method: "PATCH", body: payload }),
   deleteAttraction: (id) => request(`/admin/attractions/${id}`, { method: "DELETE" }),
 
+  transport: (params) => adminList("transport", params),
   createTransport: (payload) => request("/admin/transport", { method: "POST", body: payload }),
   updateTransport: (id, payload) => request(`/admin/transport/${id}`, { method: "PATCH", body: payload }),
   deleteTransport: (id) => request(`/admin/transport/${id}`, { method: "DELETE" }),
 
-  hotels: () => request("/admin/hotels"),
+  hotels: (params) => adminList("hotels", params),
   createHotel: (payload) => request("/admin/hotels", { method: "POST", body: payload }),
   updateHotel: (id, payload) => request(`/admin/hotels/${id}`, { method: "PATCH", body: payload }),
   deleteHotel: (id) => request(`/admin/hotels/${id}`, { method: "DELETE" }),
 
-  communityPosts: () => request("/admin/community-posts"),
-  moderatePost: (id, action) => request(`/admin/community-posts/${id}/moderate`, { method: "PATCH", body: { action } }),
-
-  reviews: () => request("/admin/reviews"),
-  moderateReview: (id, action) => request(`/admin/reviews/${id}/moderate`, { method: "PATCH", body: { action } }),
+  communityPosts: (params) => adminList("community-posts", params),
+  moderatePost: (id, action, reason) =>
+    request(`/admin/community-posts/${id}/moderate`, { method: "PATCH", body: { action, reason } }),
+  reviews: (params) => adminList("reviews", params),
+  moderateReview: (id, action, reason) =>
+    request(`/admin/reviews/${id}/moderate`, { method: "PATCH", body: { action, reason } }),
 };
 
 export { getToken };

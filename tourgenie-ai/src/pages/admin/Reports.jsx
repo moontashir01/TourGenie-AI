@@ -1,27 +1,61 @@
 import { useEffect, useState } from "react";
 import { Loader2, Download } from "lucide-react";
 import { adminApi } from "../../lib/api";
+import { ErrorBanner } from "../../components/admin/ListShell";
 
-// Reports tab (wireframe 3.13). Pulls the same data the rest of the admin
-// console uses and derives breakdowns + a downloadable CSV client-side, so
-// it needs no extra backend endpoint beyond what already exists.
+// Reports tab (wireframe 3.13).
+//
+// The breakdowns are computed in the database now rather than by downloading
+// every trip and user into the browser. The CSV still exports the trip rows
+// themselves, so it pages through the admin list instead of relying on an
+// endpoint that returns everything at once.
 export default function Reports() {
   const [analytics, setAnalytics] = useState(null);
-  const [trips, setTrips] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([adminApi.analytics(), adminApi.trips(), adminApi.users()])
-      .then(([a, t, u]) => {
-        setAnalytics(a);
-        setTrips(t.trips);
-        setUsers(u.users);
-      })
+    adminApi
+      .analytics()
+      .then(setAnalytics)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  async function exportTripsCsv() {
+    setExporting(true);
+    setError("");
+    try {
+      // Paged rather than one giant request — the same reason the lists are
+      // paginated. 100 is the server's ceiling per page.
+      const rows = [];
+      let page = 1;
+      let pages = 1;
+      do {
+        const data = await adminApi.trips({ page, limit: 100 });
+        rows.push(...(data.rows || []));
+        pages = data.pages || 1;
+        page += 1;
+      } while (page <= pages && page <= 50); // 5,000 rows is enough for a CSV
+
+      const header = ["Traveler", "Email", "Origin", "Destination", "Status", "Budget", "Created"];
+      const body = rows.map((t) => [
+        t.user_id?.name || "",
+        t.user_id?.email || "",
+        t.origin || "",
+        t.destination || "",
+        t.status || "",
+        t.budget ?? "",
+        t.created_at ? new Date(t.created_at).toISOString().slice(0, 10) : "",
+      ]);
+      downloadCsv("tourgenie-trips-report.csv", [header, ...body]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -31,56 +65,43 @@ export default function Reports() {
     );
   }
 
-  // ---- Derived breakdowns ----
-  const tripsByStatus = countBy(trips, (t) => t.status || "unknown");
-  const usersByRole = countBy(users, (u) => u.role || "traveler");
-  const topDestinations = Object.entries(countBy(trips, (t) => t.destination || "—"))
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-  const totalBudget = trips.reduce((sum, t) => sum + (t.budget || 0), 0);
-  const avgBudget = trips.length ? Math.round(totalBudget / trips.length) : 0;
-
-  function exportTripsCsv() {
-    const header = ["Traveler", "Email", "Origin", "Destination", "Status", "Budget", "Created"];
-    const rows = trips.map((t) => [
-      t.user_id?.name || "",
-      t.user_id?.email || "",
-      t.origin || "",
-      t.destination || "",
-      t.status || "",
-      t.budget ?? "",
-      t.created_at ? new Date(t.created_at).toISOString().slice(0, 10) : "",
-    ]);
-    downloadCsv("tourgenie-trips-report.csv", [header, ...rows]);
-  }
+  const tripsByStatus = Object.entries(analytics?.tripsByStatus || {});
+  const usersByRole = Object.entries(analytics?.usersByRole || {});
+  const topDestinations = analytics?.topDestinations || [];
 
   return (
     <div className="space-y-8">
-      {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
 
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-ink-900">Platform reports</h3>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h3 className="font-display text-lg text-ink-900">Platform reports</h3>
+          {analytics?.generated_at && (
+            <p className="text-xs text-ink-900/45 mt-0.5">
+              Computed {new Date(analytics.generated_at).toLocaleString()}
+            </p>
+          )}
+        </div>
         <button
           onClick={exportTripsCsv}
-          disabled={trips.length === 0}
-          className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-50 text-white font-semibold text-sm px-4 py-2 rounded-full transition-colors"
+          disabled={exporting}
+          className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-50 text-paper-fixed font-semibold text-sm px-4 py-2 rounded-full transition-colors"
         >
-          <Download className="w-4 h-4" /> Export trips (CSV)
+          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {exporting ? "Collecting…" : "Export trips (CSV)"}
         </button>
       </div>
 
-      {/* Headline figures */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <Stat label="Total trips" value={analytics?.totalTrips ?? trips.length} />
+        <Stat label="Total trips" value={analytics?.totalTrips ?? 0} />
         <Stat label="Confirmed bookings" value={analytics?.bookingCount ?? 0} />
-        <Stat label="Total budget planned" value={`৳${totalBudget.toLocaleString()}`} />
-        <Stat label="Avg budget / trip" value={`৳${avgBudget.toLocaleString()}`} />
+        <Stat label="Total budget planned" value={`৳${(analytics?.totalBudget || 0).toLocaleString()}`} />
+        <Stat label="Avg budget / trip" value={`৳${(analytics?.avgBudget || 0).toLocaleString()}`} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <BreakdownCard title="Trips by status" rows={Object.entries(tripsByStatus)} total={trips.length} />
-        <BreakdownCard title="Users by role" rows={Object.entries(usersByRole)} total={users.length} />
+        <BreakdownCard title="Trips by status" rows={tripsByStatus} total={analytics?.totalTrips || 0} />
+        <BreakdownCard title="Users by role" rows={usersByRole} total={analytics?.totalUsers || 0} />
       </div>
 
       <div className="bg-surface border border-sand rounded-2xl p-6">
@@ -89,15 +110,15 @@ export default function Reports() {
           <p className="text-sm text-ink-900/50">No trips yet.</p>
         ) : (
           <div className="space-y-3">
-            {topDestinations.map(([place, count]) => {
-              const max = topDestinations[0][1] || 1;
+            {topDestinations.map((row) => {
+              const max = topDestinations[0].count || 1;
               return (
-                <div key={place} className="flex items-center gap-3">
-                  <span className="w-32 shrink-0 text-sm text-ink-900/70 truncate">{place}</span>
+                <div key={row.destination} className="flex items-center gap-3">
+                  <span className="w-32 shrink-0 text-sm text-ink-900/70 truncate">{row.destination}</span>
                   <div className="flex-1 bg-sand/60 rounded-full h-3 overflow-hidden">
-                    <div className="bg-teal h-full rounded-full" style={{ width: `${(count / max) * 100}%` }} />
+                    <div className="bg-teal h-full rounded-full" style={{ width: `${(row.count / max) * 100}%` }} />
                   </div>
-                  <span className="w-8 text-right font-mono text-xs text-ink-900/60">{count}</span>
+                  <span className="w-8 text-right font-mono text-xs text-ink-900/60">{row.count}</span>
                 </div>
               );
             })}
@@ -106,11 +127,12 @@ export default function Reports() {
       </div>
 
       <div className="bg-surface border border-sand rounded-2xl p-6">
-        <h4 className="font-display text-base text-ink-900 mb-4">Moderation summary</h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+        <h4 className="font-display text-base text-ink-900 mb-4">Moderation & catalogue</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <MiniStat label="Hidden posts" value={analytics?.hiddenPosts ?? 0} />
           <MiniStat label="Hidden reviews" value={analytics?.hiddenReviews ?? 0} />
           <MiniStat label="Attractions listed" value={analytics?.attractionCount ?? 0} />
+          <MiniStat label="Booking value" value={`৳${(analytics?.bookingValue || 0).toLocaleString()}`} />
         </div>
       </div>
     </div>
@@ -156,14 +178,6 @@ function BreakdownCard({ title, rows, total }) {
       )}
     </div>
   );
-}
-
-function countBy(list, keyFn) {
-  return list.reduce((acc, item) => {
-    const k = keyFn(item);
-    acc[k] = (acc[k] || 0) + 1;
-    return acc;
-  }, {});
 }
 
 function downloadCsv(filename, rows) {

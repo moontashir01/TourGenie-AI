@@ -11,7 +11,9 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password_hash: { type: String, required: true, select: false },
-    role: { type: String, enum: ["traveler", "admin"], default: "traveler" },
+    // moderator/owner sit either side of admin — see middleware/auth.js for
+    // what each one may do.
+    role: { type: String, enum: ["traveler", "moderator", "admin", "owner"], default: "traveler" },
     language: { type: String, default: "en" },
 
     // — already in use by the app —

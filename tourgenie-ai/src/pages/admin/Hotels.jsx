@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2, X, Star } from "lucide-react";
+import { useState } from "react";
+import { Plus, Pencil, Trash2, X, Star } from "lucide-react";
 import { adminApi } from "../../lib/api";
+import useAdminList from "../../hooks/useAdminList";
+import { AdminToolbar, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
 
 const blankForm = {
   name: "",
@@ -13,23 +15,17 @@ const blankForm = {
 };
 
 export default function Hotels() {
-  const [hotels, setHotels] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // The catalogue is far past the point where fetching all of it per render
+  // made sense, so it pages like every other admin list.
+  const list = useAdminList(adminApi.hotels);
+  const hotels = list.rows;
   const [editing, setEditing] = useState(null); // null = closed, {} = new, {...} = editing existing
   const [form, setForm] = useState(blankForm);
   const [saving, setSaving] = useState(false);
 
-  function load() {
-    setLoading(true);
-    adminApi
-      .hotels()
-      .then(({ hotels }) => setHotels(hotels))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(load, []);
+  const load = list.reload;
+  const error = list.error;
+  const setError = list.setError;
 
   function openNew() {
     setForm(blankForm);
@@ -94,7 +90,7 @@ export default function Hotels() {
 
   return (
     <div className="space-y-5">
-      {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg text-ink-900">Hotels ({hotels.length})</h3>
@@ -126,20 +122,16 @@ export default function Hotels() {
             <input type="number" step="any" placeholder="Longitude (optional)" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} className="input" />
           </div>
           <input placeholder="Facilities (comma-separated, e.g. Wi-Fi, Pool, Breakfast)" value={form.facilities} onChange={(e) => setForm({ ...form, facilities: e.target.value })} className="input" />
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-paper-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
             {saving ? "Saving…" : editing._id ? "Save changes" : "Create hotel"}
           </button>
         </form>
       )}
 
       <div className="bg-surface border border-sand rounded-2xl p-6">
-        {loading ? (
-          <div className="flex items-center gap-2 text-ink-900/50 text-sm py-8 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-          </div>
-        ) : hotels.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No hotels yet. Add one, or run the seed script.</p>
-        ) : (
+        <AdminToolbar list={list} placeholder="Search hotel name, city or area…" />
+        <ListState list={list} empty="No hotels match that. Add one, or run the seed script." />
+        {hotels.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
@@ -174,6 +166,7 @@ export default function Hotels() {
             </tbody>
           </table>
         )}
+        <Pager list={list} />
       </div>
     </div>
   );

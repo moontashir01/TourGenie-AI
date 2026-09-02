@@ -9,6 +9,7 @@ import {
   BarChart3,
   FileBarChart,
   Compass,
+  ScrollText,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Overview from "./admin/Overview";
@@ -18,27 +19,36 @@ import Transport from "./admin/Transport";
 import Hotels from "./admin/Hotels";
 import Reviews from "./admin/Reviews";
 import Reports from "./admin/Reports";
+import Activity from "./admin/Activity";
 
+const STAFF = ["moderator", "admin", "owner"];
+const ADMIN = ["admin", "owner"];
+
+// Each tab names the roles it is for, so a moderator is not shown doors that
+// answer 403 when opened.
 const tabs = [
-  { key: "overview", label: "Overview", icon: BarChart3, component: Overview },
-  { key: "users", label: "Users", icon: Users, component: UsersTab },
-  { key: "attractions", label: "Attractions", icon: MapPinned, component: Attractions },
-  { key: "hotels", label: "Hotels", icon: Building2, component: Hotels },
-  { key: "transport", label: "Transport", icon: Bus, component: Transport },
-  { key: "reviews", label: "Reviews", icon: MessageSquareWarning, component: Reviews },
-  { key: "reports", label: "Reports", icon: FileBarChart, component: Reports },
+  { key: "overview", label: "Overview", icon: BarChart3, component: Overview, roles: STAFF },
+  { key: "users", label: "Users", icon: Users, component: UsersTab, roles: STAFF },
+  { key: "attractions", label: "Attractions", icon: MapPinned, component: Attractions, roles: ADMIN },
+  { key: "hotels", label: "Hotels", icon: Building2, component: Hotels, roles: ADMIN },
+  { key: "transport", label: "Transport", icon: Bus, component: Transport, roles: ADMIN },
+  { key: "reviews", label: "Reviews", icon: MessageSquareWarning, component: Reviews, roles: STAFF },
+  { key: "reports", label: "Reports", icon: FileBarChart, component: Reports, roles: ADMIN },
+  { key: "activity", label: "Activity", icon: ScrollText, component: Activity, roles: STAFF },
 ];
 
 export default function Admin() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
 
-  if (user?.role !== "admin") {
+  if (!STAFF.includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const ActiveComponent = tabs.find((t) => t.key === activeTab)?.component || Overview;
-  const activeLabel = tabs.find((t) => t.key === activeTab)?.label || "Overview";
+  const visibleTabs = tabs.filter((t) => t.roles.includes(user.role));
+  const current = visibleTabs.find((t) => t.key === activeTab) || visibleTabs[0];
+  const ActiveComponent = current.component;
+  const activeLabel = current.label;
 
   return (
     <div className="min-h-screen flex bg-paper">
@@ -47,8 +57,11 @@ export default function Admin() {
           <Compass className="w-6 h-6 text-sunset" strokeWidth={1.75} />
           <span className="font-display text-lg text-paper">Admin console</span>
         </Link>
+        <p className="px-2 -mt-6 mb-8 text-[11px] uppercase tracking-wide text-paper/40 capitalize">
+          Signed in as {user.role}
+        </p>
         <nav className="flex flex-col gap-1">
-          {tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -80,6 +93,7 @@ export default function Admin() {
             {activeTab === "transport" && "Manage bus, train, and launch options."}
             {activeTab === "reviews" && "Moderate community posts and attraction reviews."}
             {activeTab === "reports" && "Platform analytics and exportable reports."}
+            {activeTab === "activity" && "Every change made from this portal, and who made it."}
           </p>
         </header>
 

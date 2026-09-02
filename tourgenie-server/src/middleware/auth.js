@@ -43,10 +43,24 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
   next();
 });
 
-// Role-based access control for admin-only routes (FR-20 through FR-24)
-export const adminOnly = (req, res, next) => {
-  if (req.user?.role !== "admin") {
-    return res.status(403).json({ message: "Admin access required" });
-  }
-  next();
-};
+// Role-based access control (FR-20 through FR-24).
+//
+// The portal has three levels above a traveller, so a route declares the
+// floor it needs rather than everything sharing one "is admin" test:
+//   moderator — read the dashboards, moderate posts and reviews
+//   admin     — the above, plus catalogue CRUD, user status, exports
+//   owner     — the above, plus role changes and hard deletes
+export const ROLES = ["traveler", "moderator", "admin", "owner"];
+export const STAFF_ROLES = ["moderator", "admin", "owner"];
+
+export const requireRole =
+  (...roles) =>
+  (req, res, next) => {
+    if (!roles.includes(req.user?.role)) {
+      return res.status(403).json({ message: "You don't have access to that" });
+    }
+    next();
+  };
+
+// Kept for the routes that were written against it; "admin or above".
+export const adminOnly = requireRole("admin", "owner");

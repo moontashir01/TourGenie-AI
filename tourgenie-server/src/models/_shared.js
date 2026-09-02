@@ -26,12 +26,20 @@ export const latLngSchema = {
 };
 
 // Mongoose pre-validate hook: mirror lat_lng into GeoJSON `location`.
+//
+// With no coordinates the field has to be removed outright, not left as it
+// is. `type` defaults to "Point", so a document saved without a lat/lng
+// carries a Point with no coordinates — which the 2dsphere index refuses
+// with "Can't extract geo keys", turning every admin "create hotel" without
+// map coordinates into a 500.
 export function syncGeo(doc) {
   const lat = doc.lat_lng?.lat;
   const lng = doc.lat_lng?.lng;
   if (typeof lat === "number" && typeof lng === "number") {
     doc.location = { type: "Point", coordinates: [lng, lat] };
+    return;
   }
+  if (!doc.location?.coordinates?.length) doc.location = undefined;
 }
 
 // Attach the hook to a schema that has both `lat_lng` and `location`.

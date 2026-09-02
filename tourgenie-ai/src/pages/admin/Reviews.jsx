@@ -1,139 +1,256 @@
-import { useEffect, useState } from "react";
-import { Loader2, EyeOff, Eye, Trash2, Star } from "lucide-react";
+import { useState } from "react";
+import { EyeOff, Eye, Trash2, Star, Loader2 } from "lucide-react";
 import { adminApi } from "../../lib/api";
+import useAdminList from "../../hooks/useAdminList";
+import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
+
+// FR-23 — moderation.
+//
+// Hiding or removing someone's writing asks for a reason, which the audit
+// trail keeps. Without it the log says a post vanished and nothing about why,
+// which is no use to the next moderator or to the person who wrote it.
+function ModeratePrompt({ target, busy, onCancel, onConfirm }) {
+  const [reason, setReason] = useState("");
+  const removing = target.action === "remove";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative w-full max-w-md card p-6 animate-pop-in">
+        <h3 className="font-display text-lg text-ink-900 mb-1">
+          {removing ? "Remove this permanently?" : "Hide this from the feed?"}
+        </h3>
+        <p className="text-sm text-ink-900/60 mb-4">
+          {removing
+            ? "It is deleted for good. Hiding it is reversible; this is not."
+            : "The author keeps it, but nobody else sees it. You can unhide it later."}
+        </p>
+        <blockquote className="text-xs text-ink-900/70 bg-paper border border-sand rounded-lg px-3 py-2.5 mb-4 max-h-24 overflow-y-auto">
+          {target.excerpt}
+        </blockquote>
+        <label className="block mb-4">
+          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Reason (recorded in the activity log)</span>
+          <input
+            type="text"
+            autoFocus
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Spam, abuse, off-topic…"
+            className="input"
+          />
+        </label>
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busy || !reason.trim()}
+            onClick={() => onConfirm(reason.trim())}
+            className="inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50"
+          >
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            {removing ? "Remove" : "Hide"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const VISIBILITY = [
+  { value: "", label: "All" },
+  { value: "visible", label: "Visible" },
+  { value: "hidden", label: "Hidden" },
+];
 
 export default function Reviews() {
-  const [posts, setPosts] = useState([]);
-  const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const posts = useAdminList(adminApi.communityPosts, { visibility: "" });
+  const reviews = useAdminList(adminApi.reviews, { visibility: "" });
   const [busyId, setBusyId] = useState(null);
+  const [prompt, setPrompt] = useState(null); // { kind, id, action, excerpt }
 
-  function load() {
-    setLoading(true);
-    Promise.all([adminApi.communityPosts(), adminApi.reviews()])
-      .then(([p, r]) => {
-        setPosts(p.posts);
-        setReviews(r.reviews);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(load, []);
-
-  async function actOnPost(id, action) {
+  // Unhiding is reversible and needs no explanation, so it goes straight
+  // through; hiding and removing do not.
+  async function act(kind, id, action, reason) {
     setBusyId(id);
+    const list = kind === "post" ? posts : reviews;
     try {
-      await adminApi.moderatePost(id, action);
-      load();
+      if (kind === "post") await adminApi.moderatePost(id, action, reason);
+      else await adminApi.moderateReview(id, action, reason);
+      list.reload();
     } catch (err) {
-      setError(err.message);
+      list.setError(err.message);
     } finally {
       setBusyId(null);
+      setPrompt(null);
     }
   }
 
-  async function actOnReview(id, action) {
-    setBusyId(id);
-    try {
-      await adminApi.moderateReview(id, action);
-      load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  if (loading) {
+  function ActionButtons({ kind, row, excerpt }) {
     return (
-      <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+      <div className="flex justify-end gap-3">
+        {row.is_hidden ? (
+          <button
+            onClick={() => act(kind, row._id, "unhide")}
+            disabled={busyId === row._id}
+            title="Make visible again"
+            className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={() => setPrompt({ kind, id: row._id, action: "hide", excerpt })}
+            disabled={busyId === row._id}
+            title="Hide from the feed"
+            className="text-ink-900/40 hover:text-gold disabled:opacity-30"
+          >
+            <EyeOff className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={() => setPrompt({ kind, id: row._id, action: "remove", excerpt })}
+          disabled={busyId === row._id}
+          title="Remove permanently"
+          className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
+      <section className="card p-6">
+        <h3 className="font-display text-lg text-ink-900 mb-4">Community posts</h3>
+        <ErrorBanner message={posts.error} onDismiss={() => posts.setError("")} />
+        <AdminToolbar list={posts} placeholder="Search place or content…">
+          <AdminSelect
+            label="Visibility"
+            value={posts.filters.visibility}
+            onChange={(v) => posts.setFilter("visibility", v)}
+            options={VISIBILITY}
+          />
+        </AdminToolbar>
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-5">Community posts ({posts.length})</h3>
-        {posts.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No posts yet.</p>
-        ) : (
-          <div className="divide-y divide-sand">
-            {posts.map((p) => (
-              <div key={p._id} className="py-4 flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink-900">{p.user_id?.name || "Traveler"} <span className="font-normal text-ink-900/50">· {p.place}</span></p>
-                  <p className="text-sm text-ink-900/70 mt-1">{p.content}</p>
-                  {p.is_hidden && (
-                    <span className="inline-block mt-2 text-[11px] font-semibold uppercase tracking-wide bg-sunset-light text-sunset-dark px-2 py-0.5 rounded-full">Hidden</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {p.is_hidden ? (
-                    <button onClick={() => actOnPost(p._id, "unhide")} disabled={busyId === p._id} className="text-ink-900/40 hover:text-teal-dark" title="Unhide">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button onClick={() => actOnPost(p._id, "hide")} disabled={busyId === p._id} className="text-ink-900/40 hover:text-sunset-dark" title="Hide">
-                      <EyeOff className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button onClick={() => actOnPost(p._id, "remove")} disabled={busyId === p._id} className="text-ink-900/40 hover:text-sunset-dark" title="Delete permanently">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+        <ListState list={posts} empty="No posts match that." />
+
+        {posts.rows.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                  <th className="pb-3 font-medium">Author</th>
+                  <th className="pb-3 font-medium">Place</th>
+                  <th className="pb-3 font-medium">Content</th>
+                  <th className="pb-3 font-medium">State</th>
+                  <th className="pb-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sand">
+                {posts.rows.map((p) => (
+                  <tr key={p._id} className={busyId === p._id ? "opacity-50" : ""}>
+                    <td className="py-3 text-ink-900/70 text-xs">
+                      {p.user_id?.name || <span className="text-ink-900/35">deleted account</span>}
+                    </td>
+                    <td className="py-3 text-ink-900/70">{p.place}</td>
+                    <td className="py-3 text-ink-900/70 max-w-sm truncate" title={p.content}>
+                      {p.content}
+                    </td>
+                    <td className="py-3">
+                      <span
+                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                          p.is_hidden ? "bg-sunset-light text-sunset-dark" : "bg-teal-light text-teal-dark"
+                        }`}
+                      >
+                        {p.is_hidden ? "Hidden" : "Visible"}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      <ActionButtons kind="post" row={p} excerpt={p.content} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+        <Pager list={posts} />
+      </section>
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-5">Attraction reviews ({reviews.length})</h3>
-        {reviews.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No reviews yet.</p>
-        ) : (
-          <div className="divide-y divide-sand">
-            {reviews.map((r) => (
-              <div key={r._id} className="py-4 flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-ink-900">{r.user_id?.name || "Traveler"}</p>
-                    <span className="text-ink-900/40">·</span>
-                    <p className="text-sm text-ink-900/60">{r.attraction_id?.name || "Unknown attraction"}</p>
-                    <span className="flex items-center gap-0.5 text-gold">
-                      {[...Array(r.rating)].map((_, i) => <Star key={i} className="w-3 h-3 fill-gold" />)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink-900/70 mt-1">{r.comment}</p>
-                  {r.is_hidden && (
-                    <span className="inline-block mt-2 text-[11px] font-semibold uppercase tracking-wide bg-sunset-light text-sunset-dark px-2 py-0.5 rounded-full">Hidden</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  {r.is_hidden ? (
-                    <button onClick={() => actOnReview(r._id, "unhide")} disabled={busyId === r._id} className="text-ink-900/40 hover:text-teal-dark" title="Unhide">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button onClick={() => actOnReview(r._id, "hide")} disabled={busyId === r._id} className="text-ink-900/40 hover:text-sunset-dark" title="Hide">
-                      <EyeOff className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button onClick={() => actOnReview(r._id, "remove")} disabled={busyId === r._id} className="text-ink-900/40 hover:text-sunset-dark" title="Delete permanently">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+      <section className="card p-6">
+        <h3 className="font-display text-lg text-ink-900 mb-4">Attraction reviews</h3>
+        <ErrorBanner message={reviews.error} onDismiss={() => reviews.setError("")} />
+        <AdminToolbar list={reviews} placeholder="Search review text…">
+          <AdminSelect
+            label="Visibility"
+            value={reviews.filters.visibility}
+            onChange={(v) => reviews.setFilter("visibility", v)}
+            options={VISIBILITY}
+          />
+        </AdminToolbar>
+
+        <ListState list={reviews} empty="No reviews match that." />
+
+        {reviews.rows.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                  <th className="pb-3 font-medium">Author</th>
+                  <th className="pb-3 font-medium">Attraction</th>
+                  <th className="pb-3 font-medium">Rating</th>
+                  <th className="pb-3 font-medium">Comment</th>
+                  <th className="pb-3 font-medium">State</th>
+                  <th className="pb-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sand">
+                {reviews.rows.map((r) => (
+                  <tr key={r._id} className={busyId === r._id ? "opacity-50" : ""}>
+                    <td className="py-3 text-ink-900/70 text-xs">
+                      {r.user_id?.name || <span className="text-ink-900/35">deleted account</span>}
+                    </td>
+                    <td className="py-3 text-ink-900/70">{r.attraction_id?.name || "—"}</td>
+                    <td className="py-3">
+                      <span className="inline-flex items-center gap-1 text-ink-900/70">
+                        <Star className="w-3.5 h-3.5 text-gold fill-current" /> {r.rating}
+                      </span>
+                    </td>
+                    <td className="py-3 text-ink-900/70 max-w-sm truncate" title={r.comment}>
+                      {r.comment}
+                    </td>
+                    <td className="py-3">
+                      <span
+                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                          r.is_hidden ? "bg-sunset-light text-sunset-dark" : "bg-teal-light text-teal-dark"
+                        }`}
+                      >
+                        {r.is_hidden ? "Hidden" : "Visible"}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      <ActionButtons kind="review" row={r} excerpt={r.comment} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+        <Pager list={reviews} />
+      </section>
+
+      {prompt && (
+        <ModeratePrompt
+          target={prompt}
+          busy={busyId === prompt.id}
+          onCancel={() => setPrompt(null)}
+          onConfirm={(reason) => act(prompt.kind, prompt.id, prompt.action, reason)}
+        />
+      )}
     </div>
   );
 }

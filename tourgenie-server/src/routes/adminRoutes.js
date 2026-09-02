@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   listUsers,
   setUserStatus,
+  setUserRole,
+  getUserFootprint,
   deleteUser,
   listTrips,
   createAttraction,
@@ -11,6 +13,7 @@ import {
   createHotel,
   updateHotel,
   deleteHotel,
+  listTransportOptions,
   createTransportOption,
   updateTransportOption,
   deleteTransportOption,
@@ -18,44 +21,56 @@ import {
   moderatePost,
   listReviews,
   moderateReview,
+  listAuditLogs,
   getAnalytics,
 } from "../controllers/adminController.js";
-import { protect, adminOnly } from "../middleware/auth.js";
+import { protect, requireRole } from "../middleware/auth.js";
 
 const router = Router();
-router.use(protect, adminOnly);
 
-// FR-20
-router.get("/users", listUsers);
-router.patch("/users/:id/status", setUserStatus);
-router.delete("/users/:id", deleteUser);
+// Anyone on staff may reach the portal; each route below declares the floor
+// it actually needs on top of that.
+router.use(protect, requireRole("moderator", "admin", "owner"));
 
-// Trip oversight
-router.get("/trips", listTrips);
+const staffRead = requireRole("moderator", "admin", "owner");
+const adminWrite = requireRole("admin", "owner");
+const ownerOnly = requireRole("owner");
 
-// FR-21
-router.post("/attractions", createAttraction);
-router.patch("/attractions/:id", updateAttraction);
-router.delete("/attractions/:id", deleteAttraction);
+// — dashboards —
+router.get("/analytics", staffRead, getAnalytics);
+router.get("/audit-logs", staffRead, listAuditLogs);
 
-// FR-07 (admin) — Hotel management
-router.get("/hotels", listHotels);
-router.post("/hotels", createHotel);
-router.patch("/hotels/:id", updateHotel);
-router.delete("/hotels/:id", deleteHotel);
+// — users —
+router.get("/users", staffRead, listUsers);
+router.get("/users/:id/footprint", adminWrite, getUserFootprint);
+router.patch("/users/:id/status", adminWrite, setUserStatus);
+// Granting staff access is the one thing an admin cannot do to another
+// account: it is what stops one compromised admin minting more.
+router.patch("/users/:id/role", ownerOnly, setUserRole);
+router.delete("/users/:id", ownerOnly, deleteUser);
 
-// FR-22
-router.post("/transport", createTransportOption);
-router.patch("/transport/:id", updateTransportOption);
-router.delete("/transport/:id", deleteTransportOption);
+// — trips —
+router.get("/trips", staffRead, listTrips);
 
-// FR-23
-router.get("/community-posts", listCommunityPosts);
-router.patch("/community-posts/:id/moderate", moderatePost);
-router.get("/reviews", listReviews);
-router.patch("/reviews/:id/moderate", moderateReview);
+// — catalogue —
+router.post("/attractions", adminWrite, createAttraction);
+router.patch("/attractions/:id", adminWrite, updateAttraction);
+router.delete("/attractions/:id", adminWrite, deleteAttraction);
 
-// FR-24
-router.get("/analytics", getAnalytics);
+router.get("/hotels", staffRead, listHotels);
+router.post("/hotels", adminWrite, createHotel);
+router.patch("/hotels/:id", adminWrite, updateHotel);
+router.delete("/hotels/:id", adminWrite, deleteHotel);
+
+router.get("/transport", staffRead, listTransportOptions);
+router.post("/transport", adminWrite, createTransportOption);
+router.patch("/transport/:id", adminWrite, updateTransportOption);
+router.delete("/transport/:id", adminWrite, deleteTransportOption);
+
+// — moderation —
+router.get("/community-posts", staffRead, listCommunityPosts);
+router.patch("/community-posts/:id/moderate", staffRead, moderatePost);
+router.get("/reviews", staffRead, listReviews);
+router.patch("/reviews/:id/moderate", staffRead, moderateReview);
 
 export default router;

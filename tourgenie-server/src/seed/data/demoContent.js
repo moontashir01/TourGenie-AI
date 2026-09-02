@@ -9,7 +9,7 @@ export const ADMIN_PASSWORD = "Admin123!";
 
 export const users = [
   {
-    name: "TourGenie Admin", email: "admin@tourgenie.ai", role: "admin", language: "en",
+    name: "TourGenie Admin", email: "admin@tourgenie.ai", role: "owner", language: "en",
     password: ADMIN_PASSWORD, city: "Dhaka", days_ago: 240, email_verified: true,
   },
   {

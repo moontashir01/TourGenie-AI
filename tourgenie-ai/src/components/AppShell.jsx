@@ -274,7 +274,7 @@ function UserFooter({ user, onLogout, onNavigate }) {
         <LanguageSwitcher />
         <ThemeToggle />
       </div>
-      {user?.role === "admin" && (
+      {["moderator", "admin", "owner"].includes(user?.role) && (
         <NavLink to="/admin" className={adminLinkClass} onClick={onNavigate}>
           <Settings className="w-4 h-4" strokeWidth={1.75} />
           {t("nav.admin", "Admin console")}

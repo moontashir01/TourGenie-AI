@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Compass, Mail, Lock, AlertCircle, Clock } from "lucide-react";
 import RouteLine from "../components/RouteLine";
 import { useAuth } from "../context/AuthContext";
 import { consumeSessionExpiredNotice } from "../lib/api";
 
+const STAFF_ROLES = ["moderator", "admin", "owner"];
+
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,8 +24,12 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      const user = await login(email, password);
+      // Back to the page that sent them here, if there was one; otherwise
+      // staff go to the portal they actually came for rather than landing on
+      // a traveller dashboard and hunting for the sidebar link.
+      const intended = location.state?.from?.pathname;
+      navigate(intended || (STAFF_ROLES.includes(user.role) ? "/admin" : "/dashboard"), { replace: true });
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
@@ -109,9 +116,6 @@ export default function Login() {
             <Link to="/register" className="text-sunset font-medium hover:text-sunset-dark">
               Create an account
             </Link>
-          </p>
-          <p className="text-center text-xs text-paper/30 mt-4">
-            Demo admin: admin@tourgenie.ai / Admin123!
           </p>
         </div>
       </div>

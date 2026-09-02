@@ -1,27 +1,23 @@
-import { useEffect, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2, X } from "lucide-react";
-import { adminApi, transportApi } from "../../lib/api";
+import { useState } from "react";
+import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { adminApi } from "../../lib/api";
+import useAdminList from "../../hooks/useAdminList";
+import { AdminToolbar, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
 
 const blankForm = { operator: "", mode: "bus", from_city: "", to_city: "", depart_time: "", arrive_time: "", fare: "" };
 
 export default function Transport() {
-  const [options, setOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Reads the admin list rather than the public one: this screen needs every
+  // schedule, including any that are deactivated, and it needs to page.
+  const list = useAdminList(adminApi.transport);
+  const options = list.rows;
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(blankForm);
   const [saving, setSaving] = useState(false);
 
-  function load() {
-    setLoading(true);
-    transportApi
-      .list()
-      .then(({ options }) => setOptions(options))
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }
-
-  useEffect(load, []);
+  const load = list.reload;
+  const error = list.error;
+  const setError = list.setError;
 
   function openNew() {
     setForm(blankForm);
@@ -73,7 +69,7 @@ export default function Transport() {
 
   return (
     <div className="space-y-5">
-      {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg text-ink-900">Transport options ({options.length})</h3>
@@ -105,18 +101,16 @@ export default function Transport() {
             <input required type="time" placeholder="Arrives" value={form.arrive_time} onChange={(e) => setForm({ ...form, arrive_time: e.target.value })} className="input" />
             <input required type="number" min="0" placeholder="Fare (BDT)" value={form.fare} onChange={(e) => setForm({ ...form, fare: e.target.value })} className="input" />
           </div>
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
+          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-paper-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
             {saving ? "Saving…" : editing._id ? "Save changes" : "Create option"}
           </button>
         </form>
       )}
 
       <div className="bg-surface border border-sand rounded-2xl p-6">
-        {loading ? (
-          <div className="flex items-center gap-2 text-ink-900/50 text-sm py-8 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-          </div>
-        ) : (
+        <AdminToolbar list={list} placeholder="Search operator, from or to city…" />
+        <ListState list={list} empty="No schedules match that." />
+        {options.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
@@ -147,6 +141,7 @@ export default function Transport() {
             </tbody>
           </table>
         )}
+        <Pager list={list} />
       </div>
     </div>
   );
