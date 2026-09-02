@@ -1,29 +1,51 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Star, MapPin, Loader2 } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
 import AppShell from "../components/AppShell";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { communityApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
-const places = ["All places", "Cox's Bazar", "Sajek Valley", "Sundarbans"];
+const ALL = "All places";
+// Shown until the catalogue arrives, and if it can't be fetched at all.
+const FALLBACK_PLACES = ["Cox's Bazar", "Sajek Valley", "Sundarbans"];
 
 function CommunityBody() {
   const { user } = useAuth();
-  const [filter, setFilter] = useState("All places");
+  const [filter, setFilter] = useState(ALL);
   const [posts, setPosts] = useState([]);
+  const [places, setPlaces] = useState(FALLBACK_PLACES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [content, setContent] = useState("");
-  const [place, setPlace] = useState("Cox's Bazar");
+  const [place, setPlace] = useState(FALLBACK_PLACES[0]);
   const [posting, setPosting] = useState(false);
+
+  // Every destination in the catalogue, not the three this page used to
+  // hard-code — a post about any of the other 24 was unfilterable.
+  useEffect(() => {
+    communityApi
+      .places()
+      .then(({ places: rows }) => {
+        if (rows?.length) {
+          setPlaces(rows);
+          setPlace((current) => (rows.includes(current) ? current : rows[0]));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function load() {
     setLoading(true);
     communityApi
       .list(filter)
-      .then(({ posts }) => setPosts(posts))
+      .then(({ posts }) => {
+        setPosts(posts);
+        // Cleared on success — one failed load used to leave the red bar on
+        // screen for the rest of the visit.
+        setError("");
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }
@@ -51,7 +73,7 @@ function CommunityBody() {
         {user ? (
           <form onSubmit={handlePost} className="bg-surface border border-sand rounded-2xl p-5">
             <select value={place} onChange={(e) => setPlace(e.target.value)} className="input mb-2 w-auto">
-              {places.slice(1).map((p) => (
+              {places.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
@@ -85,7 +107,7 @@ function CommunityBody() {
             <Loader2 className="w-4 h-4 animate-spin" /> Loading posts…
           </div>
         ) : posts.length === 0 ? (
-          <p className="text-sm text-ink-900/50 text-center py-8">No posts yet for {filter === "All places" ? "any place" : filter}.</p>
+          <p className="text-sm text-ink-900/50 text-center py-8">No posts yet for {filter === ALL ? "any place" : filter}.</p>
         ) : (
           posts.map((p) => (
             <div key={p._id} className="bg-surface border border-sand rounded-2xl p-5">
@@ -109,8 +131,10 @@ function CommunityBody() {
       <aside className="space-y-5">
         <div className="bg-surface border border-sand rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/50 mb-3">Filter by place</p>
-          <div className="flex flex-col gap-1.5">
-            {places.map((p) => (
+          {/* The catalogue is 27 long — it scrolls rather than pushing the
+              page down. */}
+          <div className="flex flex-col gap-1.5 max-h-96 overflow-y-auto pr-1">
+            {[ALL, ...places].map((p) => (
               <button
                 key={p}
                 onClick={() => setFilter(p)}
