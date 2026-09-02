@@ -4,6 +4,46 @@ function getToken() {
   return localStorage.getItem("tourgenie_token");
 }
 
+// A login lasts a week. When it runs out, every request starts coming back
+// 401 — and the app used to render that as a red "Not authorized" banner on
+// whichever page you were on, forever, with no hint that logging in again
+// was the fix. Now the first such answer ends the session cleanly and sends
+// you to the login screen with an explanation.
+export const SESSION_EXPIRED_EVENT = "tourgenie:session-expired";
+const EXPIRY_NOTICE_KEY = "tourgenie_session_expired";
+
+let expiring = false;
+
+function endExpiredSession() {
+  // A page that fired six requests at once gets six 401s; only the first
+  // should do anything.
+  if (expiring) return;
+  expiring = true;
+  try {
+    localStorage.removeItem("tourgenie_token");
+    // Read and cleared by the login screen, so it can say why you're there.
+    sessionStorage.setItem(EXPIRY_NOTICE_KEY, "1");
+  } catch {
+    // Storage blocked — the event below still signs the user out in memory.
+  }
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
+  // Let the whole burst of in-flight requests settle before re-arming.
+  setTimeout(() => {
+    expiring = false;
+  }, 1000);
+}
+
+/** True once, for the login screen; the notice doesn't survive a reload. */
+export function consumeSessionExpiredNotice() {
+  try {
+    const flag = sessionStorage.getItem(EXPIRY_NOTICE_KEY);
+    if (flag) sessionStorage.removeItem(EXPIRY_NOTICE_KEY);
+    return Boolean(flag);
+  } catch {
+    return false;
+  }
+}
+
 async function request(path, { method = "GET", body, auth = true } = {}) {
   const headers = { "Content-Type": "application/json" };
   const token = getToken();
@@ -23,6 +63,10 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   }
 
   if (!res.ok) {
+    // Only when a token was actually sent: a 401 from the login form means
+    // "wrong password", not "your session ended", and must stay on the page.
+    if (res.status === 401 && auth && token) endExpiredSession();
+
     const message = data?.message || `Request failed with status ${res.status}`;
     const error = new Error(message);
     error.status = res.status;

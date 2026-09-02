@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Compass, Mail, Lock, AlertCircle } from "lucide-react";
+import { Compass, Mail, Lock, AlertCircle, Clock } from "lucide-react";
 import RouteLine from "../components/RouteLine";
 import { useAuth } from "../context/AuthContext";
+import { consumeSessionExpiredNotice } from "../lib/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,9 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Set when the API client ended an expired session and sent us here. Read
+  // once, on mount, so it doesn't reappear after a failed login attempt.
+  const [expired] = useState(consumeSessionExpiredNotice);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -40,6 +44,13 @@ export default function Login() {
         <div className="bg-ink-800 border border-ink-700 rounded-2xl p-8">
           <h1 className="font-display text-2xl text-paper mb-1">Welcome back</h1>
           <p className="text-sm text-paper/50 mb-6">Log in to pick up where your trip planning left off.</p>
+
+          {expired && !error && (
+            <div className="flex items-start gap-2 bg-teal/10 border border-teal/30 text-teal text-sm rounded-lg px-3 py-2.5 mb-4">
+              <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Your session ended — please log in again to pick up where you left off.</span>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset text-sm rounded-lg px-3 py-2.5 mb-4">

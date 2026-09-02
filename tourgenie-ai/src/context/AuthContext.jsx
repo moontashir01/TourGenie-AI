@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { authApi } from "../lib/api";
+import { authApi, SESSION_EXPIRED_EVENT } from "../lib/api";
 
 const AuthContext = createContext(null);
 
@@ -18,6 +18,20 @@ export function AuthProvider({ children }) {
       .then(({ user }) => setUser(user))
       .catch(() => localStorage.removeItem("tourgenie_token"))
       .finally(() => setLoading(false));
+  }, []);
+
+  // The API client raises this the moment a request comes back 401 with a
+  // token attached — the token has expired or been revoked. Dropping the
+  // user here is what makes ProtectedRoute send them to the login screen
+  // instead of leaving an error banner on the page they were reading.
+  useEffect(() => {
+    function onExpired() {
+      localStorage.removeItem("tourgenie_current_trip");
+      setUser(null);
+      setLoading(false);
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   async function login(email, password) {
