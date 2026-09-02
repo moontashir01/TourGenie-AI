@@ -10,6 +10,8 @@ import {
   FileBarChart,
   Compass,
   ScrollText,
+  CalendarRange,
+  Ticket,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Overview from "./admin/Overview";
@@ -20,6 +22,11 @@ import Hotels from "./admin/Hotels";
 import Reviews from "./admin/Reviews";
 import Reports from "./admin/Reports";
 import Activity from "./admin/Activity";
+import Trips from "./admin/Trips";
+import Bookings from "./admin/Bookings";
+import GlobalSearch from "../components/admin/GlobalSearch";
+import UserDetail from "../components/admin/UserDetail";
+import TripDetail from "../components/admin/TripDetail";
 
 const STAFF = ["moderator", "admin", "owner"];
 const ADMIN = ["admin", "owner"];
@@ -29,6 +36,8 @@ const ADMIN = ["admin", "owner"];
 const tabs = [
   { key: "overview", label: "Overview", icon: BarChart3, component: Overview, roles: STAFF },
   { key: "users", label: "Users", icon: Users, component: UsersTab, roles: STAFF },
+  { key: "trips", label: "Trips", icon: CalendarRange, component: Trips, roles: STAFF },
+  { key: "bookings", label: "Bookings", icon: Ticket, component: Bookings, roles: STAFF },
   { key: "attractions", label: "Attractions", icon: MapPinned, component: Attractions, roles: ADMIN },
   { key: "hotels", label: "Hotels", icon: Building2, component: Hotels, roles: ADMIN },
   { key: "transport", label: "Transport", icon: Bus, component: Transport, roles: ADMIN },
@@ -40,6 +49,10 @@ const tabs = [
 export default function Admin() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  // Opened from the search box, from any tab — a lookup shouldn't require
+  // navigating to the right list first.
+  const [searchedUserId, setSearchedUserId] = useState(null);
+  const [searchedTripId, setSearchedTripId] = useState(null);
 
   if (!STAFF.includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
@@ -84,7 +97,10 @@ export default function Admin() {
 
       <div className="flex-1 min-w-0">
         <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6">
-          <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-1">
+            <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
+            <GlobalSearch onPickUser={setSearchedUserId} onPickTrip={setSearchedTripId} />
+          </div>
           <p className="text-sm text-ink-900/60 mt-1">
             {activeTab === "overview" && "Platform health at a glance."}
             {activeTab === "users" && "Manage traveler and admin accounts."}
@@ -93,6 +109,8 @@ export default function Admin() {
             {activeTab === "transport" && "Manage bus, train, and launch options."}
             {activeTab === "reviews" && "Moderate community posts and attraction reviews."}
             {activeTab === "reports" && "Platform analytics and exportable reports."}
+            {activeTab === "trips" && "Every trip across all travellers, and how each plan was built."}
+            {activeTab === "bookings" && "Tickets and reservations, searchable by reference."}
             {activeTab === "activity" && "Every change made from this portal, and who made it."}
           </p>
         </header>
@@ -100,6 +118,9 @@ export default function Admin() {
         <main className="px-6 md:px-10 py-8">
           <ActiveComponent />
         </main>
+
+        <UserDetail userId={searchedUserId} onClose={() => setSearchedUserId(null)} />
+        <TripDetail tripId={searchedTripId} onClose={() => setSearchedTripId(null)} />
       </div>
     </div>
   );

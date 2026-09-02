@@ -309,7 +309,10 @@ export const adminApi = {
   analytics: () => request("/admin/analytics"),
   auditLogs: (params) => adminList("audit-logs", params),
 
+  search: (q) => request(`/admin/search?q=${encodeURIComponent(q)}`),
+
   users: (params) => adminList("users", params),
+  userDetail: (id) => request(`/admin/users/${id}`),
   userFootprint: (id) => request(`/admin/users/${id}/footprint`),
   setUserStatus: (id, is_active, reason) =>
     request(`/admin/users/${id}/status`, { method: "PATCH", body: { is_active, reason } }),
@@ -318,6 +321,15 @@ export const adminApi = {
   deleteUser: (id, reason) => request(`/admin/users/${id}`, { method: "DELETE", body: { reason } }),
 
   trips: (params) => adminList("trips", params),
+  tripDetail: (id) => request(`/admin/trips/${id}`),
+
+  bookings: (params) => adminList("bookings", params),
+  cancelBooking: (id, reason) => request(`/admin/bookings/${id}/cancel`, { method: "PATCH", body: { reason } }),
+  hotelBookings: (params) => adminList("hotel-bookings", params),
+  cancelHotelBooking: (id, reason) =>
+    request(`/admin/hotel-bookings/${id}/cancel`, { method: "PATCH", body: { reason } }),
+  seatMap: (transport_id, date) =>
+    request(`/admin/bookings/seat-map?transport_id=${transport_id}&date=${encodeURIComponent(String(date || "").slice(0, 10))}`),
 
   createAttraction: (payload) => request("/admin/attractions", { method: "POST", body: payload }),
   updateAttraction: (id, payload) => request(`/admin/attractions/${id}`, { method: "PATCH", body: payload }),

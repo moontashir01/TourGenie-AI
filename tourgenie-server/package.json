@@ -14,7 +14,8 @@
     "seed:weather": "node src/seed/index.js --no-demo --weather-days=365",
     "db:verify": "node src/scripts/verify.js",
     "make-owner": "node src/scripts/makeOwner.js",
-    "db:orphans": "node src/scripts/findOrphans.js"
+    "db:orphans": "node src/scripts/findOrphans.js",
+    "set-password": "node src/scripts/setPassword.js"
   },
   "keywords": [],
   "author": "",

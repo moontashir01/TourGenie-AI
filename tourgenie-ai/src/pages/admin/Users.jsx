@@ -4,6 +4,7 @@ import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
 import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
+import UserDetail from "../../components/admin/UserDetail";
 
 const ROLE_TONE = {
   owner: "bg-sunset-light text-sunset-dark",
@@ -64,6 +65,7 @@ export default function Users() {
   const [busyId, setBusyId] = useState(null);
   const [roleTarget, setRoleTarget] = useState(null); // { user, role }
   const [deleteTarget, setDeleteTarget] = useState(null); // { user, footprint }
+  const [openUserId, setOpenUserId] = useState(null);
 
   const isOwner = currentUser?.role === "owner";
   const canManage = isOwner || currentUser?.role === "admin";
@@ -170,7 +172,14 @@ export default function Users() {
                 return (
                   <tr key={u._id} className={busyId === u._id ? "opacity-50" : ""}>
                     <td className="py-3 font-medium text-ink-900">
-                      {u.name}
+                      <button
+                        type="button"
+                        onClick={() => setOpenUserId(u._id)}
+                        className="hover:text-teal-dark hover:underline text-left"
+                        title="Open this account"
+                      >
+                        {u.name}
+                      </button>
                       {self && <span className="text-[11px] text-ink-900/40 ml-1.5">(you)</span>}
                     </td>
                     <td className="py-3 text-ink-900/70">{u.email}</td>
@@ -236,6 +245,8 @@ export default function Users() {
       )}
 
       <Pager list={list} />
+
+      <UserDetail userId={openUserId} onClose={() => setOpenUserId(null)} />
 
       {roleTarget && (
         <ReasonPrompt

@@ -24,6 +24,16 @@ import {
   listAuditLogs,
   getAnalytics,
 } from "../controllers/adminController.js";
+import {
+  getUserDetail,
+  getTripDetail,
+  listBookings,
+  listHotelBookings,
+  cancelBookingForTraveller,
+  cancelHotelBookingForTraveller,
+  getDepartureSeatMap,
+  globalSearch,
+} from "../controllers/adminDetailController.js";
 import { protect, requireRole } from "../middleware/auth.js";
 
 const router = Router();
@@ -40,8 +50,12 @@ const ownerOnly = requireRole("owner");
 router.get("/analytics", staffRead, getAnalytics);
 router.get("/audit-logs", staffRead, listAuditLogs);
 
+// — one box, every subject —
+router.get("/search", staffRead, globalSearch);
+
 // — users —
 router.get("/users", staffRead, listUsers);
+router.get("/users/:id", staffRead, getUserDetail);
 router.get("/users/:id/footprint", adminWrite, getUserFootprint);
 router.patch("/users/:id/status", adminWrite, setUserStatus);
 // Granting staff access is the one thing an admin cannot do to another
@@ -51,6 +65,14 @@ router.delete("/users/:id", ownerOnly, deleteUser);
 
 // — trips —
 router.get("/trips", staffRead, listTrips);
+router.get("/trips/:id", staffRead, getTripDetail);
+
+// — bookings —
+router.get("/bookings", staffRead, listBookings);
+router.get("/bookings/seat-map", staffRead, getDepartureSeatMap);
+router.patch("/bookings/:id/cancel", adminWrite, cancelBookingForTraveller);
+router.get("/hotel-bookings", staffRead, listHotelBookings);
+router.patch("/hotel-bookings/:id/cancel", adminWrite, cancelHotelBookingForTraveller);
 
 // — catalogue —
 router.post("/attractions", adminWrite, createAttraction);

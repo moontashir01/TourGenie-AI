@@ -10,6 +10,7 @@ import Trip from "../models/Trip.js";
 import TransportOption from "../models/TransportOption.js";
 import AppSetting from "../models/AppSetting.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { releaseBooking } from "../services/bookingCancellation.js";
 
 const DAY_MS = 86400000;
 
@@ -249,31 +250,9 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     return res.status(409).json({ message: "That booking is already cancelled" });
   }
 
-  booking.status = "cancelled";
-  booking.cancelled_at = new Date();
-  await booking.save();
-
-  // Give back exactly what the booking took. Bookings made before that was
-  // recorded fall back to their seat count, still capped at the coach's own
-  // capacity so the counter can't exceed the seats that physically exist.
-  // `??`, not `||`: a booking that legitimately held zero — because the
-  // counter was already at zero when it was made — must give back zero, not
-  // fall through to its seat count and invent seats. Only a booking from
-  // before the field existed has no number at all.
-  const released = booking.inventory_held ?? (booking.seats?.length || booking.passengers.length);
-  await TransportOption.collection.updateOne({ _id: booking.transport_id }, [
-    {
-      $set: {
-        seats_available: {
-          $min: [
-            { $add: ["$seats_available", released] },
-            // No declared capacity on the schedule — nothing to clamp to.
-            { $ifNull: ["$total_seats", { $add: ["$seats_available", released] }] },
-          ],
-        },
-      },
-    },
-  ]);
+  // Shared with the admin's cancel-on-behalf, so the seat accounting can
+  // only ever be done one way.
+  await releaseBooking(booking);
 
   res.json({ booking, message: "Booking cancelled and seats released." });
 });
