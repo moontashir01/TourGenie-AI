@@ -26,6 +26,23 @@ export const protect = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// For routes anyone may read but that show something extra to whoever is
+// logged in — the community feed marks the posts you've liked. A missing or
+// stale token is not an error here; it just means there is no `req.user`.
+export const optionalAuth = asyncHandler(async (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) return next();
+
+  try {
+    const decoded = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (user?.is_active) req.user = user;
+  } catch {
+    // Expired or forged — carry on as an anonymous reader.
+  }
+  next();
+});
+
 // Role-based access control for admin-only routes (FR-20 through FR-24)
 export const adminOnly = (req, res, next) => {
   if (req.user?.role !== "admin") {

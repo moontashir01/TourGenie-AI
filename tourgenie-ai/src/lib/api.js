@@ -286,7 +286,10 @@ export const notificationApi = {
 };
 
 export const communityApi = {
-  list: (place) => request(`/community-posts${place && place !== "All places" ? `?place=${encodeURIComponent(place)}` : ""}`, { auth: false }),
+  // Sent with the token when there is one: the feed is public, but it marks
+  // the posts you've already liked.
+  list: (place) =>
+    request(`/community-posts${place && place !== "All places" ? `?place=${encodeURIComponent(place)}` : ""}`),
   places: () => request("/community-posts/places", { auth: false }),
   create: (payload) => request("/community-posts", { method: "POST", body: payload }),
   like: (id) => request(`/community-posts/${id}/like`, { method: "POST" }),

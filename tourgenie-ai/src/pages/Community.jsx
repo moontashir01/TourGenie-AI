@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Loader2 } from "lucide-react";
+import { Heart, MapPin, Loader2 } from "lucide-react";
 import AppShell from "../components/AppShell";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -21,6 +21,7 @@ function CommunityBody() {
   const [content, setContent] = useState("");
   const [place, setPlace] = useState(FALLBACK_PLACES[0]);
   const [posting, setPosting] = useState(false);
+  const [likingId, setLikingId] = useState(null);
 
   // Every destination in the catalogue, not the three this page used to
   // hard-code — a post about any of the other 24 was unfilterable.
@@ -64,6 +65,24 @@ function CommunityBody() {
       setError(err.message);
     } finally {
       setPosting(false);
+    }
+  }
+
+  // Optimistic: the heart answers on click, the server settles the count.
+  async function toggleLike(post) {
+    if (!user || likingId) return;
+    const optimistic = { liked: !post.liked, likes: post.likes + (post.liked ? -1 : 1) };
+    setPosts((prev) => prev.map((p) => (p._id === post._id ? { ...p, ...optimistic } : p)));
+    setLikingId(post._id);
+    try {
+      const { liked, likes } = await communityApi.like(post._id);
+      setPosts((prev) => prev.map((p) => (p._id === post._id ? { ...p, liked, likes } : p)));
+    } catch (err) {
+      // Put it back the way it was — the like didn't happen.
+      setPosts((prev) => prev.map((p) => (p._id === post._id ? post : p)));
+      setError(err.message);
+    } finally {
+      setLikingId(null);
     }
   }
 
@@ -123,6 +142,29 @@ function CommunityBody() {
                 </div>
               </div>
               <p className="text-sm text-ink-900/80 leading-relaxed">{p.content}</p>
+
+              <div className="flex items-center gap-3 mt-3 pt-3 border-t border-sand">
+                <button
+                  type="button"
+                  onClick={() => toggleLike(p)}
+                  disabled={!user || likingId === p._id}
+                  aria-pressed={Boolean(p.liked)}
+                  title={user ? (p.liked ? "Remove your like" : "Like this post") : "Log in to like posts"}
+                  className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full border transition-colors disabled:cursor-not-allowed ${
+                    p.liked
+                      ? "border-sunset/40 bg-sunset/10 text-sunset-dark"
+                      : "border-sand text-ink-900/55 hover:border-sunset/40 hover:text-sunset-dark"
+                  } ${!user ? "opacity-60" : ""}`}
+                >
+                  <Heart className={`w-3.5 h-3.5 ${p.liked ? "fill-current" : ""}`} strokeWidth={1.75} />
+                  {p.likes > 0 ? p.likes : "Like"}
+                </button>
+                {!user && (
+                  <Link to="/login" className="text-xs text-teal-dark hover:text-teal">
+                    Log in to like
+                  </Link>
+                )}
+              </div>
             </div>
           ))
         )}
