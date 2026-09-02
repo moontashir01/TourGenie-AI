@@ -7,18 +7,44 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 // hand-written handful. The client used to carry three names in a constant
 // while the database held 27 destinations: anything posted about the other
 // 24 could never be filtered back out again.
+// Grouped by country, because a flat run of 25 names gives no clue that the
+// list is two destinations countries rather than one long alphabet — Chiang
+// Mai lands between Chattogram and Cox's Bazar.
 export const getPlaces = asyncHandler(async (req, res) => {
   const [destinations, used] = await Promise.all([
-    Destination.find({ is_active: true }).select("name country_code").sort({ name: 1 }).lean(),
+    Destination.find({ is_active: true }).select("name country country_code").sort({ name: 1 }).lean(),
     // Places already posted about that are no longer in the catalogue — a
     // renamed or retired destination shouldn't hide its own posts.
     CommunityPost.distinct("place", { is_hidden: false }),
   ]);
 
-  const names = new Set(destinations.map((d) => d.name));
-  const extras = used.filter((place) => place && !names.has(place)).sort();
+  const byCountry = new Map();
+  for (const destination of destinations) {
+    const code = destination.country_code || "";
+    if (!byCountry.has(code)) {
+      byCountry.set(code, { country: destination.country || "Elsewhere", country_code: code, places: [] });
+    }
+    byCountry.get(code).places.push(destination.name);
+  }
 
-  res.json({ places: [...destinations.map((d) => d.name), ...extras] });
+  // Home country first, then the rest alphabetically — the feed is mostly
+  // Bangladeshi travel and burying it under "Elsewhere" would read oddly.
+  const groups = [...byCountry.values()].sort((a, b) => {
+    if (a.country_code === "BD") return -1;
+    if (b.country_code === "BD") return 1;
+    return a.country.localeCompare(b.country);
+  });
+
+  const known = new Set(destinations.map((d) => d.name));
+  const extras = used.filter((place) => place && !known.has(place)).sort();
+  if (extras.length) groups.push({ country: "Other places", country_code: "", places: extras });
+
+  res.json({
+    groups,
+    // The flat list stays: it is what the post form and the filter fall back
+    // to, and what the endpoint answered before it grouped anything.
+    places: groups.flatMap((group) => group.places),
+  });
 });
 
 // One post's shape for the feed. `liked` is per-viewer, so it is only

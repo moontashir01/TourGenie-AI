@@ -9,17 +9,21 @@ import { useAuth } from "../context/AuthContext";
 
 const ALL = "All places";
 // Shown until the catalogue arrives, and if it can't be fetched at all.
-const FALLBACK_PLACES = ["Cox's Bazar", "Sajek Valley", "Sundarbans"];
+const FALLBACK_GROUPS = [
+  { country: "Bangladesh", country_code: "BD", places: ["Cox's Bazar", "Sajek Valley", "Sundarbans"] },
+];
 
 function CommunityBody() {
   const { user } = useAuth();
   const [filter, setFilter] = useState(ALL);
   const [posts, setPosts] = useState([]);
-  const [places, setPlaces] = useState(FALLBACK_PLACES);
+  // Grouped by country: both the sidebar and the post form render the
+  // groups directly, so there is nothing left that wants a flat list.
+  const [groups, setGroups] = useState(FALLBACK_GROUPS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [content, setContent] = useState("");
-  const [place, setPlace] = useState(FALLBACK_PLACES[0]);
+  const [place, setPlace] = useState(FALLBACK_GROUPS[0].places[0]);
   const [posting, setPosting] = useState(false);
   const [likingId, setLikingId] = useState(null);
 
@@ -28,11 +32,17 @@ function CommunityBody() {
   useEffect(() => {
     communityApi
       .places()
-      .then(({ places: rows }) => {
-        if (rows?.length) {
-          setPlaces(rows);
-          setPlace((current) => (rows.includes(current) ? current : rows[0]));
-        }
+      .then(({ groups: rows, places: flat }) => {
+        // Older servers answer with the flat list only.
+        const next = rows?.length
+          ? rows
+          : flat?.length
+            ? [{ country: "All destinations", country_code: "", places: flat }]
+            : null;
+        if (!next) return;
+        setGroups(next);
+        const names = next.flatMap((group) => group.places);
+        setPlace((current) => (names.includes(current) ? current : names[0]));
       })
       .catch(() => {});
   }, []);
@@ -92,8 +102,12 @@ function CommunityBody() {
         {user ? (
           <form onSubmit={handlePost} className="bg-surface border border-sand rounded-2xl p-5">
             <select value={place} onChange={(e) => setPlace(e.target.value)} className="input mb-2 w-auto">
-              {places.map((p) => (
-                <option key={p} value={p}>{p}</option>
+              {groups.map((group) => (
+                <optgroup key={group.country_code || group.country} label={group.country}>
+                  {group.places.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </optgroup>
               ))}
             </select>
             <textarea
@@ -173,19 +187,38 @@ function CommunityBody() {
       <aside className="space-y-5">
         <div className="bg-surface border border-sand rounded-2xl p-5">
           <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/50 mb-3">Filter by place</p>
-          {/* The catalogue is 27 long — it scrolls rather than pushing the
-              page down. */}
-          <div className="flex flex-col gap-1.5 max-h-96 overflow-y-auto pr-1">
-            {[ALL, ...places].map((p) => (
-              <button
-                key={p}
-                onClick={() => setFilter(p)}
-                className={`text-left text-sm px-3 py-2 rounded-lg transition-colors ${
-                  filter === p ? "bg-teal-light text-teal-dark font-semibold" : "text-ink-900/70 hover:bg-paper"
-                }`}
-              >
-                {p}
-              </button>
+          {/* Grouped by country and scrolling: 25 names in one alphabetical
+              run hid the fact that this is two countries, with Chiang Mai
+              filed between Chattogram and Cox's Bazar. */}
+          <div className="flex flex-col max-h-96 overflow-y-auto pr-1">
+            <button
+              onClick={() => setFilter(ALL)}
+              className={`text-left text-sm px-3 py-2 rounded-lg transition-colors ${
+                filter === ALL ? "bg-teal-light text-teal-dark font-semibold" : "text-ink-900/70 hover:bg-paper"
+              }`}
+            >
+              {ALL}
+            </button>
+
+            {groups.map((group) => (
+              <div key={group.country_code || group.country} className="mt-3 first:mt-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-900/40 px-3 mb-1">
+                  {group.country}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {group.places.map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setFilter(p)}
+                      className={`text-left text-sm px-3 py-2 rounded-lg transition-colors ${
+                        filter === p ? "bg-teal-light text-teal-dark font-semibold" : "text-ink-900/70 hover:bg-paper"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
