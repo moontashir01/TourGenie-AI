@@ -44,12 +44,32 @@ function publicUser(user) {
 
 const MIN_PASSWORD_LENGTH = 6;
 
+// Deliberately loose — it rejects what is obviously not an address (no @, no
+// dot in the domain, spaces) without trying to out-guess the RFC and turn
+// away someone's real, unusual mailbox.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+
 // FR-01 — User Registration
 export const register = asyncHandler(async (req, res) => {
   const { name, email, password, language, country_code = "BD" } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: "Name, email, and password are required" });
+  }
+
+  // Sign-up used to check only that these three were present: `a` was an
+  // acceptable password and `abc` an acceptable email — and an address that
+  // isn't real is an account that can never be recovered, because the reset
+  // code has nowhere to go. The rules now match the reset and change-password
+  // screens, which have always insisted on six characters.
+  if (!EMAIL_PATTERN.test(String(email).trim())) {
+    return res.status(400).json({ message: "That doesn't look like a valid email address" });
+  }
+  if (String(password).length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+  }
+  if (!String(name).trim()) {
+    return res.status(400).json({ message: "Name can't be empty" });
   }
 
   const existing = await User.findOne({ email: email.toLowerCase() });
@@ -61,8 +81,8 @@ export const register = asyncHandler(async (req, res) => {
   const country = await Country.findOne({ code: String(country_code).toUpperCase(), is_core: true, is_active: true });
   if (!country) return res.status(400).json({ message: "Please choose a supported country" });
   const user = await User.create({
-    name,
-    email: email.toLowerCase(),
+    name: String(name).trim(),
+    email: email.toLowerCase().trim(),
     password_hash,
     language: language || "en",
     country: country.name,
