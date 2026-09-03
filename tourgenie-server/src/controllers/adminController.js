@@ -7,6 +7,9 @@ import CommunityPost from "../models/CommunityPost.js";
 import Review from "../models/Review.js";
 import AuditLog from "../models/AuditLog.js";
 import Report from "../models/Report.js";
+import Document from "../models/Document.js";
+import Destination from "../models/Destination.js";
+import TransportOption from "../models/TransportOption.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { parseListQuery, paginate } from "../utils/adminList.js";
 import { recordAudit } from "../services/auditLog.js";
@@ -287,6 +290,11 @@ export const listTrips = asyncHandler(async (req, res) => {
   });
   if (req.query.status) options.filter.status = req.query.status;
   if (req.query.country_code) options.filter.country_code = String(req.query.country_code).toUpperCase();
+  // A plan that was never generated is what a failed generation looks
+  // like in this schema — nothing records the failure itself, only that
+  // the itinerary is missing. The dashboard's work queue links here.
+  if (req.query.has_itinerary === "false") options.filter.itinerary_generated_at = null;
+  if (req.query.has_itinerary === "true") options.filter.itinerary_generated_at = { $ne: null };
 
   const result = await paginate(Trip, options, (q) => q.populate("user_id", "name email"));
   res.json(result);
@@ -349,7 +357,7 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     budget,
     bookingValue,
   ] = await Promise.all([
-    User.countDocuments(),
+    User.countDocuments({ deleted_at: null }),
     Trip.countDocuments({ status: { $in: ["planned", "active"] } }),
     Trip.countDocuments(),
     Attraction.countDocuments(),
@@ -359,7 +367,7 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     Review.countDocuments({ moderation_status: "pending" }),
     Report.countDocuments({ status: "open" }),
     Booking.countDocuments({ status: "confirmed" }),
-    User.countDocuments({ role: { $in: ["moderator", "admin", "owner"] } }),
+    User.countDocuments({ role: { $in: ["moderator", "admin", "owner"] }, deleted_at: null }),
     Trip.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
     User.aggregate([{ $group: { _id: "$role", count: { $sum: 1 } } }]),
     Trip.aggregate([
@@ -467,4 +475,119 @@ export const confirmPassword = asyncHandler(async (req, res) => {
   }
 
   res.json({ reauth_token: issueReauthToken(me), expires_in: REAUTH_TTL_SECONDS });
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The dashboard's third band: what needs somebody today.
+ *
+ * Deliberately not a chart. Every row is a count of work outstanding, with
+ * the screen that clears it — a dashboard that only says how many trips were
+ * created last month tells an admin nothing about what to do next.
+ *
+ * A note on "trips with no itinerary": nothing in the schema records a failed
+ * generation. What is observable is a planned trip with no
+ * `itinerary_generated_at`, which is what a failure leaves behind, so that is
+ * what this counts and what it says.
+ */
+export const getAttention = asyncHandler(async (req, res) => {
+  const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const in30Days = new Date(now.getTime() + 30 * DAY_MS);
+
+  const [
+    users,
+    activeTrips,
+    signupsToday,
+    bookingsToday,
+    pendingPosts,
+    pendingReviews,
+    openReports,
+    tripsWithoutItinerary,
+    documentsExpiring,
+    soldOutSchedules,
+    liveDestinations,
+    destinationsWithAttractions,
+  ] = await Promise.all([
+    User.countDocuments({ deleted_at: null }),
+    Trip.countDocuments({ status: { $in: ["planned", "active"] } }),
+    User.countDocuments({ created_at: { $gte: startOfDay }, deleted_at: null }),
+    Booking.countDocuments({ created_at: { $gte: startOfDay } }),
+    CommunityPost.countDocuments({ moderation_status: "pending" }),
+    Review.countDocuments({ moderation_status: "pending" }),
+    Report.countDocuments({ status: "open" }),
+    Trip.countDocuments({ status: { $in: ["planned", "active"] }, itinerary_generated_at: null }),
+    Document.countDocuments({
+      is_archived: false,
+      expiry_date: { $gte: now, $lte: in30Days },
+    }),
+    TransportOption.countDocuments({ is_active: true, deleted_at: null, seats_available: { $lte: 0 } }),
+    Destination.countDocuments({ deleted_at: null }),
+    // Which destinations have at least one live attraction. Counting the
+    // distinct ids is cheaper than a $lookup per destination, and the
+    // difference is the number that have none.
+    Attraction.distinct("destination_id", { deleted_at: null, destination_id: { $ne: null } }),
+  ]);
+
+  const emptyDestinations = Math.max(0, liveDestinations - destinationsWithAttractions.length);
+
+  res.json({
+    computed_at: now,
+    now: {
+      users,
+      active_trips: activeTrips,
+      signups_today: signupsToday,
+      bookings_today: bookingsToday,
+      pending_moderation: pendingPosts + pendingReviews,
+      open_reports: openReports,
+    },
+    // `tab` and `view` say where the click goes; a row without them has no
+    // screen that would show anything more than the number already does.
+    attention: [
+      {
+        key: "moderation_queue",
+        label: "Content awaiting moderation",
+        detail: `${pendingPosts} post${pendingPosts === 1 ? "" : "s"}, ${pendingReviews} review${pendingReviews === 1 ? "" : "s"} held by the posting rules`,
+        count: pendingPosts + pendingReviews,
+        tab: "moderation",
+      },
+      {
+        key: "open_reports",
+        label: "Reports from travellers",
+        detail: "Flagged content nobody has answered yet",
+        count: openReports,
+        tab: "moderation",
+      },
+      {
+        key: "trips_without_itinerary",
+        label: "Trips with no itinerary",
+        detail: "Planned or active, and never generated — what a failed generation leaves behind",
+        count: tripsWithoutItinerary,
+        tab: "trips",
+        view: { listKey: "trips", filters: { has_itinerary: "false" } },
+      },
+      {
+        key: "documents_expiring",
+        label: "Documents expiring within 30 days",
+        detail: "Passports and visas about to lapse; each one is on its owner's account",
+        count: documentsExpiring,
+      },
+      {
+        key: "sold_out_schedules",
+        label: "Schedules with no seats left",
+        detail: "Still live in the app and unbookable",
+        count: soldOutSchedules,
+        tab: "transport",
+      },
+      {
+        key: "empty_destinations",
+        label: "Destinations with no attractions",
+        detail: "A city a traveller can pick and then be shown nothing to do",
+        count: emptyDestinations,
+        tab: "catalogue",
+      },
+    ],
+  });
 });

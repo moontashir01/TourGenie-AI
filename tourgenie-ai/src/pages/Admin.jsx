@@ -114,7 +114,7 @@ export default function Admin() {
             <GlobalSearch onPickUser={setSearchedUserId} onPickTrip={setSearchedTripId} />
           </div>
           <p className="text-sm text-ink-900/60 mt-1">
-            {activeTab === "overview" && "Platform health at a glance."}
+            {activeTab === "overview" && "What is true now, how it has moved, and what needs somebody today."}
             {activeTab === "users" && "Manage traveler and admin accounts."}
             {activeTab === "catalogue" && "Destinations, countries, flights and airports — deleting is reversible."}
             {activeTab === "attractions" && "Manage the curated attractions database."}
@@ -132,7 +132,10 @@ export default function Admin() {
         </header>
 
         <main className="px-6 md:px-10 py-8">
-          <ActiveComponent />
+          {/* The dashboard's tiles and work queue link to the list behind
+              each number, so it needs to be able to change the tab. Nothing
+              else does. */}
+          <ActiveComponent {...(current.key === "overview" ? { onNavigate: setActiveTab } : {})} />
         </main>
 
         <UserDetail userId={searchedUserId} onClose={() => setSearchedUserId(null)} />

@@ -9,6 +9,7 @@ import {
   listAuditLogs,
   getAnalytics,
   getAnalyticsTrends,
+  getAttention,
   confirmPassword,
   restoreUser,
   anonymiseUser,
@@ -90,6 +91,9 @@ router.get("/analytics", staffRead, getAnalytics);
 // The time series, read from AnalyticsSnapshot; reading either endpoint is
 // what keeps today's snapshot current, since there is no cron.
 router.get("/analytics/trends", staffRead, getAnalyticsTrends);
+// The dashboard's work queue: what is outstanding, and the screen that
+// clears it. Counts only — no document leaves this endpoint.
+router.get("/attention", staffRead, getAttention);
 router.get("/audit-logs", staffRead, listAuditLogs);
 // Which providers have keys, whether their last call worked, and what the
 // database is actually holding.

@@ -364,6 +364,9 @@ export const adminApi = {
   // The time series, from AnalyticsSnapshot rather than counted live.
   trends: ({ period = "day", limit } = {}) =>
     request(`/admin/analytics/trends?period=${period}${limit ? `&limit=${limit}` : ""}`),
+  // The dashboard's work queue — counts of what is outstanding, and where
+  // each one is cleared.
+  attention: () => request("/admin/attention"),
   auditLogs: (params) => adminList("audit-logs", params),
   health: () => request("/admin/health"),
 

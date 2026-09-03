@@ -100,6 +100,18 @@ export function readLastView(listKey) {
 }
 
 /**
+ * Sets the view a list will open in, before navigating to it.
+ *
+ * This is how a dashboard tile lands on the rows behind its number instead of
+ * on the list's default: the count links to a screen already filtered to what
+ * was counted. It writes the same key useAdminList reads on mount, so no new
+ * plumbing is needed between the two screens.
+ */
+export function writeLastView(listKey, { term = "", filters = {}, sort = "" } = {}) {
+  write(`last:${listKey}`, { term, filters, sort });
+}
+
+/**
  * Which columns a list shows. `columns` is the full set; the hook stores only
  * the hidden keys, so a column added to the app later shows up by default
  * instead of being invisible to everyone who ever opened the screen.
