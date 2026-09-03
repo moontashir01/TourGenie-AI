@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Ban, CheckCircle2, Trash2, ShieldCheck, AlertTriangle, RotateCcw, Flame } from "lucide-react";
+import { Ban, CheckCircle2, Trash2, ShieldCheck, AlertTriangle, RotateCcw, Flame, UserX } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
@@ -28,6 +28,7 @@ export default function Users() {
   const [roleTarget, setRoleTarget] = useState(null); // { user, role }
   const [softTarget, setSoftTarget] = useState(null); // the reversible delete
   const [deleteTarget, setDeleteTarget] = useState(null); // { user, footprint }
+  const [anonTarget, setAnonTarget] = useState(null); // keep the trips, drop the person
   const [openUserId, setOpenUserId] = useState(null);
 
   const isOwner = currentUser?.role === "owner";
@@ -75,6 +76,18 @@ export default function Users() {
       list.reload();
     } catch (err) {
       list.setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function confirmAnonymise({ reason, password }) {
+    setBusyId(anonTarget._id);
+    try {
+      const { reauth_token } = await adminApi.reauth(password);
+      await adminApi.anonymiseUser(anonTarget._id, reason, reauth_token);
+      setAnonTarget(null);
+      list.reload();
     } finally {
       setBusyId(null);
     }
@@ -235,6 +248,18 @@ export default function Users() {
                               {u.is_active ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                             </button>
                             <button
+                              onClick={() => setAnonTarget(u)}
+                              disabled={!isOwner || busyId === u._id || self}
+                              title={
+                                isOwner
+                                  ? "Anonymise — keeps their trips and bookings, removes the person"
+                                  : "Owners only"
+                              }
+                              className="text-ink-900/40 hover:text-ink-900 disabled:opacity-30"
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => setSoftTarget(u)}
                               disabled={!canManage || busyId === u._id || self}
                               title={canManage ? "Delete — reversible from the Deleted filter" : "Admins only"}
@@ -290,6 +315,31 @@ export default function Users() {
           onCancel={() => setSoftTarget(null)}
           onConfirm={confirmSoftDelete}
         />
+      )}
+
+      {anonTarget && (
+        <ConfirmPrompt
+          title={`Anonymise ${anonTarget.name}?`}
+          description="For an erasure request from someone whose travel history the app still counts."
+          confirmLabel="Anonymise"
+          tone="danger"
+          requirePassword
+          confirmPhrase={anonTarget.email}
+          passwordNote="The name cannot be put back, so it is confirmed with your own password."
+          onCancel={() => setAnonTarget(null)}
+          onConfirm={confirmAnonymise}
+        >
+          <div className="bg-paper border border-sand rounded-lg px-3 py-2.5 mb-4 text-xs text-ink-900/70 space-y-1">
+            <p>
+              <span className="font-semibold text-ink-900">Removed:</span> name, email, phone, avatar, city, date of
+              birth, password, every stored document, notifications and notes.
+            </p>
+            <p>
+              <span className="font-semibold text-ink-900">Kept:</span> trips, bookings, expenses, posts and reviews,
+              attached to nobody — so destination averages and budget comparisons still count them.
+            </p>
+          </div>
+        </ConfirmPrompt>
       )}
 
       {deleteTarget && (

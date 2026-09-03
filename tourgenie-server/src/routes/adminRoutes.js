@@ -11,6 +11,7 @@ import {
   getAnalyticsTrends,
   confirmPassword,
   restoreUser,
+  anonymiseUser,
 } from "../controllers/adminController.js";
 import {
   getModerationQueue,
@@ -116,6 +117,9 @@ router.patch("/users/:id/role", ownerOnly, requireRecentAuth, setUserRole);
 // route serves both.
 router.delete("/users/:id", adminWrite, requireRecentAuthForHardDelete, deleteUser);
 router.post("/users/:id/restore", adminWrite, restoreUser);
+// Keeps the trips and bookings, removes the person. Owner-only and
+// password-confirmed: the identity cannot be put back.
+router.post("/users/:id/anonymise", ownerOnly, requireRecentAuth, anonymiseUser);
 
 // — support notes —
 // What an admin knew, as opposed to what they did. Moderators may write them

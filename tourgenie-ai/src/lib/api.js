@@ -381,6 +381,9 @@ export const adminApi = {
   deleteUser: (id, reason, { hard = false, reauthToken } = {}) =>
     request(`/admin/users/${id}${hard ? "?hard=true" : ""}`, { method: "DELETE", body: { reason }, reauthToken }),
   restoreUser: (id, reason) => request(`/admin/users/${id}/restore`, { method: "POST", body: { reason } }),
+  // Keeps the trips and bookings, removes the person.
+  anonymiseUser: (id, reason, reauthToken) =>
+    request(`/admin/users/${id}/anonymise`, { method: "POST", body: { reason }, reauthToken }),
 
   trips: (params) => adminList("trips", params),
   tripDetail: (id) => request(`/admin/trips/${id}`),

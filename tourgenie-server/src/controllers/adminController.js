@@ -11,7 +11,11 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { parseListQuery, paginate } from "../utils/adminList.js";
 import { recordAudit } from "../services/auditLog.js";
 import { maybeRoll, getTrend } from "../services/analyticsRoller.js";
-import { deleteAccountAndContent, summariseAccountFootprint } from "../services/accountDeletion.js";
+import {
+  deleteAccountAndContent,
+  summariseAccountFootprint,
+  anonymiseAccount,
+} from "../services/accountDeletion.js";
 import { ROLES } from "../middleware/auth.js";
 import { issueReauthToken, REAUTH_TTL_SECONDS } from "../middleware/reauth.js";
 import { reauthLimiter } from "../middleware/rateLimit.js";
@@ -203,6 +207,49 @@ export const deleteUser = asyncHandler(async (req, res) => {
   });
 
   res.json({ message: "Account and all of its content removed", removed });
+});
+
+/**
+ * The third option, between deactivating and destroying.
+ *
+ * A traveller asking to be removed is asking about themselves, not about the
+ * 12 trips that make up part of every destination average in the app.
+ * Anonymising answers the request without answering it with the analytics:
+ * the identity goes, the history stays attached to nobody.
+ *
+ * Owner-only, password-confirmed and typed out in the UI, because the name
+ * cannot be put back — nothing is kept that could.
+ */
+export const anonymiseUser = asyncHandler(async (req, res) => {
+  if (req.params.id === String(req.user._id)) {
+    return res.status(400).json({ message: "You can't anonymise your own account while logged in as it" });
+  }
+
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+  if (user.role === "owner" && (await lastOwner(user._id))) {
+    return res.status(400).json({ message: "This is the only owner — promote someone else first" });
+  }
+  if (user.email.endsWith("@removed.invalid")) {
+    return res.status(409).json({ message: "That account is already anonymised" });
+  }
+
+  const cleared = await anonymiseAccount(user._id, req.user._id);
+
+  // The audit entry keeps the old address on purpose: it is the only record
+  // left that this row was ever that person, and it is what makes the
+  // erasure itself auditable.
+  await recordAudit(req, {
+    action: "user.anonymise",
+    entity_type: "User",
+    entity_id: user._id,
+    entity_label: user.email,
+    before: { name: user.name, email: user.email },
+    after: cleared,
+    reason: req.body?.reason,
+  });
+
+  res.json({ message: "Account anonymised — their trips and bookings are kept, their identity is gone", cleared });
 });
 
 export const restoreUser = asyncHandler(async (req, res) => {
