@@ -146,6 +146,11 @@ function blankFrom(fields) {
 // "delete" can mean "delete" at all.
 function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
   const [reason, setReason] = useState("");
+  // Permanent deletion asks for the record's own name to be typed out. A
+  // reason gets answered on muscle memory after the fifth time; copying the
+  // name is the step that can't be finished without reading which row is
+  // about to go for good.
+  const [phrase, setPhrase] = useState("");
   const [refs, setRefs] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -203,18 +208,40 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
           />
         </label>
 
+        {blocking.length === 0 && (
+          <label className="block mb-4">
+            <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+              To delete permanently, type <span className="font-mono text-ink-900">{label}</span>
+            </span>
+            <input
+              type="text"
+              autoComplete="off"
+              spellCheck={false}
+              value={phrase}
+              onChange={(e) => setPhrase(e.target.value)}
+              placeholder={label}
+              className="input font-mono"
+            />
+            <span className="text-[11px] text-ink-900/40 mt-1 block">
+              Leave it empty to delete reversibly instead.
+            </span>
+          </label>
+        )}
+
         <div className="flex flex-wrap justify-end gap-2">
           <button type="button" onClick={onCancel} className="btn-secondary">
             Cancel
           </button>
           <button
             type="button"
-            disabled={busy || !reason.trim() || blocking.length > 0}
+            disabled={busy || !reason.trim() || blocking.length > 0 || phrase.trim() !== label}
             onClick={() => onConfirm(reason.trim(), true)}
             title={
               blocking.length > 0
                 ? "Something still points at this record"
-                : "Remove the row from the database for good"
+                : phrase.trim() !== label
+                  ? `Type ${label} above to enable this`
+                  : "Remove the row from the database for good"
             }
             className="inline-flex items-center gap-2 border border-sunset/40 text-sunset-dark font-semibold text-sm px-4 py-2.5 rounded-full disabled:opacity-40"
           >

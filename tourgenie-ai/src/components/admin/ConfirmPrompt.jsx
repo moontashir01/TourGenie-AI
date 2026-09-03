@@ -11,6 +11,11 @@ import { Loader2, Lock } from "lucide-react";
 //              localStorage; that is enough to read a dashboard and not
 //              enough to grant `owner`, delete an account and everything it
 //              owns, or export email addresses.
+//   phrase   — the record's own name, typed out. Reason and password both
+//              travel on muscle memory once an admin has answered them a few
+//              times; copying out an email address is the one step that
+//              cannot be completed without reading which record is about to
+//              go. Reserved for what genuinely cannot be undone.
 //
 // It owns its own busy and error state, so a wrong password leaves the dialog
 // open with the message inside it rather than closing and losing what was
@@ -23,6 +28,7 @@ export default function ConfirmPrompt({
   tone = "teal",
   requireReason = true,
   requirePassword = false,
+  confirmPhrase = "",
   passwordNote = "This action asks for your password again.",
   onCancel,
   onConfirm,
@@ -30,10 +36,14 @@ export default function ConfirmPrompt({
 }) {
   const [reason, setReason] = useState("");
   const [password, setPassword] = useState("");
+  const [phrase, setPhrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const ready = (!requireReason || reason.trim()) && (!requirePassword || password);
+  const ready =
+    (!requireReason || reason.trim()) &&
+    (!requirePassword || password) &&
+    (!confirmPhrase || phrase.trim() === confirmPhrase);
 
   async function submit(event) {
     event.preventDefault();
@@ -75,6 +85,23 @@ export default function ConfirmPrompt({
           </label>
         )}
 
+        {confirmPhrase && (
+          <label className="block mb-4">
+            <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+              Type <span className="font-mono text-ink-900">{confirmPhrase}</span> to confirm
+            </span>
+            <input
+              type="text"
+              autoComplete="off"
+              spellCheck={false}
+              value={phrase}
+              onChange={(e) => setPhrase(e.target.value)}
+              placeholder={confirmPhrase}
+              className="input font-mono"
+            />
+          </label>
+        )}
+
         {requirePassword && (
           <label className="block mb-4">
             <span className="text-xs font-medium text-ink-900/60 mb-1.5 flex items-center gap-1.5">
@@ -82,7 +109,7 @@ export default function ConfirmPrompt({
             </span>
             <input
               type="password"
-              autoFocus={!requireReason}
+              autoFocus={!requireReason && !confirmPhrase}
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

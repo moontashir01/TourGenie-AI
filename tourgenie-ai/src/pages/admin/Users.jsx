@@ -236,6 +236,7 @@ export default function Users() {
           confirmLabel="Delete permanently"
           tone="danger"
           requirePassword
+          confirmPhrase={deleteTarget.user.email}
           passwordNote="Nothing here can be restored, so it is confirmed with your own password."
           onCancel={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
