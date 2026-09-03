@@ -9,7 +9,7 @@ const blankForm = { operator: "", mode: "bus", from_city: "", to_city: "", depar
 export default function Transport() {
   // Reads the admin list rather than the public one: this screen needs every
   // schedule, including any that are deactivated, and it needs to page.
-  const list = useAdminList(adminApi.transport);
+  const list = useAdminList(adminApi.transport, {}, { listKey: "transport" });
   const options = list.rows;
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(blankForm);

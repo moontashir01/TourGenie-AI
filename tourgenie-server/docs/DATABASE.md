@@ -411,7 +411,26 @@ first post from an account under a day old are held for review. Held content
 is excluded from every public read path, and a held review does not move its
 attraction's average rating.
 
-### 4.14 Reference tables
+### 4.14 Configuration, and what the portal may edit
+
+`appsettings`, `notificationtemplates` and `translations` are read at runtime
+and are editable from the admin portal's Settings tab — the booking limits,
+the copy of every notification, and the UI string tables.
+
+Two things follow from that. `AppSetting.value` is Mixed, so the update route
+coerces what the form sends to the declared `type`: `booking.max_passengers`
+stored as the string "10" would compare wrong rather than fail. And all three
+collections are in `REFERENCE_MODELS`, which the seeder replaces wholesale —
+an edit made in the portal is gone after the next `npm run seed` unless the
+same change is made in `src/seed/data/`. The screen says so.
+
+Translation `strings` is a nested object because that is the shape
+`useLanguage().t("common.save")` walks; the admin route flattens it to dotted
+keys for editing and rebuilds it on save, merging only the keys that were
+sent. A `null` value removes a key — the only way to clear an orphan (a key
+one language has that English doesn't, which nothing ever asks for).
+
+### 4.15 Reference tables
 
 | Collection | Rows | Purpose |
 |---|---|---|

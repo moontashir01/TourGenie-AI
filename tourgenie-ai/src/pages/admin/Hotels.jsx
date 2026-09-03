@@ -17,7 +17,7 @@ const blankForm = {
 export default function Hotels() {
   // The catalogue is far past the point where fetching all of it per render
   // made sense, so it pages like every other admin list.
-  const list = useAdminList(adminApi.hotels);
+  const list = useAdminList(adminApi.hotels, {}, { listKey: "hotels" });
   const hotels = list.rows;
   const [editing, setEditing] = useState(null); // null = closed, {} = new, {...} = editing existing
   const [form, setForm] = useState(blankForm);

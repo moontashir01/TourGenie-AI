@@ -61,7 +61,7 @@ function ReasonPrompt({ title, description, confirmLabel, tone = "teal", busy, o
 
 export default function Users() {
   const { user: currentUser } = useAuth();
-  const list = useAdminList(adminApi.users, { role: "", status: "" });
+  const list = useAdminList(adminApi.users, { role: "", status: "" }, { listKey: "users" });
   const [busyId, setBusyId] = useState(null);
   const [roleTarget, setRoleTarget] = useState(null); // { user, role }
   const [deleteTarget, setDeleteTarget] = useState(null); // { user, footprint }

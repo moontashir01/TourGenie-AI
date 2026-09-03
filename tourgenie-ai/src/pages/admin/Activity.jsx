@@ -54,7 +54,7 @@ function format(value) {
 }
 
 export default function Activity() {
-  const list = useAdminList(adminApi.auditLogs, { entity_type: "" });
+  const list = useAdminList(adminApi.auditLogs, { entity_type: "" }, { listKey: "activity" });
 
   return (
     <div className="card p-6">

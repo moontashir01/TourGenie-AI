@@ -65,8 +65,8 @@ export default function Bookings() {
   const { user } = useAuth();
   const canCancel = ["admin", "owner"].includes(user?.role);
 
-  const transport = useAdminList(adminApi.bookings, { status: "" });
-  const hotels = useAdminList(adminApi.hotelBookings, { status: "" });
+  const transport = useAdminList(adminApi.bookings, { status: "" }, { listKey: "bookings:transport" });
+  const hotels = useAdminList(adminApi.hotelBookings, { status: "" }, { listKey: "bookings:hotels" });
 
   const [prompt, setPrompt] = useState(null);
   const [busyId, setBusyId] = useState(null);

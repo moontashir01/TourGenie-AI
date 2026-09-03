@@ -15,6 +15,7 @@ import {
   Library,
   ShieldAlert,
   Activity as ActivityIcon,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Overview from "./admin/Overview";
@@ -25,6 +26,7 @@ import Hotels from "./admin/Hotels";
 import Reviews from "./admin/Reviews";
 import Moderation from "./admin/Moderation";
 import Health from "./admin/Health";
+import Settings from "./admin/Settings";
 import Reports from "./admin/Reports";
 import Activity from "./admin/Activity";
 import Trips from "./admin/Trips";
@@ -53,6 +55,7 @@ const tabs = [
   { key: "reports", label: "Reports", icon: FileBarChart, component: Reports, roles: ADMIN },
   { key: "activity", label: "Activity", icon: ScrollText, component: Activity, roles: STAFF },
   { key: "health", label: "System health", icon: ActivityIcon, component: Health, roles: ADMIN },
+  { key: "settings", label: "Settings", icon: SlidersHorizontal, component: Settings, roles: ADMIN },
 ];
 
 export default function Admin() {
@@ -124,6 +127,7 @@ export default function Admin() {
             {activeTab === "bookings" && "Tickets and reservations, searchable by reference."}
             {activeTab === "activity" && "Every change made from this portal, and who made it."}
             {activeTab === "health" && "Which providers answer, what the database holds, and when it was last seeded."}
+            {activeTab === "settings" && "Runtime limits, notification copy and the UI string tables — no reseed required."}
           </p>
         </header>
 

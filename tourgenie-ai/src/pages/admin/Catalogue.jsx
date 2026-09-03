@@ -3,7 +3,16 @@ import { Plus, Pencil, Trash2, RotateCcw, X, Loader2, AlertTriangle, Database } 
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
-import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
+import {
+  AdminToolbar,
+  AdminSelect,
+  ColumnPicker,
+  SortableHeader,
+  Pager,
+  ListState,
+  ErrorBanner,
+} from "../../components/admin/ListShell";
+import { useColumnPreferences } from "../../hooks/useListPreferences";
 
 // The collections that had no admin screen at all: changing a destination, a
 // country, a flight or an airport meant editing a seed file and re-running
@@ -25,8 +34,8 @@ const RESOURCES = {
     columns: [
       { key: "name", label: "Name" },
       { key: "country", label: "Country" },
-      { key: "type", label: "Type" },
-      { key: "recommended_days", label: "Days" },
+      { key: "type", label: "Type", sortable: false },
+      { key: "recommended_days", label: "Days", sortable: false },
       { key: "avg_daily_cost", label: "Daily cost", money: true },
       { key: "popularity", label: "Popularity" },
     ],
@@ -53,9 +62,9 @@ const RESOURCES = {
     columns: [
       { key: "name", label: "Name" },
       { key: "code", label: "Code" },
-      { key: "capital", label: "Capital" },
-      { key: "currency", label: "Currency" },
-      { key: "is_core", label: "Core", boolean: true },
+      { key: "capital", label: "Capital", sortable: false },
+      { key: "currency", label: "Currency", sortable: false },
+      { key: "is_core", label: "Core", boolean: true, sortable: false },
     ],
     fields: [
       text("name", "Name", { required: true }),
@@ -73,10 +82,10 @@ const RESOURCES = {
     label: "Flights",
     search: "Search airline, flight number or airport…",
     columns: [
-      { key: "flight_number", label: "Flight" },
+      { key: "flight_number", label: "Flight", sortable: false },
       { key: "airline", label: "Airline" },
-      { key: "from_iata", label: "From" },
-      { key: "to_iata", label: "To" },
+      { key: "from_iata", label: "From", sortable: false },
+      { key: "to_iata", label: "To", sortable: false },
       { key: "depart_time", label: "Departs" },
       { key: "total_fare_bdt", label: "Fare", money: true },
     ],
@@ -108,8 +117,8 @@ const RESOURCES = {
       { key: "iata", label: "IATA" },
       { key: "name", label: "Name" },
       { key: "city", label: "City" },
-      { key: "country", label: "Country" },
-      { key: "is_international", label: "International", boolean: true },
+      { key: "country", label: "Country", sortable: false },
+      { key: "is_international", label: "International", boolean: true, sortable: false },
     ],
     fields: [
       text("iata", "IATA code", { required: true, maxLength: 3 }),
@@ -234,7 +243,11 @@ export default function Catalogue() {
   const config = RESOURCES[resource];
 
   const fetcher = useCallback((params) => adminApi.catalogue.list(resource, params), [resource]);
-  const list = useAdminList(fetcher, { deleted: "" });
+  const listKey = `catalogue:${resource}`;
+  const list = useAdminList(fetcher, { deleted: "" }, { listKey });
+  // Which columns this admin keeps, per collection — a flight has fifteen
+  // fields and nobody reads all of them at once.
+  const columns = useColumnPreferences(listKey, config.columns);
 
   const [editing, setEditing] = useState(null); // null | {} | row
   const [form, setForm] = useState({});
@@ -434,6 +447,12 @@ export default function Catalogue() {
               { value: "all", label: "Everything" },
             ]}
           />
+          <ColumnPicker
+            columns={config.columns}
+            hidden={columns.hidden}
+            onToggle={columns.toggle}
+            onReset={columns.reset}
+          />
         </AdminToolbar>
 
         {canWrite && selected.length > 0 && (
@@ -478,10 +497,10 @@ export default function Catalogue() {
                       />
                     </th>
                   )}
-                  {config.columns.map((c) => (
-                    <th key={c.key} className="pb-3 font-medium">
+                  {columns.visible.map((c) => (
+                    <SortableHeader key={c.key} list={list} field={c.sortable === false ? null : c.key}>
                       {c.label}
-                    </th>
+                    </SortableHeader>
                   ))}
                   <th className="pb-3 font-medium">State</th>
                   <th className="pb-3 font-medium text-right">Actions</th>
@@ -501,7 +520,7 @@ export default function Catalogue() {
                         />
                       </td>
                     )}
-                    {config.columns.map((c) => (
+                    {columns.visible.map((c) => (
                       <td key={c.key} className="py-3 text-ink-900/70">
                         {c.money ? (
                           <span className="font-mono">{money(row[c.key])}</span>

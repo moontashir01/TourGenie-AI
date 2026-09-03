@@ -65,8 +65,8 @@ const VISIBILITY = [
 ];
 
 export default function Reviews() {
-  const posts = useAdminList(adminApi.communityPosts, { visibility: "" });
-  const reviews = useAdminList(adminApi.reviews, { visibility: "" });
+  const posts = useAdminList(adminApi.communityPosts, { visibility: "" }, { listKey: "content:posts" });
+  const reviews = useAdminList(adminApi.reviews, { visibility: "" }, { listKey: "content:reviews" });
   const [busyId, setBusyId] = useState(null);
   const [prompt, setPrompt] = useState(null); // { kind, id, action, excerpt }
 

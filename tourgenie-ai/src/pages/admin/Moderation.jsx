@@ -92,7 +92,7 @@ export default function Moderation() {
   const [busyId, setBusyId] = useState(null);
   const [prompt, setPrompt] = useState(null);
 
-  const reports = useAdminList(adminApi.reports, { status: "open" });
+  const reports = useAdminList(adminApi.reports, { status: "open" }, { listKey: "moderation:reports" });
 
   const load = useCallback(() => {
     setLoading(true);

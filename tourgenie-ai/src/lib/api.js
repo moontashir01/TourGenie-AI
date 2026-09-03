@@ -436,6 +436,31 @@ export const adminApi = {
   resolveReport: (id, status, resolution) =>
     request(`/admin/reports/${id}`, { method: "PATCH", body: { status, resolution } }),
 
+  // Configuration: the limits the app enforces, the copy of every
+  // notification, and the UI string tables. All three were seed-file-only.
+  settings: {
+    list: () => request("/admin/settings"),
+    update: (key, value, reason) =>
+      request(`/admin/settings/${encodeURIComponent(key)}`, { method: "PATCH", body: { value, reason } }),
+  },
+
+  notificationTemplates: {
+    list: () => request("/admin/notification-templates"),
+    create: (payload) => request("/admin/notification-templates", { method: "POST", body: payload }),
+    update: (id, payload) => request(`/admin/notification-templates/${id}`, { method: "PATCH", body: payload }),
+    remove: (id, reason) =>
+      request(`/admin/notification-templates/${id}`, { method: "DELETE", body: { reason } }),
+  },
+
+  translations: {
+    list: () => request("/admin/translations"),
+    // Flattened to dotted keys with the English text beside each one.
+    get: (lang) => request(`/admin/translations/${lang}`),
+    // Send only the keys being changed — the whole table would let two
+    // people editing at once overwrite each other silently.
+    update: (lang, payload) => request(`/admin/translations/${lang}`, { method: "PATCH", body: payload }),
+  },
+
   // Streamed CSV, built server-side. Personal columns are opt-in and every
   // download writes an audit entry.
   exports: {

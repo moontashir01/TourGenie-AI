@@ -23,6 +23,17 @@ import {
 import { listExports, runExport } from "../controllers/adminExportController.js";
 import { getSystemHealth } from "../controllers/adminHealthController.js";
 import {
+  listSettings,
+  updateSetting,
+  listNotificationTemplates,
+  createNotificationTemplate,
+  updateNotificationTemplate,
+  deleteNotificationTemplate,
+  listTranslations,
+  getTranslation,
+  updateTranslation,
+} from "../controllers/adminSettingsController.js";
+import {
   getUserDetail,
   getTripDetail,
   listBookings,
@@ -109,6 +120,25 @@ router.get("/catalogue/:resource/:id/references", staffRead, getReferences);
 router.patch("/catalogue/:resource/:id", adminWrite, updateResource);
 router.delete("/catalogue/:resource/:id", adminWrite, deleteResource);
 router.post("/catalogue/:resource/:id/restore", adminWrite, restoreResource);
+
+// — configuration —
+// Three collections that are read at runtime and had no screen: the limits
+// the booking code enforces, the copy of every notification, and the UI
+// string tables. Changing one meant editing a seed file and re-seeding.
+//
+// Settings are owner-only because they change how the app behaves for
+// everyone; content is editable by an admin, being copy rather than policy.
+router.get("/settings", staffRead, listSettings);
+router.patch("/settings/:key", ownerOnly, updateSetting);
+
+router.get("/notification-templates", staffRead, listNotificationTemplates);
+router.post("/notification-templates", adminWrite, createNotificationTemplate);
+router.patch("/notification-templates/:id", adminWrite, updateNotificationTemplate);
+router.delete("/notification-templates/:id", ownerOnly, deleteNotificationTemplate);
+
+router.get("/translations", staffRead, listTranslations);
+router.get("/translations/:lang", staffRead, getTranslation);
+router.patch("/translations/:lang", adminWrite, updateTranslation);
 
 // — moderation —
 // The queue is the entry point: content the posting rules held, plus anything

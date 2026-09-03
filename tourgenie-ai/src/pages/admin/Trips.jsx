@@ -18,7 +18,7 @@ const STATUS_TONE = {
 // whole trip, including which AI wrote the itinerary and whether the fare on
 // it was real.
 export default function Trips() {
-  const list = useAdminList(adminApi.trips, { status: "" });
+  const list = useAdminList(adminApi.trips, { status: "" }, { listKey: "trips" });
   const [openTripId, setOpenTripId] = useState(null);
 
   return (
