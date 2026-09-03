@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ItineraryItem from "../models/ItineraryItem.js";
 import Trip from "../models/Trip.js";
 import Attraction from "../models/Attraction.js";
@@ -167,12 +168,88 @@ export async function augmentTravelItems(items, trip) {
   }
 }
 
+// Fields the traveller owns rather than the planner. A chat edit ("make day
+// three cheaper") rewrites the whole plan through here, and it used to do so
+// by dropping every row and inserting the AI's items verbatim — which untick
+// what had already been done, unlocked what had been locked against exactly
+// this, and threw away the transport option the traveller picked and the
+// budget was priced from. The AI returns items with no identity, so each one
+// is matched back to the row it replaces and these come across with it.
+const CARRIED_FIELDS = [
+  "selected_transport_option",
+  "is_completed",
+  "is_locked",
+  "notes",
+  "date",
+  "end_time",
+  "duration_min",
+  "day_theme",
+  "lat_lng",
+  "sort_order",
+  "weather_dependent",
+];
+
+function carryKey(day, time, activity) {
+  return `${day}|${time || ""}|${String(activity || "").trim().toLowerCase()}`;
+}
+
+/**
+ * Pairs each incoming item with the row it replaces: by id when the caller
+ * sent one, then by day + time + activity, then by day + activity for an
+ * item whose time the AI moved. A row is claimed once, so two identical
+ * activities on one day can't both inherit the same booked seat.
+ */
+function matchPrevious(previous) {
+  const unused = new Set(previous.map((d) => String(d._id)));
+  const byId = new Map(previous.map((d) => [String(d._id), d]));
+
+  const index = (keyOf) => {
+    const map = new Map();
+    for (const doc of previous) {
+      const key = keyOf(doc);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(doc);
+    }
+    return map;
+  };
+  const exact = index((d) => carryKey(d.day, d.time, d.activity));
+  const loose = index((d) => carryKey(d.day, "", d.activity));
+
+  const claim = (doc) => {
+    if (!doc || !unused.has(String(doc._id))) return null;
+    unused.delete(String(doc._id));
+    return doc;
+  };
+
+  return (item) => {
+    const direct = item._id ? claim(byId.get(String(item._id))) : null;
+    if (direct) return direct;
+    const buckets = [
+      exact.get(carryKey(item.day, item.time, item.activity)),
+      loose.get(carryKey(item.day, "", item.activity)),
+    ];
+    for (const bucket of buckets) {
+      const hit = (bucket || []).find((d) => unused.has(String(d._id)));
+      if (hit) return claim(hit);
+    }
+    return null;
+  };
+}
+
 // Replaces a trip's itinerary wholesale with a freshly generated/adjusted
-// items[] (the shape generateItineraryWithAI / adjustItineraryWithAI return).
+// items[] (the shape generateItineraryWithAI / adjustItineraryWithAI return),
+// carrying the traveller's own edits across — see CARRIED_FIELDS.
 export async function persistItinerary(trip, items) {
-  await ItineraryItem.deleteMany({ trip_id: trip._id });
-  const created = await ItineraryItem.insertMany(
-    items.map((i) => ({
+  const previous = await ItineraryItem.find({ trip_id: trip._id }).lean();
+  const take = matchPrevious(previous);
+
+  const rows = items.map((i) => {
+    const prior = take(i);
+    const row = {
+      // The id of the row this item replaces is reused, so an item id the
+      // client is already holding — the transport picker posts one — still
+      // resolves after an edit.
+      _id: prior?._id || new mongoose.Types.ObjectId(),
       trip_id: trip._id,
       day: i.day,
       time: i.time,
@@ -184,12 +261,27 @@ export async function persistItinerary(trip, items) {
       est_cost: i.est_cost || 0,
       category: i.category || "activity",
       attraction_id: i.attraction_id || null,
-      // Carried through so the rainy-day rewriter works on generated
-      // itineraries too, not only seeded ones.
-      weather_dependent: Boolean(i.weather_dependent),
       available_transport_options: i.available_transport_options || [],
-    }))
-  );
+    };
+
+    for (const field of CARRIED_FIELDS) {
+      if (i[field] !== undefined && i[field] !== null) row[field] = i[field];
+      else if (prior?.[field] !== undefined && prior?.[field] !== null) row[field] = prior[field];
+    }
+
+    // A picked transport option is a decision, not an estimate: the budget
+    // was computed from that fare. Restoring the option without its price
+    // would leave the Budget page naming the chosen operator beside the
+    // AI's generic guess at what the leg costs.
+    if (row.selected_transport_option?.estimated_cost && !i.selected_transport_option) {
+      row.est_cost = row.selected_transport_option.estimated_cost;
+    }
+
+    return row;
+  });
+
+  await ItineraryItem.deleteMany({ trip_id: trip._id });
+  const created = await ItineraryItem.insertMany(rows);
 
   trip.status = "planned";
   await trip.save();
