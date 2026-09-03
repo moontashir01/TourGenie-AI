@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { tripsApi, getToken } from "../lib/api";
+import { useAuth } from "./AuthContext";
 
 // Tracks which trip the traveler is currently looking at, so pages like
 // Itinerary and Budget (reached via sidebar links, not URL params) know
@@ -12,6 +13,7 @@ import { tripsApi, getToken } from "../lib/api";
 const TripContext = createContext(null);
 
 export function TripProvider({ children }) {
+  const { user, loading: loadingUser } = useAuth();
   const [currentTripId, setCurrentTripIdState] = useState(
     () => localStorage.getItem("tourgenie_current_trip") || null
   );
@@ -25,6 +27,24 @@ export function TripProvider({ children }) {
     setCurrentTripIdState(id);
     if (!id) setCurrentTrip(null);
   }, []);
+
+  // Which account this provider is currently holding a trip for. Logging out
+  // clears the stored id but not this component's state, so without a reset
+  // the next person to sign in on the same browser was shown the previous
+  // one's trip in the sidebar until a request happened to 404. Signing in
+  // also has to re-run the load: `currentTripId` doesn't change across it, so
+  // nothing else would.
+  const account = useRef(undefined);
+  useEffect(() => {
+    const next = user?.id ?? null;
+    if (loadingUser || account.current === next) return;
+    const first = account.current === undefined;
+    account.current = next;
+    if (first) return; // boot: the id restored from localStorage stands
+    setCurrentTrip(null);
+    setTripError(false);
+    setCurrentTripIdState(localStorage.getItem("tourgenie_current_trip") || null);
+  }, [user?.id, loadingUser]);
 
   const loadTrip = useCallback(() => {
     if (!currentTripId || !getToken()) {
@@ -55,9 +75,12 @@ export function TripProvider({ children }) {
       .finally(() => setLoadingTrip(false));
   }, [currentTripId, setCurrentTripId]);
 
+  // `user?.id` is in here on purpose: signing in has to trigger the fetch
+  // that was skipped while there was no token.
   useEffect(() => {
+    if (loadingUser) return;
     loadTrip();
-  }, [loadTrip]);
+  }, [loadTrip, loadingUser, user?.id]);
 
   return (
     <TripContext.Provider
