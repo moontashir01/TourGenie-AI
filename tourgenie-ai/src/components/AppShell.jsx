@@ -3,13 +3,15 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Compass, LayoutGrid, MapPinned, FileStack, Users, Settings, Wallet,
   MessageCircleMore, LogOut, Building2, Landmark, Menu, X, Languages,
-  Scale, Route as RouteIcon, Ticket, CalendarRange, ChevronRight, Plus, Map, RefreshCw,
+  Scale, Route as RouteIcon, Ticket, CalendarRange, ChevronRight, Plus, Map, RefreshCw, Search,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useCurrentTrip } from "../context/TripContext";
 import NotificationBell from "./NotificationBell";
 import ThemeToggle from "./ThemeToggle";
+import ChatDock from "./ChatDock";
+import CommandPalette from "./CommandPalette";
 
 // The sidebar is grouped rather than a flat list because the destinations
 // are not peers: three of them are things you do before a trip exists, seven
@@ -195,6 +197,30 @@ function CurrentTripCard({ onNavigate }) {
   );
 }
 
+// A shortcut nobody knows about may as well not exist, so the sidebar advertises
+// it. Clicking dispatches the same key event the palette already listens for,
+// which keeps the open/close logic in one place.
+function SearchHint() {
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "");
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "k", metaKey: isMac, ctrlKey: !isMac, bubbles: true })
+        )
+      }
+      className="flex items-center gap-2 w-[calc(100%-0.5rem)] mx-1 mb-3 px-3 py-2 rounded-xl border border-sand bg-white/60 hover:bg-white hover:border-teal/40 text-left transition-colors group"
+    >
+      <Search className="w-3.5 h-3.5 text-ink-900/30 group-hover:text-teal-dark shrink-0" />
+      <span className="text-xs text-ink-900/40 flex-1">Search…</span>
+      <kbd className="text-[10px] font-mono text-ink-900/35 border border-sand rounded px-1.5 py-0.5 bg-paper">
+        {isMac ? "⌘" : "Ctrl "}K
+      </kbd>
+    </button>
+  );
+}
+
 function NavLinks({ onNavigate }) {
   const { t } = useLanguage();
   const { currentTripId } = useCurrentTrip();
@@ -322,6 +348,7 @@ function SidebarBody({ onNavigate }) {
       <div className="relative flex-1 min-h-0">
         <div className="h-full overflow-y-auto -mr-2 pr-2">
           <CurrentTripCard onNavigate={onNavigate} />
+          <SearchHint />
           <NavLinks onNavigate={onNavigate} />
         </div>
         <div className="pointer-events-none absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-paper/90 to-transparent" />
@@ -403,6 +430,10 @@ export default function AppShell({ children, title, subtitle }) {
         )}
         <main className="px-6 md:px-10 py-8 animate-fade-up">{children}</main>
       </div>
+
+      {/* Available from every authenticated page. */}
+      <CommandPalette />
+      <ChatDock />
     </div>
   );
 }

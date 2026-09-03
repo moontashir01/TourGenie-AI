@@ -7,6 +7,7 @@ import { TripProvider } from "./context/TripContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import { CurrencyProvider } from "./context/CurrencyContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
+import { ChatProvider } from "./context/ChatContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -17,7 +18,9 @@ createRoot(document.getElementById("root")).render(
         <ThemeProvider>
           <TripProvider>
             <CurrencyProvider>
-              <App />
+              <ChatProvider>
+                <App />
+              </ChatProvider>
             </CurrencyProvider>
           </TripProvider>
         </ThemeProvider>
