@@ -24,7 +24,7 @@ export async function findJourney(originName, destinationName) {
   const from = exact(originName);
   const to = exact(destinationName);
 
-  const direct = await Route.findOne({ "from.name": from, "to.name": to })
+  const direct = await Route.findOne({ "from.name": from, "to.name": to, is_active: { $ne: false } })
     .sort({ is_default: -1, duration_min: 1 })
     .lean();
   if (direct) {
@@ -42,8 +42,8 @@ export async function findJourney(originName, destinationName) {
   }
 
   const [outbound, inbound] = await Promise.all([
-    Route.find({ "from.name": from }).lean(),
-    Route.find({ "to.name": to }).lean(),
+    Route.find({ "from.name": from, is_active: { $ne: false } }).lean(),
+    Route.find({ "to.name": to, is_active: { $ne: false } }).lean(),
   ]);
 
   const secondLegByCity = new Map();

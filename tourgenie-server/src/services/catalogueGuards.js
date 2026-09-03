@@ -14,6 +14,10 @@ import Hotel from "../models/Hotel.js";
 import Destination from "../models/Destination.js";
 import TransportOption from "../models/TransportOption.js";
 import HotelRate from "../models/HotelRate.js";
+import Expense from "../models/Expense.js";
+import PackingList from "../models/PackingList.js";
+import ChatSession from "../models/ChatSession.js";
+import Route from "../models/Route.js";
 
 /**
  * Everything pointing at one record, as { label, count } rows.
@@ -109,6 +113,41 @@ export async function referencesTo(kind, doc) {
     ];
   }
 
+  // Reference data is referenced by *code*, not by id: an expense names its
+  // category, a trip names its interests. Those two block, because deleting
+  // the row leaves a value in use that nothing can any longer explain.
+  if (kind === "expense_category") {
+    const expenses = await Expense.countDocuments({ category: doc.code });
+    return [{ label: "logged expenses", count: expenses, blocking: true }];
+  }
+
+  if (kind === "interest_tag") {
+    const trips = await Trip.countDocuments({ interests: doc.code });
+    return [{ label: "trips that chose it", count: trips, blocking: true }];
+  }
+
+  // The rest are informative. A packing list already generated keeps the
+  // items it was given, a chat reply keeps its text, and a route keeps the
+  // emissions figure it was computed with — none of them break if the row
+  // behind them is gone, so removing it is allowed with the count shown.
+  if (kind === "packing_template") {
+    const lists = await PackingList.countDocuments({ "trip_context.templates_applied": doc.code });
+    return [{ label: "packing lists built from it", count: lists, blocking: false }];
+  }
+
+  if (kind === "chat_intent") {
+    const replies = await ChatSession.countDocuments({ "messages.intent_code": doc.code });
+    return [{ label: "assistant replies", count: replies, blocking: false }];
+  }
+
+  if (kind === "carbon_factor") {
+    const routes = await Route.countDocuments({ mode: doc.mode, deleted_at: null });
+    return [{ label: "routes using that mode", count: routes, blocking: false }];
+  }
+
+  // Routes, nearby services and itinerary templates are referenced by nothing
+  // at all: a trip stores the plan it was given, not the template it came
+  // from, and the map redraws from whatever routes exist.
   return [];
 }
 

@@ -20,7 +20,11 @@ function exact(name) {
 }
 
 function nameFilter(from, to) {
-  return { "from.name": exact(from), "to.name": exact(to) };
+  // `$ne: false` and not `true`: routes seeded before is_active
+  // existed don't carry the field, and an admin soft delete sets it
+  // to false, so this is what hides a deleted route without hiding
+  // every route that predates the flag.
+  return { "from.name": exact(from), "to.name": exact(to), is_active: { $ne: false } };
 }
 
 // A route seeded only as A->B still describes the B->A journey: same road,
@@ -230,7 +234,7 @@ export const getTripJourney = asyncHandler(async (req, res) => {
     for (const alias of d.aliases || []) coordsByName.set(alias.toLowerCase(), d.lat_lng);
   }
 
-  const factors = await CarbonFactor.find().lean();
+  const factors = await CarbonFactor.find({ is_active: { $ne: false } }).lean();
   const factorByMode = new Map(factors.map((f) => [f.mode, f]));
 
   const legs = [];

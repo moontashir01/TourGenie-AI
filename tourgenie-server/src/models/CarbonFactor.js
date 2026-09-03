@@ -5,7 +5,7 @@
 // Factors are per *passenger*-km, so shared modes already account for
 // typical occupancy — that's what `occupancy_assumption` records.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const carbonFactorSchema = new mongoose.Schema(
   {
@@ -28,10 +28,15 @@ const carbonFactorSchema = new mongoose.Schema(
     source: { type: String, default: "DEFRA/IPCC average" },
     notes: { type: String, default: "" },
     sort_order: { type: Number, default: 0 },
+    // As on Route: read paths test `$ne: false`, since rows seeded
+    // before this field existed don't carry it.
+    is_active: { type: Boolean, default: true },
   },
   TIMESTAMPS
 );
 
 carbonFactorSchema.index({ category: 1, sort_order: 1 });
+
+withSoftDelete(carbonFactorSchema);
 
 export default mongoose.model("CarbonFactor", carbonFactorSchema);

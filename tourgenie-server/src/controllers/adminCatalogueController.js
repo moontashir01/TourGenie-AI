@@ -7,7 +7,9 @@
 //
 // Before this, only attractions, hotels and transport had any admin screen at
 // all: destinations, countries, flights and airports could only be changed by
-// editing a seed file and re-running the seed.
+// editing a seed file and re-running the seed. The second half of the list —
+// routes, nearby services, the reference tables and the content templates —
+// was in the same position until it was added here.
 import Destination from "../models/Destination.js";
 import Country from "../models/Country.js";
 import Attraction from "../models/Attraction.js";
@@ -16,6 +18,14 @@ import TransportOption from "../models/TransportOption.js";
 import FlightOption from "../models/FlightOption.js";
 import Airport from "../models/Airport.js";
 import HotelRate from "../models/HotelRate.js";
+import Route from "../models/Route.js";
+import NearbyService from "../models/NearbyService.js";
+import ExpenseCategory from "../models/ExpenseCategory.js";
+import InterestTag from "../models/InterestTag.js";
+import CarbonFactor from "../models/CarbonFactor.js";
+import ItineraryTemplate from "../models/ItineraryTemplate.js";
+import PackingTemplate from "../models/PackingTemplate.js";
+import ChatIntent from "../models/ChatIntent.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { parseListQuery, paginate } from "../utils/adminList.js";
 import { recordAudit, diffFields } from "../services/auditLog.js";
@@ -97,6 +107,102 @@ const RESOURCES = {
     filters: { country_code: (v) => String(v).toUpperCase() },
     label: (a) => `${a.iata} — ${a.name}`,
     summary: (a) => ({ iata: a.iata, name: a.name, city: a.city, is_active: a.is_active }),
+  },
+
+  // — the map and what is around it —
+  routes: {
+    Model: Route,
+    kind: "route",
+    singular: "Route",
+    searchFields: ["from.name", "to.name", "notes", "profile"],
+    allowedSort: ["created_at", "mode", "distance_km", "duration_min"],
+    defaultSort: "mode",
+    filters: { mode: (v) => v, variant: (v) => v },
+    label: (r) => `${r.from?.name} → ${r.to?.name} (${r.mode})`,
+    summary: (r) => ({ mode: r.mode, variant: r.variant, distance_km: r.distance_km, is_active: r.is_active }),
+  },
+  "nearby-services": {
+    Model: NearbyService,
+    kind: "nearby_service",
+    singular: "NearbyService",
+    searchFields: ["name", "city", "area", "address", "subcategory"],
+    allowedSort: ["created_at", "name", "city", "category", "rating"],
+    defaultSort: "city",
+    filters: { city: (v) => v, category: (v) => v },
+    label: (n) => `${n.name} (${n.city})`,
+    summary: (n) => ({ name: n.name, city: n.city, category: n.category, is_active: n.is_active }),
+  },
+
+  // — reference tables the traveller app reads at runtime —
+  "expense-categories": {
+    Model: ExpenseCategory,
+    kind: "expense_category",
+    singular: "ExpenseCategory",
+    searchFields: ["code", "label", "description"],
+    allowedSort: ["sort_order", "code", "label", "created_at"],
+    defaultSort: "sort_order",
+    label: (c) => c.label,
+    summary: (c) => ({ code: c.code, label: c.label, color: c.color, is_active: c.is_active }),
+  },
+  "interest-tags": {
+    Model: InterestTag,
+    kind: "interest_tag",
+    singular: "InterestTag",
+    searchFields: ["code", "label", "description"],
+    allowedSort: ["sort_order", "code", "label", "group", "created_at"],
+    defaultSort: "sort_order",
+    filters: { group: (v) => v },
+    label: (t) => t.label,
+    summary: (t) => ({ code: t.code, label: t.label, group: t.group, is_active: t.is_active }),
+  },
+  "carbon-factors": {
+    Model: CarbonFactor,
+    kind: "carbon_factor",
+    singular: "CarbonFactor",
+    searchFields: ["mode", "label", "notes", "source"],
+    allowedSort: ["sort_order", "mode", "grams_co2_per_passenger_km", "created_at"],
+    defaultSort: "sort_order",
+    filters: { category: (v) => v },
+    label: (f) => `${f.label} (${f.mode})`,
+    summary: (f) => ({
+      mode: f.mode,
+      grams_co2_per_passenger_km: f.grams_co2_per_passenger_km,
+      is_active: f.is_active,
+    }),
+  },
+
+  // — the content that answers with no AI key configured —
+  "itinerary-templates": {
+    Model: ItineraryTemplate,
+    kind: "itinerary_template",
+    singular: "ItineraryTemplate",
+    searchFields: ["code", "title", "city", "summary"],
+    allowedSort: ["created_at", "code", "title", "city", "duration_days", "popularity"],
+    defaultSort: "city",
+    filters: { city: (v) => v, budget_tier: (v) => v, pace: (v) => v },
+    label: (t) => `${t.title} (${t.city})`,
+    summary: (t) => ({ code: t.code, city: t.city, duration_days: t.duration_days, is_active: t.is_active }),
+  },
+  "packing-templates": {
+    Model: PackingTemplate,
+    kind: "packing_template",
+    singular: "PackingTemplate",
+    searchFields: ["code", "label", "description"],
+    allowedSort: ["priority", "code", "label", "category", "created_at"],
+    defaultSort: "category",
+    filters: { category: (v) => v },
+    label: (t) => t.label,
+    summary: (t) => ({ code: t.code, category: t.category, priority: t.priority, is_active: t.is_active }),
+  },
+  "chat-intents": {
+    Model: ChatIntent,
+    kind: "chat_intent",
+    singular: "ChatIntent",
+    searchFields: ["code", "label", "response_template", "keywords"],
+    allowedSort: ["priority", "code", "label", "created_at"],
+    defaultSort: "-priority",
+    label: (i) => i.label,
+    summary: (i) => ({ code: i.code, priority: i.priority, is_active: i.is_active }),
   },
 };
 

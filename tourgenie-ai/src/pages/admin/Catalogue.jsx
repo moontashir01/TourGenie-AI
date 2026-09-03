@@ -15,17 +15,26 @@ import {
 import { useColumnPreferences } from "../../hooks/useListPreferences";
 
 // The collections that had no admin screen at all: changing a destination, a
-// country, a flight or an airport meant editing a seed file and re-running
-// the seed. One table and one form serve all four, driven by the field specs
-// below — which is also what keeps them consistent as more are added.
+// route, an expense category or the copy the assistant answers with meant
+// editing a seed file and re-running the seed. One table and one form serve
+// all of them, driven by the field specs below — which is also what keeps
+// them consistent as more are added.
 //
 // Attractions, hotels and transport keep their own tabs; their forms predate
-// this and are shaped around fields these four don't have.
+// this and are shaped around fields these don't have.
+//
+// Two field kinds exist for the shapes a flat form can't otherwise reach: a
+// `list` is a comma-separated line that stores an array of strings, and a
+// `json` is a textarea for the genuinely nested parts — an itinerary
+// template's days, a route's endpoints. A malformed one is refused with the
+// parser's own message rather than being sent as a string.
 
 const text = (name, label, extra = {}) => ({ name, label, kind: "text", ...extra });
 const num = (name, label, extra = {}) => ({ name, label, kind: "number", ...extra });
 const bool = (name, label) => ({ name, label, kind: "boolean" });
 const choice = (name, label, options, extra = {}) => ({ name, label, kind: "select", options, ...extra });
+const list = (name, label, extra = {}) => ({ name, label, kind: "list", ...extra });
+const json = (name, label, extra = {}) => ({ name, label, kind: "json", wide: true, ...extra });
 
 const RESOURCES = {
   destinations: {
@@ -132,14 +141,270 @@ const RESOURCES = {
       bool("is_active", "Active"),
     ],
   },
+
+  routes: {
+    label: "Routes",
+    search: "Search endpoints, notes or profile…",
+    columns: [
+      { key: "from", label: "From", get: (r) => r.from?.name, sortable: false },
+      { key: "to", label: "To", get: (r) => r.to?.name, sortable: false },
+      { key: "mode", label: "Mode" },
+      { key: "variant", label: "Variant", sortable: false },
+      { key: "distance_km", label: "Distance (km)" },
+      { key: "duration_min", label: "Minutes" },
+    ],
+    fields: [
+      // Endpoints carry a name, a kind and coordinates; a flat form can't
+      // express that, so they are edited as the objects they are.
+      json("from", "From", { hint: '{ "name": "Dhaka", "kind": "city", "lat_lng": { "lat": 23.81, "lng": 90.41 } }' }),
+      json("to", "To", { hint: "Same shape as From" }),
+      choice("mode", "Mode", ["driving", "bus", "train", "launch", "flight", "walking", "cycling"], {
+        required: true,
+      }),
+      choice("variant", "Variant", ["fastest", "shortest", "scenic", "cheapest"]),
+      text("profile", "Profile", { hint: "ORS naming, e.g. driving-car" }),
+      num("distance_km", "Distance (km)", { required: true }),
+      num("duration_min", "Duration (minutes)", { required: true }),
+      num("est_fare_bdt", "Fare (BDT, per passenger)"),
+      num("toll_bdt", "Tolls (BDT)"),
+      num("fuel_cost_bdt", "Fuel cost (BDT)"),
+      num("carbon_kg", "Carbon (kg per passenger)"),
+      text("notes", "Notes", { wide: true }),
+      bool("is_default", "Selected by default for this pair"),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "nearby-services": {
+    label: "Nearby services",
+    search: "Search name, city, area or address…",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "category", label: "Category" },
+      { key: "city", label: "City" },
+      { key: "area", label: "Area", sortable: false },
+      { key: "rating", label: "Rating" },
+      { key: "is_24h", label: "24h", boolean: true, sortable: false },
+    ],
+    fields: [
+      text("name", "Name", { required: true }),
+      choice(
+        "category",
+        "Category",
+        [
+          "restaurant", "cafe", "hospital", "pharmacy", "atm", "bank", "fuel",
+          "shopping", "toilet", "police", "mosque", "bus_stop", "hotel", "tourist_info",
+        ],
+        { required: true }
+      ),
+      text("subcategory", "Subcategory"),
+      text("city", "City", { required: true }),
+      text("area", "Area"),
+      text("address", "Address", { wide: true }),
+      text("phone", "Phone"),
+      text("opening_hours", "Opening hours"),
+      num("rating", "Rating (0–5)"),
+      num("price_level", "Price level (0–4)"),
+      list("tags", "Tags", { hint: "halal, wheelchair, card-accepted" }),
+      json("lat_lng", "Coordinates", { hint: '{ "lat": 21.42, "lng": 92.01 }' }),
+      bool("is_24h", "Open 24 hours"),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "expense-categories": {
+    label: "Expense categories",
+    search: "Search code, label or description…",
+    columns: [
+      { key: "sort_order", label: "#" },
+      { key: "code", label: "Code" },
+      { key: "label", label: "Label" },
+      { key: "color", label: "Colour", sortable: false },
+      { key: "default_budget_share", label: "Budget share", sortable: false },
+      { key: "is_system", label: "System", boolean: true, sortable: false },
+    ],
+    fields: [
+      text("code", "Code", { required: true, hint: "lowercase; expenses store this" }),
+      text("label", "Label", { required: true }),
+      text("color", "Colour", { required: true, hint: "hex, used by the budget donut" }),
+      text("icon", "Icon", { hint: "lucide-react icon name" }),
+      text("description", "Description", { wide: true }),
+      num("default_budget_share", "Default budget share", { hint: "0–1, seeds the estimated breakdown" }),
+      num("sort_order", "Sort order"),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "interest-tags": {
+    label: "Interest tags",
+    search: "Search code, label or description…",
+    columns: [
+      { key: "sort_order", label: "#" },
+      { key: "code", label: "Code" },
+      { key: "label", label: "Label" },
+      { key: "group", label: "Group" },
+    ],
+    fields: [
+      text("code", "Code", { required: true, hint: "matched against templates and trips" }),
+      text("label", "Label", { required: true }),
+      choice("group", "Group", ["nature", "culture", "activity", "food", "relaxation", "social"]),
+      text("icon", "Icon", { hint: "lucide-react icon name" }),
+      text("description", "Description", { wide: true }),
+      list("suits_destination_types", "Suits destination types", { hint: "beach, hill, island" }),
+      num("sort_order", "Sort order"),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "carbon-factors": {
+    label: "Carbon factors",
+    search: "Search mode, label, source or notes…",
+    columns: [
+      { key: "sort_order", label: "#" },
+      { key: "mode", label: "Mode" },
+      { key: "label", label: "Label", sortable: false },
+      { key: "grams_co2_per_passenger_km", label: "g CO₂ / pax-km" },
+      { key: "rating", label: "Rating", sortable: false },
+    ],
+    fields: [
+      text("mode", "Mode", { required: true, hint: "bus, train, flight_short…" }),
+      text("label", "Label", { required: true }),
+      choice("category", "Category", ["road", "rail", "water", "air", "active"], { required: true }),
+      num("grams_co2_per_passenger_km", "Grams CO₂ per passenger-km", { required: true }),
+      num("occupancy_assumption", "Occupancy assumption"),
+      choice("rating", "Rating", ["low", "moderate", "high", "very-high"]),
+      list("greener_alternatives", "Greener alternatives"),
+      text("source", "Source"),
+      text("notes", "Notes", { wide: true }),
+      num("sort_order", "Sort order"),
+      bool("is_shared", "Shared mode"),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "itinerary-templates": {
+    label: "Itinerary templates",
+    search: "Search code, title, city or summary…",
+    columns: [
+      { key: "title", label: "Title" },
+      { key: "city", label: "City" },
+      { key: "duration_days", label: "Days" },
+      { key: "budget_tier", label: "Tier", sortable: false },
+      { key: "popularity", label: "Popularity" },
+    ],
+    fields: [
+      text("code", "Code", { required: true }),
+      text("title", "Title", { required: true }),
+      text("city", "City", { required: true }),
+      text("destination_id", "Destination id", { required: true, hint: "the Destinations tab has these" }),
+      text("summary", "Summary", { wide: true }),
+      num("duration_days", "Duration (days)", { required: true }),
+      choice("pace", "Pace", ["relaxed", "balanced", "packed"]),
+      choice("budget_tier", "Budget tier", ["budget", "mid", "luxury"]),
+      list("interests", "Interests", { hint: "matched against the trip's interests" }),
+      list("suitable_for", "Suitable for", { hint: "family, couple, solo, friends" }),
+      num("est_total_cost_per_person", "Estimated cost per person (BDT)"),
+      num("popularity", "Popularity (0–100)"),
+      json("days", "Days", { hint: '[{ "day": 1, "theme": "Arrival", "items": [ … ] }]' }),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "packing-templates": {
+    label: "Packing templates",
+    search: "Search code, label or description…",
+    columns: [
+      { key: "label", label: "Label" },
+      { key: "code", label: "Code" },
+      { key: "category", label: "Category" },
+      { key: "priority", label: "Priority" },
+      { key: "always_include", label: "Always", boolean: true, sortable: false },
+    ],
+    fields: [
+      text("code", "Code", { required: true }),
+      text("label", "Label", { required: true }),
+      choice(
+        "category",
+        "Category",
+        ["clothing", "electronics", "documents", "toiletries", "health", "gear", "misc"],
+        { required: true }
+      ),
+      text("description", "Description", { wide: true }),
+      num("priority", "Priority", { hint: "higher wins when two templates supply the same item" }),
+      json("items", "Items", { hint: '[{ "name": "Rain jacket", "qty_rule": "per_traveler", "essential": true }]' }),
+      json("conditions", "Conditions", { hint: "All present conditions must match; omit a key to ignore it" }),
+      bool("always_include", "Baseline kit (no matching)"),
+      bool("is_active", "Active"),
+    ],
+  },
+
+  "chat-intents": {
+    label: "Chat intents",
+    search: "Search code, label, reply or keywords…",
+    columns: [
+      { key: "label", label: "Label" },
+      { key: "code", label: "Code" },
+      { key: "priority", label: "Priority" },
+      { key: "is_quick_action", label: "Quick action", boolean: true, sortable: false },
+      { key: "requires_trip", label: "Needs a trip", boolean: true, sortable: false },
+    ],
+    fields: [
+      text("code", "Code", { required: true }),
+      text("label", "Label", { required: true }),
+      list("keywords", "Keywords", { hint: "cheaper, cheap, budget, save" }),
+      list("patterns", "Patterns", { hint: "case-insensitive regex sources" }),
+      text("response_template", "Reply", {
+        required: true,
+        wide: true,
+        hint: "supports {{destination}}, {{days}}, {{budget}}, {{saved}}",
+      }),
+      list("followup_suggestions", "Follow-up suggestions"),
+      json("action", "Action", { hint: '{ "type": "reduce_budget", "params": {} }' }),
+      num("priority", "Priority", { hint: "higher wins when several intents match" }),
+      text("quick_action_label", "Quick action label"),
+      num("quick_action_order", "Quick action order"),
+      bool("is_quick_action", "Show as a chip above the chat input"),
+      bool("requires_trip", "Only answerable with a trip open"),
+      bool("is_active", "Active"),
+    ],
+  },
 };
 
 const money = (n) => `৳${Math.round(n || 0).toLocaleString()}`;
 
 function blankFrom(fields) {
-  return Object.fromEntries(
-    fields.map((f) => [f.name, f.kind === "boolean" ? true : f.kind === "number" ? "" : ""])
-  );
+  return Object.fromEntries(fields.map((f) => [f.name, f.kind === "boolean" ? true : ""]));
+}
+
+/** What a stored value looks like in the form. */
+function toFormValue(field, value) {
+  if (value === undefined || value === null) return field.kind === "boolean" ? false : "";
+  if (field.kind === "list") return Array.isArray(value) ? value.join(", ") : String(value);
+  if (field.kind === "json") return JSON.stringify(value, null, 2);
+  return value;
+}
+
+/**
+ * What the form sends back. Throws on malformed JSON so the message the
+ * parser gives is what the admin reads, rather than the field being sent as
+ * a string and rejected by Mongoose as the wrong type.
+ */
+function toPayloadValue(field, value) {
+  if (field.kind === "number") return Number(value);
+  if (field.kind === "list") {
+    return String(value)
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean);
+  }
+  if (field.kind === "json") {
+    try {
+      return JSON.parse(value);
+    } catch (err) {
+      throw new Error(`${field.label}: ${err.message}`);
+    }
+  }
+  return value;
 }
 
 // Read before offering to remove: what a record is holding up decides whether
@@ -295,11 +560,7 @@ export default function Catalogue() {
   }
 
   function openEdit(row) {
-    setForm(
-      Object.fromEntries(
-        config.fields.map((f) => [f.name, row[f.name] === undefined || row[f.name] === null ? "" : row[f.name]])
-      )
-    );
+    setForm(Object.fromEntries(config.fields.map((f) => [f.name, toFormValue(f, row[f.name])])));
     setEditing(row);
   }
 
@@ -311,7 +572,7 @@ export default function Catalogue() {
       const payload = Object.fromEntries(
         config.fields
           .filter((f) => form[f.name] !== "" && form[f.name] !== undefined)
-          .map((f) => [f.name, f.kind === "number" ? Number(form[f.name]) : form[f.name]])
+          .map((f) => [f.name, toPayloadValue(f, form[f.name])])
       );
       if (editing._id) await adminApi.catalogue.update(resource, editing._id, payload);
       else await adminApi.catalogue.create(resource, payload);
@@ -439,6 +700,14 @@ export default function Catalogue() {
                       </option>
                     ))}
                   </select>
+                ) : f.kind === "json" ? (
+                  <textarea
+                    rows={6}
+                    spellCheck={false}
+                    value={form[f.name] ?? ""}
+                    onChange={(e) => setForm({ ...form, [f.name]: e.target.value })}
+                    className="input font-mono text-xs resize-y"
+                  />
                 ) : (
                   <input
                     type={f.kind === "number" ? "number" : "text"}
@@ -547,17 +816,22 @@ export default function Catalogue() {
                         />
                       </td>
                     )}
-                    {columns.visible.map((c) => (
-                      <td key={c.key} className="py-3 text-ink-900/70">
-                        {c.money ? (
-                          <span className="font-mono">{money(row[c.key])}</span>
-                        ) : c.boolean ? (
-                          row[c.key] ? "Yes" : "No"
-                        ) : (
-                          String(row[c.key] ?? "—")
-                        )}
-                      </td>
-                    ))}
+                    {columns.visible.map((c) => {
+                      // A route's endpoints are nested objects, so a column
+                      // may name an accessor instead of a top-level key.
+                      const value = c.get ? c.get(row) : row[c.key];
+                      return (
+                        <td key={c.key} className="py-3 text-ink-900/70">
+                          {c.money ? (
+                            <span className="font-mono">{money(value)}</span>
+                          ) : c.boolean ? (
+                            value ? "Yes" : "No"
+                          ) : (
+                            String(value ?? "—")
+                          )}
+                        </td>
+                      );
+                    })}
                     <td className="py-3">
                       <span
                         className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
@@ -623,7 +897,16 @@ export default function Catalogue() {
         <DeletePrompt
           resource={resource}
           row={deleting}
-          label={deleting.name || deleting.flight_number || deleting.iata || "this record"}
+          label={
+            deleting.name ||
+            deleting.label ||
+            deleting.title ||
+            deleting.flight_number ||
+            deleting.iata ||
+            deleting.code ||
+            deleting.mode ||
+            "this record"
+          }
           busy={busyId === deleting._id}
           onCancel={() => setDeleting(null)}
           onConfirm={confirmDelete}

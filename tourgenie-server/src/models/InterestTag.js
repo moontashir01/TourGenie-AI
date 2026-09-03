@@ -3,7 +3,7 @@
 // ItineraryTemplate.interests and PackingTemplate.conditions.interests — one
 // list, one source of truth.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const interestTagSchema = new mongoose.Schema(
   {
@@ -27,5 +27,7 @@ const interestTagSchema = new mongoose.Schema(
 );
 
 interestTagSchema.index({ group: 1, sort_order: 1 });
+
+withSoftDelete(interestTagSchema);
 
 export default mongoose.model("InterestTag", interestTagSchema);

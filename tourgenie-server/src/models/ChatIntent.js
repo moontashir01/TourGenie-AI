@@ -6,7 +6,7 @@
 // food only", "What if it rains?") are rows in this collection, which is why
 // the chat works with no AI provider configured.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const chatIntentSchema = new mongoose.Schema(
   {
@@ -57,5 +57,7 @@ const chatIntentSchema = new mongoose.Schema(
 
 chatIntentSchema.index({ is_active: 1, priority: -1 });
 chatIntentSchema.index({ is_quick_action: 1, quick_action_order: 1 });
+
+withSoftDelete(chatIntentSchema);
 
 export default mongoose.model("ChatIntent", chatIntentSchema);

@@ -4,7 +4,7 @@
 // the Add Expense form are driven by the same rows, and an admin can add a
 // category without touching the client.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 const expenseCategorySchema = new mongoose.Schema(
   {
@@ -26,5 +26,7 @@ const expenseCategorySchema = new mongoose.Schema(
 );
 
 expenseCategorySchema.index({ sort_order: 1 });
+
+withSoftDelete(expenseCategorySchema);
 
 export default mongoose.model("ExpenseCategory", expenseCategorySchema);

@@ -4,7 +4,7 @@
 // aggregation returns the same "here are the restaurants within 2 km, sorted
 // by distance" answer Overpass would, with the distance already computed.
 import mongoose from "mongoose";
-import { geoPointSchema, latLngSchema, withGeoSync, TIMESTAMPS } from "./_shared.js";
+import { geoPointSchema, latLngSchema, withGeoSync, TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 export const SERVICE_CATEGORIES = [
   "restaurant",
@@ -60,5 +60,7 @@ nearbyServiceSchema.index({ location: "2dsphere" });
 nearbyServiceSchema.index({ city: 1, category: 1 });
 nearbyServiceSchema.index({ destination_id: 1, category: 1 });
 nearbyServiceSchema.index({ name: "text", tags: "text" });
+
+withSoftDelete(nearbyServiceSchema);
 
 export default mongoose.model("NearbyService", nearbyServiceSchema);

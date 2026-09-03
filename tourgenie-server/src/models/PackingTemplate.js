@@ -6,7 +6,7 @@
 // their items into a PackingList. No AI call needed — the "smart" part is
 // the rule match against the WeatherForecast rows for the trip dates.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 
 export const PACKING_CATEGORIES = [
   "clothing",
@@ -64,5 +64,7 @@ const packingTemplateSchema = new mongoose.Schema(
 
 packingTemplateSchema.index({ category: 1, priority: -1 });
 packingTemplateSchema.index({ is_active: 1, always_include: 1 });
+
+withSoftDelete(packingTemplateSchema);
 
 export default mongoose.model("PackingTemplate", packingTemplateSchema);

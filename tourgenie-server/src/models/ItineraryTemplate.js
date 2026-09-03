@@ -9,7 +9,7 @@
 // and no network call — the AI provider, when one is available, refines a
 // plan that already exists rather than inventing one from nothing.
 import mongoose from "mongoose";
-import { TIMESTAMPS } from "./_shared.js";
+import { TIMESTAMPS, withSoftDelete } from "./_shared.js";
 import { BUDGET_TIERS } from "./CostBenchmark.js";
 
 const templateItemSchema = new mongoose.Schema(
@@ -71,5 +71,7 @@ const itineraryTemplateSchema = new mongoose.Schema(
 itineraryTemplateSchema.index({ destination_id: 1, duration_days: 1, budget_tier: 1 });
 itineraryTemplateSchema.index({ city: 1, is_active: 1 });
 itineraryTemplateSchema.index({ interests: 1 });
+
+withSoftDelete(itineraryTemplateSchema);
 
 export default mongoose.model("ItineraryTemplate", itineraryTemplateSchema);
