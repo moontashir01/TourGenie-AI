@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Download, ShieldAlert } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { ErrorBanner } from "../../components/admin/ListShell";
+import ConfirmPrompt from "../../components/admin/ConfirmPrompt";
 
 // Reports tab (wireframe 3.13).
 //
@@ -11,7 +12,10 @@ import { ErrorBanner } from "../../components/admin/ListShell";
 // live, so it can cover 90 days without 90 aggregations.
 //
 // Personal columns (email addresses) are opt-in on every export, and every
-// download writes an audit entry naming the report and its row count.
+// download writes an audit entry naming the report and its row count. An
+// export that includes them also asks for the admin's password: the server
+// refuses `include_personal=true` without a fresh confirmation, so the prompt
+// below is what supplies it rather than a courtesy.
 
 const METRICS = [
   { key: "users_new", label: "Sign-ups" },
@@ -38,6 +42,7 @@ export default function Reports() {
   const [includePersonal, setIncludePersonal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState("");
+  const [passwordFor, setPasswordFor] = useState(""); // report key awaiting confirmation
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -60,18 +65,34 @@ export default function Reports() {
       .catch((err) => setError(err.message));
   }, [period]);
 
-  async function runExport(key) {
-    setExporting(key);
+  // Without email addresses this runs straight away; with them it goes
+  // through the password prompt first.
+  function startExport(key) {
     setError("");
     setNotice("");
+    if (includePersonal) return setPasswordFor(key);
+    runExport(key);
+  }
+
+  async function runExport(key, reauthToken) {
+    setExporting(key);
     try {
-      const { filename } = await adminApi.exports.run(key, { includePersonal });
+      const { filename } = await adminApi.exports.run(key, { includePersonal, reauthToken });
       setNotice(`Downloaded ${filename}. The download is recorded in the activity log.`);
     } catch (err) {
       setError(err.message);
     } finally {
       setExporting("");
     }
+  }
+
+  // Thrown errors keep the prompt open with the message inside it, which is
+  // what a mistyped password should do.
+  async function confirmPersonalExport({ password }) {
+    const { reauth_token } = await adminApi.reauth(password);
+    const key = passwordFor;
+    setPasswordFor("");
+    await runExport(key, reauth_token);
   }
 
   if (loading) {
@@ -219,7 +240,7 @@ export default function Reports() {
             <button
               key={report.key}
               type="button"
-              onClick={() => runExport(report.key)}
+              onClick={() => startExport(report.key)}
               disabled={Boolean(exporting)}
               className="flex items-center gap-3 text-left border border-sand rounded-xl px-4 py-3 hover:border-teal disabled:opacity-50 transition-colors"
             >
@@ -293,6 +314,20 @@ export default function Reports() {
           </p>
         )}
       </div>
+
+      {passwordFor && (
+        <ConfirmPrompt
+          title="Export email addresses?"
+          description="This file carries travellers' email addresses out of the system. It is logged against your account."
+          confirmLabel="Confirm and download"
+          tone="danger"
+          requireReason={false}
+          requirePassword
+          passwordNote="Personal data leaving the system is confirmed with your own password."
+          onCancel={() => setPasswordFor("")}
+          onConfirm={confirmPersonalExport}
+        />
+      )}
     </div>
   );
 }

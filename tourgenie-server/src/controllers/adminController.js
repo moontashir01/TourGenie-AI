@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Trip from "../models/Trip.js";
 import Booking from "../models/Booking.js";
@@ -12,6 +13,8 @@ import { recordAudit } from "../services/auditLog.js";
 import { maybeRoll, getTrend } from "../services/analyticsRoller.js";
 import { deleteAccountAndContent, summariseAccountFootprint } from "../services/accountDeletion.js";
 import { ROLES } from "../middleware/auth.js";
+import { issueReauthToken, REAUTH_TTL_SECONDS } from "../middleware/reauth.js";
+import { reauthLimiter } from "../middleware/rateLimit.js";
 
 // FR-20 — Admin: User Management
 export const listUsers = asyncHandler(async (req, res) => {
@@ -300,4 +303,36 @@ export const getAnalyticsTrends = asyncHandler(async (req, res) => {
     top_destinations: snapshots.at(-1)?.top_destinations || [],
     top_interests: snapshots.at(-1)?.top_interests || [],
   });
+});
+
+// The password prompt behind role changes, account deletion and any export
+// carrying email addresses. Hands back a two-minute confirmation the client
+// attaches to that one request; see middleware/reauth.js for why it is a
+// token and not the password again.
+export const confirmPassword = asyncHandler(async (req, res) => {
+  const { password } = req.body || {};
+  if (!password) return res.status(400).json({ message: "Enter your password to confirm." });
+
+  // `password_hash` is select:false on the model, so it has to be asked for.
+  const me = await User.findById(req.user._id).select("+password_hash");
+  if (!me) return res.status(404).json({ message: "Account not found" });
+
+  if (!(await bcrypt.compare(password, me.password_hash))) {
+    // Only wrong answers are counted, so an admin working through six
+    // deletions in a row never meets the limit.
+    reauthLimiter.penalise(req);
+    // A wrong password on a privileged prompt is worth recording: it is what
+    // a session someone else is holding looks like from the server's side.
+    await recordAudit(req, {
+      action: "admin.reauth_failed",
+      entity_type: "User",
+      entity_id: me._id,
+      entity_label: me.email,
+    });
+    // 403, not 401 — a 401 on a request carrying a token ends the session,
+    // and a typo shouldn't log an admin out.
+    return res.status(403).json({ message: "That password is not right.", code: "reauth_failed" });
+  }
+
+  res.json({ reauth_token: issueReauthToken(me), expires_in: REAUTH_TTL_SECONDS });
 });

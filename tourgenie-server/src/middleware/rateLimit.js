@@ -88,3 +88,38 @@ export const adminExportLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   message: "That's ten exports in ten minutes. Wait a few minutes before downloading another.",
 });
+
+/**
+ * A limiter that counts only what it is told to.
+ *
+ * The password prompt needs guessing protection, not load protection, and
+ * counting attempts would lock an admin out for doing six legitimate
+ * deletions in a row. So the window counts wrong answers: `guard` reads the
+ * standing count without adding to it, and the handler calls `penalise` when
+ * the password comes back wrong.
+ */
+export function failureLimit({ name, max, windowMs, message }) {
+  const keyFor = (req) => `${name}:${req.user?._id || req.ip}`;
+
+  return {
+    guard: (req, res, next) => {
+      const entry = buckets.get(keyFor(req));
+      if (entry && entry.reset > Date.now() && entry.count >= max) {
+        const retry_after = Math.max(1, Math.ceil((entry.reset - Date.now()) / 1000));
+        res.setHeader("Retry-After", String(retry_after));
+        return res.status(429).json({ message, retry_after });
+      }
+      next();
+    },
+    penalise: (req) => take(keyFor(req), max, windowMs),
+  };
+}
+
+// Five wrong passwords in fifteen minutes, per account. Correct ones are
+// free.
+export const reauthLimiter = failureLimit({
+  name: "reauth",
+  max: 5,
+  windowMs: 15 * 60 * 1000,
+  message: "Too many incorrect password confirmations. Try again in a few minutes.",
+});

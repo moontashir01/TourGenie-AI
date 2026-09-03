@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Ban, CheckCircle2, Trash2, ShieldCheck, Loader2, AlertTriangle } from "lucide-react";
+import { Ban, CheckCircle2, Trash2, ShieldCheck, AlertTriangle } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
 import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
 import UserDetail from "../../components/admin/UserDetail";
+import ConfirmPrompt from "../../components/admin/ConfirmPrompt";
 
 const ROLE_TONE = {
   owner: "bg-sunset-light text-sunset-dark",
@@ -15,49 +16,10 @@ const ROLE_TONE = {
 
 const ROLES = ["traveler", "moderator", "admin", "owner"];
 
-// Changing what someone may do, and deleting an account, both ask for a
-// reason — it is what the audit trail records, and it is the difference
-// between a log you can act on and a list of timestamps.
-function ReasonPrompt({ title, description, confirmLabel, tone = "teal", busy, onCancel, onConfirm, children }) {
-  const [reason, setReason] = useState("");
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-md card p-6 animate-pop-in">
-        <h3 className="font-display text-lg text-ink-900 mb-1">{title}</h3>
-        <p className="text-sm text-ink-900/60 mb-4">{description}</p>
-        {children}
-        <label className="block mb-4">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Reason (recorded in the activity log)</span>
-          <input
-            type="text"
-            autoFocus
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Why is this happening?"
-            className="input"
-          />
-        </label>
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="btn-secondary">
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={busy || !reason.trim()}
-            onClick={() => onConfirm(reason.trim())}
-            className={`inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50 ${
-              tone === "danger" ? "bg-sunset hover:bg-sunset-dark text-ink-fixed" : "bg-teal hover:bg-teal-dark text-paper-fixed"
-            }`}
-          >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Changing what someone may do and deleting an account both ask for a reason
+// — it is what the audit trail records — and for the admin's own password,
+// because the server refuses either without a fresh confirmation. See
+// components/admin/ConfirmPrompt and middleware/reauth.js.
 
 export default function Users() {
   const { user: currentUser } = useAuth();
@@ -82,15 +44,13 @@ export default function Users() {
     }
   }
 
-  async function confirmRole(reason) {
+  async function confirmRole({ reason, password }) {
     setBusyId(roleTarget.user._id);
     try {
-      await adminApi.setUserRole(roleTarget.user._id, roleTarget.role, reason);
+      const { reauth_token } = await adminApi.reauth(password);
+      await adminApi.setUserRole(roleTarget.user._id, roleTarget.role, reason, reauth_token);
       setRoleTarget(null);
       list.reload();
-    } catch (err) {
-      list.setError(err.message);
-      setRoleTarget(null);
     } finally {
       setBusyId(null);
     }
@@ -110,15 +70,13 @@ export default function Users() {
     }
   }
 
-  async function confirmDelete(reason) {
+  async function confirmDelete({ reason, password }) {
     setBusyId(deleteTarget.user._id);
     try {
-      await adminApi.deleteUser(deleteTarget.user._id, reason);
+      const { reauth_token } = await adminApi.reauth(password);
+      await adminApi.deleteUser(deleteTarget.user._id, reason, reauth_token);
       setDeleteTarget(null);
       list.reload();
-    } catch (err) {
-      list.setError(err.message);
-      setDeleteTarget(null);
     } finally {
       setBusyId(null);
     }
@@ -249,7 +207,7 @@ export default function Users() {
       <UserDetail userId={openUserId} onClose={() => setOpenUserId(null)} />
 
       {roleTarget && (
-        <ReasonPrompt
+        <ConfirmPrompt
           title={`Make ${roleTarget.user.name} a ${roleTarget.role}?`}
           description={
             roleTarget.role === "traveler"
@@ -257,7 +215,8 @@ export default function Users() {
               : `They will be able to sign in to the admin portal as a ${roleTarget.role}.`
           }
           confirmLabel="Change role"
-          busy={busyId === roleTarget.user._id}
+          requirePassword
+          passwordNote="Granting portal access is confirmed with your own password."
           onCancel={() => setRoleTarget(null)}
           onConfirm={confirmRole}
         >
@@ -267,16 +226,17 @@ export default function Users() {
               {roleTarget.user.role} → {roleTarget.role}
             </span>
           </div>
-        </ReasonPrompt>
+        </ConfirmPrompt>
       )}
 
       {deleteTarget && (
-        <ReasonPrompt
+        <ConfirmPrompt
           title={`Delete ${deleteTarget.user.name}'s account?`}
           description="This cannot be undone. Everything the account owns is removed with it."
           confirmLabel="Delete permanently"
           tone="danger"
-          busy={busyId === deleteTarget.user._id}
+          requirePassword
+          passwordNote="Nothing here can be restored, so it is confirmed with your own password."
           onCancel={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
         >
@@ -296,7 +256,7 @@ export default function Users() {
               </ul>
             )}
           </div>
-        </ReasonPrompt>
+        </ConfirmPrompt>
       )}
     </div>
   );

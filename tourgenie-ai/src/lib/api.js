@@ -44,10 +44,13 @@ export function consumeSessionExpiredNotice() {
   }
 }
 
-async function request(path, { method = "GET", body, auth = true } = {}) {
+async function request(path, { method = "GET", body, auth = true, reauthToken } = {}) {
   const headers = { "Content-Type": "application/json" };
   const token = getToken();
   if (auth && token) headers.Authorization = `Bearer ${token}`;
+  // The two-minute confirmation from POST /admin/reauth. A handful of admin
+  // actions ask for the password again and won't run without it.
+  if (reauthToken) headers["x-reauth-token"] = reauthToken;
 
   const res = await fetch(`${API_URL}${path}`, {
     method,
@@ -85,10 +88,13 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
 // A file, not JSON. The admin exports stream CSV straight from a cursor, so
 // they can't go through request() — but they still need the bearer token, and
 // a plain <a href> can't carry one.
-async function downloadFile(path, fallbackName) {
+async function downloadFile(path, fallbackName, { reauthToken } = {}) {
   const token = getToken();
   const res = await fetch(`${API_URL}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(reauthToken ? { "x-reauth-token": reauthToken } : {}),
+    },
   });
 
   if (!res.ok) {
@@ -349,6 +355,11 @@ function adminList(resource, params = {}) {
 }
 
 export const adminApi = {
+  // Confirms the admin's own password and returns a short-lived token for
+  // role changes, account deletion and exports carrying email addresses. It
+  // is deliberately not cached: each of those prompts asks again.
+  reauth: (password) => request("/admin/reauth", { method: "POST", body: { password } }),
+
   analytics: () => request("/admin/analytics"),
   // The time series, from AnalyticsSnapshot rather than counted live.
   trends: ({ period = "day", limit } = {}) =>
@@ -363,9 +374,10 @@ export const adminApi = {
   userFootprint: (id) => request(`/admin/users/${id}/footprint`),
   setUserStatus: (id, is_active, reason) =>
     request(`/admin/users/${id}/status`, { method: "PATCH", body: { is_active, reason } }),
-  setUserRole: (id, role, reason) =>
-    request(`/admin/users/${id}/role`, { method: "PATCH", body: { role, reason } }),
-  deleteUser: (id, reason) => request(`/admin/users/${id}`, { method: "DELETE", body: { reason } }),
+  setUserRole: (id, role, reason, reauthToken) =>
+    request(`/admin/users/${id}/role`, { method: "PATCH", body: { role, reason }, reauthToken }),
+  deleteUser: (id, reason, reauthToken) =>
+    request(`/admin/users/${id}`, { method: "DELETE", body: { reason }, reauthToken }),
 
   trips: (params) => adminList("trips", params),
   tripDetail: (id) => request(`/admin/trips/${id}`),
@@ -465,10 +477,11 @@ export const adminApi = {
   // download writes an audit entry.
   exports: {
     list: () => request("/admin/exports"),
-    run: (report, { includePersonal = false } = {}) =>
+    run: (report, { includePersonal = false, reauthToken } = {}) =>
       downloadFile(
         `/admin/exports/${report}${includePersonal ? "?include_personal=true" : ""}`,
-        `tourgenie-${report}.csv`
+        `tourgenie-${report}.csv`,
+        { reauthToken }
       ),
   },
 };

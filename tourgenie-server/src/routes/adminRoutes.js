@@ -9,6 +9,7 @@ import {
   listAuditLogs,
   getAnalytics,
   getAnalyticsTrends,
+  confirmPassword,
 } from "../controllers/adminController.js";
 import {
   getModerationQueue,
@@ -55,7 +56,8 @@ import {
   clearRateCache,
 } from "../controllers/adminCatalogueController.js";
 import { protect, requireRole } from "../middleware/auth.js";
-import { adminReadLimiter, adminExportLimiter } from "../middleware/rateLimit.js";
+import { adminReadLimiter, adminExportLimiter, reauthLimiter } from "../middleware/rateLimit.js";
+import { requireRecentAuth, requireRecentAuthForPersonalData } from "../middleware/reauth.js";
 
 const router = Router();
 
@@ -68,6 +70,13 @@ router.use(protect, requireRole("moderator", "admin", "owner"), adminReadLimiter
 const staffRead = requireRole("moderator", "admin", "owner");
 const adminWrite = requireRole("admin", "owner");
 const ownerOnly = requireRole("owner");
+
+// — confirming who is at the keyboard —
+// A week-long session token is enough to read a dashboard and not enough to
+// grant `owner`, delete an account, or export email addresses. Those three
+// ask for the password again and carry the two-minute confirmation it
+// returns.
+router.post("/reauth", reauthLimiter.guard, confirmPassword);
 
 // — dashboards —
 router.get("/analytics", staffRead, getAnalytics);
@@ -83,7 +92,7 @@ router.get("/health", staffRead, getSystemHealth);
 // Streamed from a cursor server-side, and each one writes an audit entry
 // naming the report and its row count. Personal columns are opt-in.
 router.get("/exports", adminWrite, listExports);
-router.get("/exports/:report", adminWrite, adminExportLimiter, runExport);
+router.get("/exports/:report", adminWrite, adminExportLimiter, requireRecentAuthForPersonalData, runExport);
 
 // — one box, every subject —
 router.get("/search", staffRead, globalSearch);
@@ -95,8 +104,8 @@ router.get("/users/:id/footprint", adminWrite, getUserFootprint);
 router.patch("/users/:id/status", adminWrite, setUserStatus);
 // Granting staff access is the one thing an admin cannot do to another
 // account: it is what stops one compromised admin minting more.
-router.patch("/users/:id/role", ownerOnly, setUserRole);
-router.delete("/users/:id", ownerOnly, deleteUser);
+router.patch("/users/:id/role", ownerOnly, requireRecentAuth, setUserRole);
+router.delete("/users/:id", ownerOnly, requireRecentAuth, deleteUser);
 
 // — trips —
 router.get("/trips", staffRead, listTrips);

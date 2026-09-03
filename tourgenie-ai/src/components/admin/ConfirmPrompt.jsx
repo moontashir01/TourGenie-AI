@@ -1,0 +1,122 @@
+import { useState } from "react";
+import { Loader2, Lock } from "lucide-react";
+
+// The dialog in front of an admin action that has to be accounted for.
+//
+// Two things it can ask for, independently:
+//
+//   reason   — what the audit trail records. The difference between a log you
+//              can act on and a list of timestamps.
+//   password — re-authentication. A session token lasts a week and lives in
+//              localStorage; that is enough to read a dashboard and not
+//              enough to grant `owner`, delete an account and everything it
+//              owns, or export email addresses.
+//
+// It owns its own busy and error state, so a wrong password leaves the dialog
+// open with the message inside it rather than closing and losing what was
+// typed. `onConfirm({ reason, password })` may throw; whatever it throws is
+// shown here.
+export default function ConfirmPrompt({
+  title,
+  description,
+  confirmLabel,
+  tone = "teal",
+  requireReason = true,
+  requirePassword = false,
+  passwordNote = "This action asks for your password again.",
+  onCancel,
+  onConfirm,
+  children,
+}) {
+  const [reason, setReason] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const ready = (!requireReason || reason.trim()) && (!requirePassword || password);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (!ready || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await onConfirm({ reason: reason.trim(), password });
+      // Success unmounts this dialog, so nothing is reset here.
+    } catch (err) {
+      setError(err.message);
+      // A wrong password is the likely failure; clearing it saves a select-all.
+      if (requirePassword) setPassword("");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={busy ? undefined : onCancel} />
+      <form onSubmit={submit} className="relative w-full max-w-md card p-6 animate-pop-in">
+        <h3 className="font-display text-lg text-ink-900 mb-1">{title}</h3>
+        <p className="text-sm text-ink-900/60 mb-4">{description}</p>
+        {children}
+
+        {requireReason && (
+          <label className="block mb-4">
+            <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+              Reason (recorded in the activity log)
+            </span>
+            <input
+              type="text"
+              autoFocus
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Why is this happening?"
+              className="input"
+            />
+          </label>
+        )}
+
+        {requirePassword && (
+          <label className="block mb-4">
+            <span className="text-xs font-medium text-ink-900/60 mb-1.5 flex items-center gap-1.5">
+              <Lock className="w-3 h-3" /> Your password
+            </span>
+            <input
+              type="password"
+              autoFocus={!requireReason}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Confirm it's you"
+              className="input"
+            />
+            <span className="text-xs text-ink-900/45 mt-1.5 block">{passwordNote}</span>
+          </label>
+        )}
+
+        {error && (
+          <p className="text-sm text-sunset-dark bg-sunset-light/40 border border-sunset-dark/20 rounded-lg px-3 py-2 mb-4">
+            {error}
+          </p>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onCancel} disabled={busy} className="btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={busy || !ready}
+            className={`inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50 ${
+              tone === "danger"
+                ? "bg-sunset hover:bg-sunset-dark text-ink-fixed"
+                : "bg-teal hover:bg-teal-dark text-paper-fixed"
+            }`}
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {confirmLabel}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
