@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, MapPin, Ticket, Star, MessageSquare, ScrollText } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import Drawer, { DrawerSection, Field } from "./Drawer";
+import AdminNotes from "./AdminNotes";
 import { ErrorBanner } from "./ListShell";
 
 // One traveller, whole. The screen that turns "a support question" into a
@@ -156,6 +157,8 @@ export default function UserDetail({ userId, onClose }) {
               ))}
             </ul>
           </DrawerSection>
+
+          <AdminNotes targetType="user" targetId={userId} />
 
           <DrawerSection title="Admin actions on this account" count={data.audit.length} empty="None recorded.">
             <ul className="space-y-1.5">

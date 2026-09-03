@@ -21,6 +21,7 @@ import {
   moderateReview,
   getModerationStats,
 } from "../controllers/adminModerationController.js";
+import { listNotes, createNote, updateNote, deleteNote } from "../controllers/adminNoteController.js";
 import { listExports, runExport } from "../controllers/adminExportController.js";
 import { getSystemHealth } from "../controllers/adminHealthController.js";
 import {
@@ -106,6 +107,15 @@ router.patch("/users/:id/status", adminWrite, setUserStatus);
 // account: it is what stops one compromised admin minting more.
 router.patch("/users/:id/role", ownerOnly, requireRecentAuth, setUserRole);
 router.delete("/users/:id", ownerOnly, requireRecentAuth, deleteUser);
+
+// — support notes —
+// What an admin knew, as opposed to what they did. Moderators may write them
+// because answering support questions is most of what they do; only the
+// author and an owner may change or remove one.
+router.get("/notes", staffRead, listNotes);
+router.post("/notes", staffRead, createNote);
+router.patch("/notes/:id", staffRead, updateNote);
+router.delete("/notes/:id", staffRead, deleteNote);
 
 // — trips —
 router.get("/trips", staffRead, listTrips);

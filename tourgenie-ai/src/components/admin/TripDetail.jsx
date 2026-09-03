@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Sparkles, Plane, Building2, Wallet, CalendarRange } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import Drawer, { DrawerSection, Field } from "./Drawer";
+import AdminNotes from "./AdminNotes";
 import { ErrorBanner } from "./ListShell";
 import { StatusPill } from "./UserDetail";
 
@@ -204,6 +205,8 @@ export default function TripDetail({ tripId, onClose }) {
               ))}
             </ul>
           </DrawerSection>
+
+          <AdminNotes targetType="trip" targetId={tripId} />
         </>
       )}
     </Drawer>

@@ -382,6 +382,16 @@ export const adminApi = {
   trips: (params) => adminList("trips", params),
   tripDetail: (id) => request(`/admin/trips/${id}`),
 
+  // Support context on a traveller or a trip — what an admin knew, as
+  // opposed to what they did, which is the audit log's job.
+  notes: {
+    list: (target_type, target_id) =>
+      request(`/admin/notes?target_type=${target_type}&target_id=${target_id}`),
+    create: (payload) => request("/admin/notes", { method: "POST", body: payload }),
+    update: (id, payload) => request(`/admin/notes/${id}`, { method: "PATCH", body: payload }),
+    remove: (id) => request(`/admin/notes/${id}`, { method: "DELETE" }),
+  },
+
   bookings: (params) => adminList("bookings", params),
   cancelBooking: (id, reason) => request(`/admin/bookings/${id}/cancel`, { method: "PATCH", body: { reason } }),
   hotelBookings: (params) => adminList("hotel-bookings", params),

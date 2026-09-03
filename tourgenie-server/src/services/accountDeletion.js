@@ -21,6 +21,7 @@ import Notification from "../models/Notification.js";
 import ChatSession from "../models/ChatSession.js";
 import PackingList from "../models/PackingList.js";
 import PasswordReset from "../models/PasswordReset.js";
+import AdminNote from "../models/AdminNote.js";
 
 /** What deleting this account would take with it — shown before confirming. */
 export async function summariseAccountFootprint(userId) {
@@ -40,6 +41,13 @@ export async function summariseAccountFootprint(userId) {
       ItineraryItem.countDocuments({ trip_id: { $in: tripIds } }),
     ]);
 
+  const notes = await AdminNote.countDocuments({
+    $or: [
+      { target_type: "user", target_id: userId },
+      { target_type: "trip", target_id: { $in: tripIds } },
+    ],
+  });
+
   return {
     trips: trips.length,
     itinerary_items: items,
@@ -51,6 +59,7 @@ export async function summariseAccountFootprint(userId) {
     reviews,
     reports,
     notifications,
+    admin_notes: notes,
   };
 }
 
@@ -88,6 +97,16 @@ export async function deleteAccountAndContent(userId) {
       PasswordReset.deleteMany({ user_id: id }),
     ]);
 
+  // Support notes about this account and its trips. They are context, not a
+  // record of what was done — the audit trail keeps that — and leaving them
+  // behind would strand notes about a traveller who no longer exists.
+  const notes = await AdminNote.deleteMany({
+    $or: [
+      { target_type: "user", target_id: id },
+      { target_type: "trip", target_id: { $in: tripIds } },
+    ],
+  });
+
   // Trips last: they are the key everything above was found by.
   const removedTrips = await Trip.deleteMany({ user_id: id });
   const removedUser = await User.deleteOne({ _id: id });
@@ -115,6 +134,7 @@ export async function deleteAccountAndContent(userId) {
     reports: reports.deletedCount,
     notifications: notifications.deletedCount,
     password_resets: resets.deletedCount,
+    admin_notes: notes.deletedCount,
     likes_withdrawn: likedPosts.length,
   };
 }
