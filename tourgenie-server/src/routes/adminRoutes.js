@@ -55,12 +55,15 @@ import {
   clearRateCache,
 } from "../controllers/adminCatalogueController.js";
 import { protect, requireRole } from "../middleware/auth.js";
+import { adminReadLimiter, adminExportLimiter } from "../middleware/rateLimit.js";
 
 const router = Router();
 
 // Anyone on staff may reach the portal; each route below declares the floor
 // it actually needs on top of that.
-router.use(protect, requireRole("moderator", "admin", "owner"));
+// The limiter is per account and sits after `protect` for that reason. An
+// unpaginated export loop is the cheapest denial of service in the app.
+router.use(protect, requireRole("moderator", "admin", "owner"), adminReadLimiter);
 
 const staffRead = requireRole("moderator", "admin", "owner");
 const adminWrite = requireRole("admin", "owner");
@@ -80,7 +83,7 @@ router.get("/health", staffRead, getSystemHealth);
 // Streamed from a cursor server-side, and each one writes an audit entry
 // naming the report and its row count. Personal columns are opt-in.
 router.get("/exports", adminWrite, listExports);
-router.get("/exports/:report", adminWrite, runExport);
+router.get("/exports/:report", adminWrite, adminExportLimiter, runExport);
 
 // — one box, every subject —
 router.get("/search", staffRead, globalSearch);
