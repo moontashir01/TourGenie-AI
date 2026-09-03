@@ -56,6 +56,17 @@ const userSchema = new mongoose.Schema(
 
     last_login_at: { type: Date, default: null },
     email_verified: { type: Boolean, default: false },
+
+    // Bumped whenever the password changes. Every issued JWT carries the
+    // version it was signed under, so changing a password — the one action a
+    // person takes precisely because someone else may be holding their
+    // session — now actually ends those sessions instead of leaving them
+    // valid for the rest of the week the token was good for.
+    //
+    // Tokens issued before this field existed carry no version and are read
+    // as 0, which is the default here, so nobody is signed out by the
+    // upgrade itself.
+    token_version: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

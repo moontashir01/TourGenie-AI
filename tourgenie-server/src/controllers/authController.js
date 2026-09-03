@@ -15,6 +15,7 @@ import { sendMail, passwordResetEmail } from "../services/mailer.js";
 import { generateToken } from "../utils/generateToken.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { loadRates, normalizeCode } from "../utils/currency.js";
+import { loginFailureLimiter } from "../middleware/rateLimit.js";
 
 // Login, /me and the settings save all describe the account the same way.
 // They used to each pick their own subset, which is why the Plan Trip form's
@@ -105,11 +106,15 @@ export const login = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email: email.toLowerCase() }).select("+password_hash");
   if (!user || !user.is_active) {
+    // Counted the same as a wrong password: a limiter that only fires on
+    // real accounts would tell an attacker which addresses exist.
+    loginFailureLimiter.penalise(req);
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) {
+    loginFailureLimiter.penalise(req);
     return res.status(401).json({ message: "Invalid email or password" });
   }
 
@@ -118,7 +123,7 @@ export const login = asyncHandler(async (req, res) => {
   user.last_login_at = new Date();
   await user.save();
 
-  const token = generateToken(user._id);
+  const token = generateToken(user);
   res.json({ token, user: publicUser(user) });
 });
 
@@ -296,6 +301,10 @@ export const resetPassword = asyncHandler(async (req, res) => {
   }
 
   user.password_hash = await bcrypt.hash(password, 10);
+  // Whoever forced this reset may already be holding a live session on the
+  // account; the reset is what has to end it. Every token signed under the
+  // old version stops verifying — see middleware/auth.js.
+  user.token_version = (user.token_version || 0) + 1;
   await user.save();
 
   reset.consumed_at = new Date();
@@ -444,6 +453,8 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
 
   user.password_hash = await bcrypt.hash(new_password, 10);
+  // Same as the reset flow: every other session on this account ends here.
+  user.token_version = (user.token_version || 0) + 1;
   await user.save();
 
   // Any outstanding reset code is void — the password it was issued for is
@@ -453,5 +464,8 @@ export const changePassword = asyncHandler(async (req, res) => {
     { $set: { expires_at: new Date() } }
   );
 
-  res.json({ message: "Password changed." });
+  // Including the session doing the changing — so it is handed a replacement
+  // rather than being thrown back to the login screen for using the form
+  // correctly.
+  res.json({ message: "Password changed.", token: generateToken(user) });
 });

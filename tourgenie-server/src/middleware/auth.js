@@ -22,6 +22,13 @@ export const protect = asyncHandler(async (req, res, next) => {
     return res.status(401).json({ message: "Not authorized — account not found or deactivated" });
   }
 
+  // A token signed before the password changed is spent. Tokens issued
+  // before `tv` existed carry no claim and read as 0, matching the default
+  // on the account, so the upgrade signs nobody out on its own.
+  if ((decoded.tv ?? 0) !== (user.token_version || 0)) {
+    return res.status(401).json({ message: "Not authorized — the password on this account changed. Sign in again." });
+  }
+
   req.user = user;
   next();
 });
@@ -36,7 +43,9 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
   try {
     const decoded = jwt.verify(header.split(" ")[1], process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
-    if (user?.is_active) req.user = user;
+    // Same version check as `protect` — a token the password change retired
+    // reads here as no token at all.
+    if (user?.is_active && (decoded.tv ?? 0) === (user.token_version || 0)) req.user = user;
   } catch {
     // Expired or forged — carry on as an anonymous reader.
   }

@@ -5,7 +5,7 @@ import {
   Sun, Moon, Monitor, Palette,
 } from "lucide-react";
 import AppShell from "../components/AppShell";
-import { authApi, destinationsApi, referenceApi } from "../lib/api";
+import { authApi, destinationsApi, referenceApi, setToken } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
@@ -214,7 +214,10 @@ export default function Settings() {
     }
     setPasswordState({ saving: true, error: "", success: "" });
     try {
-      const { message } = await authApi.changePassword(passwords.current, passwords.next);
+      const { message, token } = await authApi.changePassword(passwords.current, passwords.next);
+      // The change signs every session on the account out, this one included.
+      // The replacement token keeps the tab that did it signed in.
+      setToken(token);
       setPasswords({ current: "", next: "", confirm: "" });
       setPasswordState({ saving: false, error: "", success: message });
     } catch (err) {

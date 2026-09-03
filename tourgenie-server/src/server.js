@@ -33,6 +33,16 @@ import nearbyRoutes from "./routes/nearbyRoutes.js";
 
 const app = express();
 
+// The sign-in limiter counts failures per address, so `req.ip` has to be the
+// visitor's and not the proxy's. Opt-in, because trusting a forwarded header
+// that nobody is actually setting lets a caller claim any address it likes
+// and walk straight past the limiter. Set TRUST_PROXY to the number of
+// proxies in front of this process when deploying behind one.
+if (process.env.TRUST_PROXY) {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set("trust proxy", Number.isFinite(hops) ? hops : process.env.TRUST_PROXY);
+}
+
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
 app.use(express.json());
 app.use(morgan("dev"));

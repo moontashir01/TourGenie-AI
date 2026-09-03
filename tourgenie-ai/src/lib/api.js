@@ -4,6 +4,16 @@ function getToken() {
   return localStorage.getItem("tourgenie_token");
 }
 
+/**
+ * Changing a password retires every token signed before it, including the
+ * one this tab is holding. The server answers with a replacement; storing it
+ * here is what stops the next request 401-ing the user out of the settings
+ * page they just used correctly.
+ */
+export function setToken(token) {
+  if (token) localStorage.setItem("tourgenie_token", token);
+}
+
 // A login lasts a week. When it runs out, every request starts coming back
 // 401 — and the app used to render that as a red "Not authorized" banner on
 // whichever page you were on, forever, with no hint that logging in again

@@ -10,11 +10,14 @@ import {
   changePassword,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/auth.js";
+import { loginFailureLimiter, authWriteLimiter } from "../middleware/rateLimit.js";
 
 const router = Router();
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", authWriteLimiter, register);
+// `guard` only reads the count; the handler calls `penalise` on a wrong
+// password, so signing in correctly is never rationed.
+router.post("/login", loginFailureLimiter.guard, login);
 router.get("/me", protect, getMe);
 
 // Account settings — profile, preferences, and changing a known password.
@@ -22,7 +25,7 @@ router.patch("/me", protect, updateMe);
 router.post("/change-password", protect, changePassword);
 
 // Password recovery — /forgot-password doubles as the resend endpoint.
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", authWriteLimiter, forgotPassword);
 router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);
 
