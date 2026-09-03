@@ -5,9 +5,11 @@ import Attraction from "../models/Attraction.js";
 import CommunityPost from "../models/CommunityPost.js";
 import Review from "../models/Review.js";
 import AuditLog from "../models/AuditLog.js";
+import Report from "../models/Report.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { parseListQuery, paginate } from "../utils/adminList.js";
-import { recordAudit, diffFields } from "../services/auditLog.js";
+import { recordAudit } from "../services/auditLog.js";
+import { maybeRoll, getTrend } from "../services/analyticsRoller.js";
 import { deleteAccountAndContent, summariseAccountFootprint } from "../services/accountDeletion.js";
 import { ROLES } from "../middleware/auth.js";
 
@@ -159,114 +161,9 @@ export const listTrips = asyncHandler(async (req, res) => {
 // which gives all seven collections the same paging, soft delete, referential
 // guards and audit trail instead of three of them having their own.
 
-// FR-23 — Admin: Review Moderation
-// Lists ALL posts/reviews (including hidden ones) so the admin has something
-// to actually moderate — the public endpoints only show is_hidden: false.
-export const listCommunityPosts = asyncHandler(async (req, res) => {
-  const options = parseListQuery(req.query, {
-    searchFields: ["place", "content"],
-    allowedSort: ["created_at", "place", "likes"],
-  });
-  if (req.query.visibility === "hidden") options.filter.is_hidden = true;
-  if (req.query.visibility === "visible") options.filter.is_hidden = false;
-
-  res.json(await paginate(CommunityPost, options, (q) => q.populate("user_id", "name email")));
-});
-
-export const listReviews = asyncHandler(async (req, res) => {
-  const options = parseListQuery(req.query, {
-    searchFields: ["comment"],
-    allowedSort: ["created_at", "rating"],
-  });
-  if (req.query.visibility === "hidden") options.filter.is_hidden = true;
-  if (req.query.visibility === "visible") options.filter.is_hidden = false;
-
-  res.json(
-    await paginate(Review, options, (q) =>
-      q.populate("user_id", "name email").populate("attraction_id", "name city")
-    )
-  );
-});
-
-// action: "hide" | "unhide" | "remove"
-export const moderatePost = asyncHandler(async (req, res) => {
-  const { action, reason } = req.body;
-  const post = await CommunityPost.findById(req.params.id).populate("user_id", "email");
-  if (!post) return res.status(404).json({ message: "Post not found" });
-
-  const label = `${post.place}: ${String(post.content).slice(0, 60)}`;
-
-  if (action === "remove") {
-    await CommunityPost.deleteOne({ _id: post._id });
-    await recordAudit(req, {
-      action: "post.remove",
-      entity_type: "CommunityPost",
-      entity_id: post._id,
-      entity_label: label,
-      before: { author: post.user_id?.email || "", content: post.content },
-      reason,
-    });
-    return res.json({ message: "Post removed" });
-  }
-
-  const hide = action === "hide";
-  const was = post.is_hidden;
-  post.is_hidden = hide;
-  post.moderation_status = hide ? "rejected" : "approved";
-  post.moderated_by = req.user._id;
-  post.moderated_at = new Date();
-  await post.save();
-
-  await recordAudit(req, {
-    action: hide ? "post.hide" : "post.unhide",
-    entity_type: "CommunityPost",
-    entity_id: post._id,
-    entity_label: label,
-    before: { is_hidden: was },
-    after: { is_hidden: hide },
-    reason,
-  });
-
-  res.json({ post });
-});
-
-export const moderateReview = asyncHandler(async (req, res) => {
-  const { action, reason } = req.body;
-  const review = await Review.findById(req.params.id).populate("user_id", "email");
-  if (!review) return res.status(404).json({ message: "Review not found" });
-
-  const label = `${review.rating}★ ${String(review.comment).slice(0, 60)}`;
-
-  if (action === "remove") {
-    await Review.deleteOne({ _id: review._id });
-    await recordAudit(req, {
-      action: "review.remove",
-      entity_type: "Review",
-      entity_id: review._id,
-      entity_label: label,
-      before: { author: review.user_id?.email || "", comment: review.comment },
-      reason,
-    });
-    return res.json({ message: "Review removed" });
-  }
-
-  const hide = action === "hide";
-  const was = review.is_hidden;
-  review.is_hidden = hide;
-  await review.save();
-
-  await recordAudit(req, {
-    action: hide ? "review.hide" : "review.unhide",
-    entity_type: "Review",
-    entity_id: review._id,
-    entity_label: label,
-    before: { is_hidden: was },
-    after: { is_hidden: hide },
-    reason,
-  });
-
-  res.json({ review });
-});
+// FR-23 — moderation moved to adminModerationController.js when it grew a
+// queue, traveller reports and an approve action; the two list endpoints
+// went with it so all of moderation reads as one thing.
 
 // The action trail itself. Read-only by everyone, including owners — an audit
 // log an admin can edit is not an audit log.
@@ -292,6 +189,12 @@ export const getAnalytics = asyncHandler(async (req, res) => {
   since.setUTCMonth(since.getUTCMonth() - 5, 1);
   since.setUTCHours(0, 0, 0, 0);
 
+  // Reading the dashboard is what keeps the snapshots current — the same
+  // trick notificationController uses for the rule sweep, because there is
+  // no cron on free-tier hosting. Not awaited: the tiles below are live
+  // counts and must not wait on the roll-up behind them.
+  maybeRoll();
+
   const [
     totalUsers,
     activeTrips,
@@ -299,6 +202,9 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     attractionCount,
     hiddenPosts,
     hiddenReviews,
+    pendingPosts,
+    pendingReviews,
+    openReports,
     bookingCount,
     staffCount,
     tripsByStatus,
@@ -314,6 +220,9 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     Attraction.countDocuments(),
     CommunityPost.countDocuments({ is_hidden: true }),
     Review.countDocuments({ is_hidden: true }),
+    CommunityPost.countDocuments({ moderation_status: "pending" }),
+    Review.countDocuments({ moderation_status: "pending" }),
+    Report.countDocuments({ status: "open" }),
     Booking.countDocuments({ status: "confirmed" }),
     User.countDocuments({ role: { $in: ["moderator", "admin", "owner"] } }),
     Trip.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
@@ -346,7 +255,13 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     hiddenReviews,
     bookingCount,
     staffCount,
-    pendingModeration: hiddenPosts + hiddenReviews,
+    pendingPosts,
+    pendingReviews,
+    openReports,
+    // What the queue actually owes an answer to. It used to count hidden
+    // content — work already done — which read as a backlog that never
+    // cleared no matter how much moderating happened.
+    pendingModeration: pendingPosts + pendingReviews + openReports,
     tripsByStatus: asMap(tripsByStatus),
     usersByRole: asMap(usersByRole),
     topDestinations: topDestinations.map((d) => ({ destination: d._id || "—", count: d.count })),
@@ -355,5 +270,34 @@ export const getAnalytics = asyncHandler(async (req, res) => {
     avgBudget: Math.round(budget[0]?.avg || 0),
     bookingValue: bookingValue[0]?.total || 0,
     generated_at: new Date(),
+  });
+});
+
+// FR-24 — the time series, from AnalyticsSnapshot rather than re-aggregating
+// every collection per point. The snapshots were modelled and seeded from the
+// start and nothing read them; this is the reader.
+//
+// The answer says when each period was computed, because a chart that doesn't
+// admit its own staleness is worse than no chart.
+export const getAnalyticsTrends = asyncHandler(async (req, res) => {
+  await maybeRoll();
+
+  const period = req.query.period === "month" ? "month" : "day";
+  const limit = Number(req.query.limit) || (period === "month" ? 12 : 30);
+  const snapshots = await getTrend({ period, limit });
+
+  res.json({
+    period,
+    points: snapshots.map((snapshot) => ({
+      key: snapshot.period_key,
+      date: snapshot.date,
+      computed_at: snapshot.computed_at,
+      ...snapshot.metrics,
+    })),
+    // Today and this month are still being written to; everything before
+    // them is final. The client labels the last point accordingly.
+    latest_is_partial: snapshots.length > 0,
+    top_destinations: snapshots.at(-1)?.top_destinations || [],
+    top_interests: snapshots.at(-1)?.top_interests || [],
   });
 });

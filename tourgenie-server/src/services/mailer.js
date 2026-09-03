@@ -5,6 +5,7 @@
 // credentials configured the transport is skipped entirely and the message is
 // written to the server log instead, so the reset flow stays testable offline.
 import nodemailer from "nodemailer";
+import { recordProviderCall } from "./providerStatus.js";
 
 let cachedTransport;
 
@@ -46,9 +47,13 @@ export async function sendMail({ to, subject, text, html }) {
   try {
     const from = process.env.MAIL_FROM || `TourGenie AI <${process.env.MAIL_USER}>`;
     const info = await transport.sendMail({ from, to, subject, text, html });
+    recordProviderCall("mail", true);
     return { delivered: true, messageId: info.messageId };
   } catch (err) {
     console.error("[mailer] send failed:", err.message);
+    // A silent mail outage is exactly the kind of thing the health panel
+    // exists for: the reset flow keeps working and nobody gets the code.
+    recordProviderCall("mail", false, err.message);
     return { delivered: false, reason: "send_failed", error: err.message };
   }
 }

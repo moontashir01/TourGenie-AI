@@ -16,6 +16,7 @@ import Expense from "../models/Expense.js";
 import Document from "../models/Document.js";
 import CommunityPost from "../models/CommunityPost.js";
 import Review from "../models/Review.js";
+import Report from "../models/Report.js";
 import Notification from "../models/Notification.js";
 import ChatSession from "../models/ChatSession.js";
 import PackingList from "../models/PackingList.js";
@@ -26,7 +27,7 @@ export async function summariseAccountFootprint(userId) {
   const trips = await Trip.find({ user_id: userId }).select("_id").lean();
   const tripIds = trips.map((t) => t._id);
 
-  const [bookings, hotelBookings, expenses, documents, posts, reviews, notifications, items] =
+  const [bookings, hotelBookings, expenses, documents, posts, reviews, reports, notifications, items] =
     await Promise.all([
       Booking.countDocuments({ $or: [{ user_id: userId }, { trip_id: { $in: tripIds } }] }),
       HotelBooking.countDocuments({ $or: [{ user_id: userId }, { trip_id: { $in: tripIds } }] }),
@@ -34,6 +35,7 @@ export async function summariseAccountFootprint(userId) {
       Document.countDocuments({ user_id: userId }),
       CommunityPost.countDocuments({ user_id: userId }),
       Review.countDocuments({ user_id: userId }),
+      Report.countDocuments({ $or: [{ reporter_id: userId }, { target_author_id: userId }] }),
       Notification.countDocuments({ user_id: userId }),
       ItineraryItem.countDocuments({ trip_id: { $in: tripIds } }),
     ]);
@@ -47,6 +49,7 @@ export async function summariseAccountFootprint(userId) {
     documents,
     posts,
     reviews,
+    reports,
     notifications,
   };
 }
@@ -66,7 +69,7 @@ export async function deleteAccountAndContent(userId) {
   const byTrip = { trip_id: { $in: tripIds } };
   const byOwner = { $or: [{ user_id: id }, { trip_id: { $in: tripIds } }] };
 
-  const [items, bookings, hotelBookings, expenses, packing, chats, documents, posts, reviews, notifications, resets] =
+  const [items, bookings, hotelBookings, expenses, packing, chats, documents, posts, reviews, reports, notifications, resets] =
     await Promise.all([
       ItineraryItem.deleteMany(byTrip),
       Booking.deleteMany(byOwner),
@@ -77,6 +80,10 @@ export async function deleteAccountAndContent(userId) {
       Document.deleteMany({ user_id: id }),
       CommunityPost.deleteMany({ user_id: id }),
       Review.deleteMany({ user_id: id }),
+      // Reports this person raised, and reports about what they wrote — the
+      // content behind them is going too, so an open report would otherwise
+      // sit in the moderation queue pointing at nothing.
+      Report.deleteMany({ $or: [{ reporter_id: id }, { target_author_id: id }] }),
       Notification.deleteMany({ user_id: id }),
       PasswordReset.deleteMany({ user_id: id }),
     ]);
@@ -105,6 +112,7 @@ export async function deleteAccountAndContent(userId) {
     documents: documents.deletedCount,
     posts: posts.deletedCount,
     reviews: reviews.deletedCount,
+    reports: reports.deletedCount,
     notifications: notifications.deletedCount,
     password_resets: resets.deletedCount,
     likes_withdrawn: likedPosts.length,

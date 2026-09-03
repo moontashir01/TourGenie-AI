@@ -386,7 +386,32 @@ aggregations across every collection on each page load (NFR-01).
 `trips_by_status` and `top_destinations` are point-in-time rather than
 reconstructed per day, because trip status history isn't recorded.
 
-### 4.13 Reference tables
+The seeder writes the history; `services/analyticsRoller.js` keeps it current
+afterwards. Today's row and the current month's are re-upserted when an admin
+reads the dashboard, at most once every five minutes — the same lazy pattern
+the notification sweep uses, because there is no cron on free-tier hosting.
+Earlier periods are finished and are never rewritten.
+
+### 4.13 `reports` — FR-19, FR-23
+
+A traveller flagging someone else's post or review: reporter, target
+(`CommunityPost` or `Review`) with a text `target_label` that outlives the
+target, a reason category, and the moderator's resolution.
+
+A unique index on `(reporter_id, target_type, target_id)` is the authority on
+one report per person per thing — ten reports from one account must not read
+as ten complaints. Two separate reporters put the content into
+`moderation_status: "pending"`, which takes it off the feed for everyone but
+its author; one does not, because that would hand any account a veto over
+anyone else's writing.
+
+`moderation_status` on `communityposts` and `reviews` is what the rules in
+`services/moderationRules.js` set at write time — links, watched words and a
+first post from an account under a day old are held for review. Held content
+is excluded from every public read path, and a held review does not move its
+attraction's average rating.
+
+### 4.14 Reference tables
 
 | Collection | Rows | Purpose |
 |---|---|---|
@@ -395,8 +420,9 @@ reconstructed per day, because trip status history isn't recorded.
 | `airports` | 20 | IATA reference — replaces a hardcoded city→code map |
 | `flightoptions` | 26 | Recurring flight schedules (`days_of_week`), expanded onto real dates at search time |
 | `exchangerates` | 14 | Indicative FX against BDT, for international trips |
-| `appsettings` | 18 | Feature flags, limits, AI provider order. `is_public: false` keeps some server-side |
-| `auditlogs` | 0 | Admin action trail — populated at runtime by FR-20–FR-23 routes |
+| `appsettings` | 20 | Feature flags, limits, AI provider order, plus the two `seed.*` markers the System health panel reads. `is_public: false` keeps some server-side |
+| `auditlogs` | 0 | Admin action trail — populated at runtime by FR-20–FR-24 routes, exports included |
+| `reports` | 0 | Traveller content reports — populated at runtime (§4.13) |
 
 ---
 

@@ -42,7 +42,10 @@ async function refreshAttractionRating(attractionId) {
   const Review = mongoose.model("Review");
   const Attraction = mongoose.model("Attraction");
   const [agg] = await Review.aggregate([
-    { $match: { attraction_id: attractionId, is_hidden: false } },
+    // A review waiting for a moderator must not move the average yet —
+    // otherwise a rating held for review still changes the attraction's
+    // score while nobody can read what it says.
+    { $match: { attraction_id: attractionId, is_hidden: false, moderation_status: { $ne: "pending" } } },
     { $group: { _id: null, avg: { $avg: "$rating" }, count: { $sum: 1 } } },
   ]);
   await Attraction.findByIdAndUpdate(attractionId, {

@@ -4,6 +4,8 @@
 // "the AI layer falls back to a secondary provider if the primary fails").
 // Order: Groq (fast, free tier) -> Claude (primary per the SRS) -> OpenAI.
 
+import { recordProviderCall } from "./providerStatus.js";
+
 const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -558,9 +560,13 @@ async function runProviders(prompt) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const items = await provider.call(prompt);
+        recordProviderCall(provider.name.toLowerCase(), true);
         return { items, provider: provider.name.toLowerCase() };
       } catch (err) {
         console.warn(`${provider.name} itinerary generation failed (attempt ${attempt}):`, err.message);
+        // Falling back to the next provider is silent by design; the admin
+        // health panel is where that silence is broken.
+        recordProviderCall(provider.name.toLowerCase(), false, err.message);
         lastError = err;
       }
     }

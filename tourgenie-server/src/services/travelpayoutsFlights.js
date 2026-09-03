@@ -16,6 +16,7 @@
 // your profile, and put it in .env as TRAVELPAYOUTS_API_KEY.
 
 import { toBdt, normalizeCode } from "../utils/currency.js";
+import { trackProvider } from "./providerStatus.js";
 
 const BASE_URL = "https://api.travelpayouts.com";
 const AIRLINES_URL = `${BASE_URL}/data/en/airlines.json`;
@@ -168,7 +169,7 @@ function normalize(offer, { origin, destination, travelers, currency, airlines, 
  * cached — those results come back flagged `dateShifted` so the caller can
  * label them instead of quietly showing the wrong day.
  */
-export async function searchFlights({ origin, destination, date, returnDate, travelers = 1, currency = "BDT", limit = 20 }) {
+async function runSearch({ origin, destination, date, returnDate, travelers = 1, currency = "BDT", limit = 20 }) {
   const token = process.env.TRAVELPAYOUTS_API_KEY;
   if (!token) {
     throw new Error("TRAVELPAYOUTS_API_KEY is not set in .env — get a free token at https://www.travelpayouts.com");
@@ -226,5 +227,10 @@ export async function searchFlights({ origin, destination, date, returnDate, tra
   searchCache.set(key, { at: Date.now(), flights });
   return flights;
 }
+
+// Wrapped so the admin health panel can say whether the last fare lookup
+// worked. A failure here is silent to the traveller — the app falls back to
+// the seeded schedules and labels them as not real.
+export const searchFlights = (params) => trackProvider("travelpayouts", () => runSearch(params));
 
 export default { searchFlights };

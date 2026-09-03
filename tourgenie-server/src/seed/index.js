@@ -48,6 +48,7 @@ import Expense from "../models/Expense.js";
 import Document from "../models/Document.js";
 import CommunityPost from "../models/CommunityPost.js";
 import Review from "../models/Review.js";
+import Report from "../models/Report.js";
 import AuditLog from "../models/AuditLog.js";
 import AnalyticsSnapshot from "../models/AnalyticsSnapshot.js";
 
@@ -121,8 +122,12 @@ const REFERENCE_MODELS = [
 // Collections holding user-generated content — only wiped with --fresh.
 const USER_MODELS = [
   User, Trip, ItineraryItem, Booking, Expense, Document, CommunityPost,
-  Review, Notification, PackingList, ChatSession, AuditLog,
+  Review, Report, Notification, PackingList, ChatSession, AuditLog,
 ];
+
+// Written into AppSetting so the admin health panel can say which seed built
+// this database. Bump it when the seed data changes shape, not on every edit.
+const SEED_VERSION = "4.0-moderation";
 
 // ═════════════════════════════════════════════════════════════════════
 async function seedReference() {
@@ -300,8 +305,32 @@ async function seedReference() {
   log("exchange rates", exchangeRates.length);
 
   await AppSetting.deleteMany({});
-  await AppSetting.insertMany(appSettings);
-  log("app settings", appSettings.length);
+  // Two markers the seeder writes about itself, so the admin System health
+  // panel can say when this database was last built and from what. Every
+  // other question it asks ("is this collection empty?") is answerable from
+  // the data; "when was it seeded" is not.
+  await AppSetting.insertMany([
+    ...appSettings,
+    {
+      key: "seed.last_run",
+      value: new Date().toISOString(),
+      type: "string",
+      group: "general",
+      label: "Last seed run",
+      is_public: false,
+      is_editable: false,
+    },
+    {
+      key: "seed.version",
+      value: SEED_VERSION,
+      type: "string",
+      group: "general",
+      label: "Seed version",
+      is_public: false,
+      is_editable: false,
+    },
+  ]);
+  log("app settings", appSettings.length + 2);
 
   // 11. Rule tables
   await PackingTemplate.deleteMany({});

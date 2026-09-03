@@ -16,6 +16,7 @@ import Hotel from "../models/Hotel.js";
 import HotelRate from "../models/HotelRate.js";
 import Destination from "../models/Destination.js";
 import { toBdt } from "../utils/currency.js";
+import { trackProvider } from "./providerStatus.js";
 
 const BASE_URL = "https://api.stayapi.com/v1";
 
@@ -146,7 +147,7 @@ function milesToKm(text) {
  * Returns the saved Hotel documents with the stay's own nightly rate applied,
  * so callers get normal Mongo _id values regardless of data source.
  */
-export async function fetchAndCacheStayApiHotels({ city, checkIn, checkOut, guests = 2, rooms = 1, nights }) {
+async function runFetchAndCache({ city, checkIn, checkOut, guests = 2, rooms = 1, nights }) {
   const apiKey = process.env.STAYAPI_KEY;
   if (!apiKey) throw new Error("STAYAPI_KEY is not set");
 
@@ -206,3 +207,7 @@ export async function fetchAndCacheStayApiHotels({ city, checkIn, checkOut, gues
 
   return saved;
 }
+
+// Wrapped so the admin health panel can report whether the last live rate
+// lookup worked; hotelController catches the failure and shows seeded rates.
+export const fetchAndCacheStayApiHotels = (params) => trackProvider("stayapi", () => runFetchAndCache(params));

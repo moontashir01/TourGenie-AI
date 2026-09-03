@@ -42,7 +42,7 @@ export default function Overview() {
         { label: "Total Trips", value: analytics.totalTrips },
         { label: "Active Trips", value: analytics.activeTrips },
         { label: "Confirmed Bookings", value: analytics.bookingCount },
-        { label: "Hidden Posts/Reviews", value: analytics.pendingModeration },
+        { label: "Awaiting Moderation", value: analytics.pendingModeration },
       ]
     : [];
 

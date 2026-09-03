@@ -13,6 +13,8 @@ import {
   CalendarRange,
   Ticket,
   Library,
+  ShieldAlert,
+  Activity as ActivityIcon,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Overview from "./admin/Overview";
@@ -21,6 +23,8 @@ import Attractions from "./admin/Attractions";
 import Transport from "./admin/Transport";
 import Hotels from "./admin/Hotels";
 import Reviews from "./admin/Reviews";
+import Moderation from "./admin/Moderation";
+import Health from "./admin/Health";
 import Reports from "./admin/Reports";
 import Activity from "./admin/Activity";
 import Trips from "./admin/Trips";
@@ -44,9 +48,11 @@ const tabs = [
   { key: "attractions", label: "Attractions", icon: MapPinned, component: Attractions, roles: ADMIN },
   { key: "hotels", label: "Hotels", icon: Building2, component: Hotels, roles: ADMIN },
   { key: "transport", label: "Transport", icon: Bus, component: Transport, roles: ADMIN },
-  { key: "reviews", label: "Reviews", icon: MessageSquareWarning, component: Reviews, roles: STAFF },
+  { key: "moderation", label: "Moderation", icon: ShieldAlert, component: Moderation, roles: STAFF },
+  { key: "reviews", label: "All content", icon: MessageSquareWarning, component: Reviews, roles: STAFF },
   { key: "reports", label: "Reports", icon: FileBarChart, component: Reports, roles: ADMIN },
   { key: "activity", label: "Activity", icon: ScrollText, component: Activity, roles: STAFF },
+  { key: "health", label: "System health", icon: ActivityIcon, component: Health, roles: ADMIN },
 ];
 
 export default function Admin() {
@@ -111,11 +117,13 @@ export default function Admin() {
             {activeTab === "attractions" && "Manage the curated attractions database."}
             {activeTab === "hotels" && "Manage the hotel database used for recommendations."}
             {activeTab === "transport" && "Manage bus, train, and launch options."}
-            {activeTab === "reviews" && "Moderate community posts and attraction reviews."}
-            {activeTab === "reports" && "Platform analytics and exportable reports."}
+            {activeTab === "moderation" && "Content held by the posting rules, and everything travellers have reported."}
+            {activeTab === "reviews" && "Every post and review ever written, hidden ones included."}
+            {activeTab === "reports" && "Trends from the daily roll-up, and CSV exports built server-side."}
             {activeTab === "trips" && "Every trip across all travellers, and how each plan was built."}
             {activeTab === "bookings" && "Tickets and reservations, searchable by reference."}
             {activeTab === "activity" && "Every change made from this portal, and who made it."}
+            {activeTab === "health" && "Which providers answer, what the database holds, and when it was last seeded."}
           </p>
         </header>
 

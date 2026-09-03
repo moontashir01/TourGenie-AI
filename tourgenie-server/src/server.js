@@ -19,6 +19,7 @@ import documentRoutes from "./routes/documentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import communityRoutes from "./routes/communityRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import flightRoutes from "./routes/flightRoutes.js";
 import destinationRoutes from "./routes/destinationRoutes.js";
@@ -52,6 +53,7 @@ app.use("/api/documents", documentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/community-posts", communityRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/reports", reportRoutes); // FR-23 — travellers flagging content
 app.use("/api/admin", adminRoutes);
 app.use("/api/flights", flightRoutes);
 app.use("/api/chat", chatRoutes);

@@ -9,6 +9,7 @@
 // Pricing:  https://ignav.com/pricing ($2 / 1,000 after free tier; failed requests not billed)
 
 import { toBdt } from "../utils/currency.js";
+import { trackProvider } from "./providerStatus.js";
 
 const IGNAV_BASE = "https://ignav.com/api/fares";
 
@@ -102,7 +103,7 @@ export function resolveIata(cityName) {
 }
 
 // Main search — returns array of flight offers shaped for the frontend.
-export async function searchFlights({ origin, destination, date, travelers = 1 }) {
+async function runSearch({ origin, destination, date, travelers = 1 }) {
   const apiKey = process.env.IGNAV_API_KEY;
   if (!apiKey) {
     throw new Error("IGNAV_API_KEY is not set in .env — sign up free at https://ignav.com");
@@ -195,6 +196,10 @@ function formatDurationMin(minutes) {
   const m = minutes % 60;
   return [h && `${h}h`, m && `${m}m`].filter(Boolean).join(" ");
 }
+
+// Wrapped so the admin health panel can report whether the last lookup
+// worked — the caller falls back to seeded schedules without saying so.
+export const searchFlights = (params) => trackProvider("ignav", () => runSearch(params));
 
 // Keep this export so flightController.js needs no changes
 export { formatDurationMin as formatDuration };

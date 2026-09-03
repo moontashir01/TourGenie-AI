@@ -82,6 +82,41 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   return data;
 }
 
+// A file, not JSON. The admin exports stream CSV straight from a cursor, so
+// they can't go through request() — but they still need the bearer token, and
+// a plain <a href> can't carry one.
+async function downloadFile(path, fallbackName) {
+  const token = getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    // An error before the stream starts is still JSON.
+    let message = `Request failed with status ${res.status}`;
+    try {
+      message = (await res.json())?.message || message;
+    } catch {
+      // Not JSON — keep the status line.
+    }
+    if (res.status === 401 && token) endExpiredSession();
+    const error = new Error(message);
+    error.status = res.status;
+    throw error;
+  }
+
+  const disposition = res.headers.get("content-disposition") || "";
+  const named = /filename="([^"]+)"/.exec(disposition);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = named?.[1] || fallbackName;
+  a.click();
+  URL.revokeObjectURL(url);
+  return { filename: a.download, bytes: blob.size };
+}
+
 export const authApi = {
   register: (payload) => request("/auth/register", { method: "POST", body: payload, auth: false }),
   login: (payload) => request("/auth/login", { method: "POST", body: payload, auth: false }),
@@ -295,6 +330,14 @@ export const communityApi = {
   like: (id) => request(`/community-posts/${id}/like`, { method: "POST" }),
 };
 
+// FR-23 — flagging someone else's post or review. One report per person per
+// thing; the server answers 409 on a second attempt.
+export const reportApi = {
+  create: ({ target_type, target_id, reason, details }) =>
+    request("/reports", { method: "POST", body: { target_type, target_id, reason, details } }),
+  mine: () => request("/reports/mine"),
+};
+
 // Admin lists all speak the same query language — see utils/adminList.js on
 // the server. `params` is {q, page, limit, sort, ...filters}; the answer is
 // always { rows, page, limit, total, pages }.
@@ -307,7 +350,11 @@ function adminList(resource, params = {}) {
 
 export const adminApi = {
   analytics: () => request("/admin/analytics"),
+  // The time series, from AnalyticsSnapshot rather than counted live.
+  trends: ({ period = "day", limit } = {}) =>
+    request(`/admin/analytics/trends?period=${period}${limit ? `&limit=${limit}` : ""}`),
   auditLogs: (params) => adminList("audit-logs", params),
+  health: () => request("/admin/health"),
 
   search: (q) => request(`/admin/search?q=${encodeURIComponent(q)}`),
 
@@ -379,6 +426,26 @@ export const adminApi = {
   reviews: (params) => adminList("reviews", params),
   moderateReview: (id, action, reason) =>
     request(`/admin/reviews/${id}/moderate`, { method: "PATCH", body: { action, reason } }),
+
+  // FR-23 — the queue: content the posting rules held, plus anything a
+  // traveller reported. `action` is approve | hide | unhide | remove and goes
+  // through the same two endpoints as the lists above.
+  moderationQueue: (limit = 25) => request(`/admin/moderation/queue?limit=${limit}`),
+  moderationStats: () => request("/admin/moderation/stats"),
+  reports: (params) => adminList("reports", params),
+  resolveReport: (id, status, resolution) =>
+    request(`/admin/reports/${id}`, { method: "PATCH", body: { status, resolution } }),
+
+  // Streamed CSV, built server-side. Personal columns are opt-in and every
+  // download writes an audit entry.
+  exports: {
+    list: () => request("/admin/exports"),
+    run: (report, { includePersonal = false } = {}) =>
+      downloadFile(
+        `/admin/exports/${report}${includePersonal ? "?include_personal=true" : ""}`,
+        `tourgenie-${report}.csv`
+      ),
+  },
 };
 
 export { getToken };

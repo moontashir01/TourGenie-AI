@@ -6,13 +6,22 @@ import {
   getUserFootprint,
   deleteUser,
   listTrips,
+  listAuditLogs,
+  getAnalytics,
+  getAnalyticsTrends,
+} from "../controllers/adminController.js";
+import {
+  getModerationQueue,
+  listReports,
+  resolveReport,
   listCommunityPosts,
   moderatePost,
   listReviews,
   moderateReview,
-  listAuditLogs,
-  getAnalytics,
-} from "../controllers/adminController.js";
+  getModerationStats,
+} from "../controllers/adminModerationController.js";
+import { listExports, runExport } from "../controllers/adminExportController.js";
+import { getSystemHealth } from "../controllers/adminHealthController.js";
 import {
   getUserDetail,
   getTripDetail,
@@ -48,7 +57,19 @@ const ownerOnly = requireRole("owner");
 
 // — dashboards —
 router.get("/analytics", staffRead, getAnalytics);
+// The time series, read from AnalyticsSnapshot; reading either endpoint is
+// what keeps today's snapshot current, since there is no cron.
+router.get("/analytics/trends", staffRead, getAnalyticsTrends);
 router.get("/audit-logs", staffRead, listAuditLogs);
+// Which providers have keys, whether their last call worked, and what the
+// database is actually holding.
+router.get("/health", staffRead, getSystemHealth);
+
+// — exports —
+// Streamed from a cursor server-side, and each one writes an audit entry
+// naming the report and its row count. Personal columns are opt-in.
+router.get("/exports", adminWrite, listExports);
+router.get("/exports/:report", adminWrite, runExport);
 
 // — one box, every subject —
 router.get("/search", staffRead, globalSearch);
@@ -90,6 +111,14 @@ router.delete("/catalogue/:resource/:id", adminWrite, deleteResource);
 router.post("/catalogue/:resource/:id/restore", adminWrite, restoreResource);
 
 // — moderation —
+// The queue is the entry point: content the posting rules held, plus anything
+// a traveller reported. The two lists below are still there for looking
+// something up after the fact.
+router.get("/moderation/queue", staffRead, getModerationQueue);
+router.get("/moderation/stats", staffRead, getModerationStats);
+router.get("/reports", staffRead, listReports);
+router.patch("/reports/:id", staffRead, resolveReport);
+
 router.get("/community-posts", staffRead, listCommunityPosts);
 router.patch("/community-posts/:id/moderate", staffRead, moderatePost);
 router.get("/reviews", staffRead, listReviews);

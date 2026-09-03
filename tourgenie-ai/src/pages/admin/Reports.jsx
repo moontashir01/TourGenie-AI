@@ -1,59 +1,76 @@
 import { useEffect, useState } from "react";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, ShieldAlert } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { ErrorBanner } from "../../components/admin/ListShell";
 
 // Reports tab (wireframe 3.13).
 //
-// The breakdowns are computed in the database now rather than by downloading
-// every trip and user into the browser. The CSV still exports the trip rows
-// themselves, so it pages through the admin list instead of relying on an
-// endpoint that returns everything at once.
+// Two things changed here in Phase 4. The CSV is generated server-side and
+// streamed — the browser no longer pages a whole collection down to join it
+// locally — and the trend chart reads AnalyticsSnapshot instead of counting
+// live, so it can cover 90 days without 90 aggregations.
+//
+// Personal columns (email addresses) are opt-in on every export, and every
+// download writes an audit entry naming the report and its row count.
+
+const METRICS = [
+  { key: "users_new", label: "Sign-ups" },
+  { key: "trips_created", label: "Trips created" },
+  { key: "bookings_created", label: "Bookings" },
+  { key: "bookings_value_bdt", label: "Booking value (৳)" },
+  { key: "posts_created", label: "Posts" },
+  { key: "itineraries_generated", label: "Itineraries generated" },
+];
+
+const PERIODS = [
+  { key: "day", limit: 30, label: "30 days" },
+  { key: "day", limit: 90, label: "90 days" },
+  { key: "month", limit: 12, label: "12 months" },
+];
+
 export default function Reports() {
   const [analytics, setAnalytics] = useState(null);
+  const [moderation, setModeration] = useState(null);
+  const [exports, setExports] = useState([]);
+  const [trend, setTrend] = useState(null);
+  const [period, setPeriod] = useState(0);
+  const [metric, setMetric] = useState("trips_created");
+  const [includePersonal, setIncludePersonal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    adminApi
-      .analytics()
-      .then(setAnalytics)
+    Promise.all([adminApi.analytics(), adminApi.moderationStats(), adminApi.exports.list()])
+      .then(([a, m, e]) => {
+        setAnalytics(a);
+        setModeration(m);
+        setExports(e.reports || []);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  async function exportTripsCsv() {
-    setExporting(true);
-    setError("");
-    try {
-      // Paged rather than one giant request — the same reason the lists are
-      // paginated. 100 is the server's ceiling per page.
-      const rows = [];
-      let page = 1;
-      let pages = 1;
-      do {
-        const data = await adminApi.trips({ page, limit: 100 });
-        rows.push(...(data.rows || []));
-        pages = data.pages || 1;
-        page += 1;
-      } while (page <= pages && page <= 50); // 5,000 rows is enough for a CSV
+  useEffect(() => {
+    const chosen = PERIODS[period];
+    adminApi
+      .trends({ period: chosen.key, limit: chosen.limit })
+      .then(setTrend)
+      .catch((err) => setError(err.message));
+  }, [period]);
 
-      const header = ["Traveler", "Email", "Origin", "Destination", "Status", "Budget", "Created"];
-      const body = rows.map((t) => [
-        t.user_id?.name || "",
-        t.user_id?.email || "",
-        t.origin || "",
-        t.destination || "",
-        t.status || "",
-        t.budget ?? "",
-        t.created_at ? new Date(t.created_at).toISOString().slice(0, 10) : "",
-      ]);
-      downloadCsv("tourgenie-trips-report.csv", [header, ...body]);
+  async function runExport(key) {
+    setExporting(key);
+    setError("");
+    setNotice("");
+    try {
+      const { filename } = await adminApi.exports.run(key, { includePersonal });
+      setNotice(`Downloaded ${filename}. The download is recorded in the activity log.`);
     } catch (err) {
       setError(err.message);
     } finally {
-      setExporting(false);
+      setExporting("");
     }
   }
 
@@ -68,28 +85,28 @@ export default function Reports() {
   const tripsByStatus = Object.entries(analytics?.tripsByStatus || {});
   const usersByRole = Object.entries(analytics?.usersByRole || {});
   const topDestinations = analytics?.topDestinations || [];
+  const points = trend?.points || [];
+  const max = Math.max(1, ...points.map((p) => p[metric] || 0));
 
   return (
     <div className="space-y-8">
       <ErrorBanner message={error} onDismiss={() => setError("")} />
-
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h3 className="font-display text-lg text-ink-900">Platform reports</h3>
-          {analytics?.generated_at && (
-            <p className="text-xs text-ink-900/45 mt-0.5">
-              Computed {new Date(analytics.generated_at).toLocaleString()}
-            </p>
-          )}
+      {notice && (
+        <div className="flex items-start gap-2 bg-teal-light border border-teal/30 text-teal-dark text-sm rounded-lg px-4 py-3">
+          <span className="flex-1">{notice}</span>
+          <button type="button" onClick={() => setNotice("")} className="text-xs font-semibold underline">
+            Dismiss
+          </button>
         </div>
-        <button
-          onClick={exportTripsCsv}
-          disabled={exporting}
-          className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-50 text-paper-fixed font-semibold text-sm px-4 py-2 rounded-full transition-colors"
-        >
-          {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-          {exporting ? "Collecting…" : "Export trips (CSV)"}
-        </button>
+      )}
+
+      <div>
+        <h3 className="font-display text-lg text-ink-900">Platform reports</h3>
+        {analytics?.generated_at && (
+          <p className="text-xs text-ink-900/45 mt-0.5">
+            Counters computed {new Date(analytics.generated_at).toLocaleString()}
+          </p>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -97,6 +114,127 @@ export default function Reports() {
         <Stat label="Confirmed bookings" value={analytics?.bookingCount ?? 0} />
         <Stat label="Total budget planned" value={`৳${(analytics?.totalBudget || 0).toLocaleString()}`} />
         <Stat label="Avg budget / trip" value={`৳${(analytics?.avgBudget || 0).toLocaleString()}`} />
+      </div>
+
+      {/* — trends, from AnalyticsSnapshot — */}
+      <div className="bg-surface border border-sand rounded-2xl p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+          <div>
+            <h4 className="font-display text-base text-ink-900">Trend</h4>
+            <p className="text-xs text-ink-900/45 mt-0.5">
+              From the daily roll-up, not counted live.
+              {points.at(-1)?.computed_at && (
+                <> Latest period computed {new Date(points.at(-1).computed_at).toLocaleString()}.</>
+              )}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value)}
+              aria-label="Metric"
+              className="bg-paper border border-sand rounded-lg text-sm text-ink-900 px-3 py-2 focus:outline-none focus:border-teal"
+            >
+              {METRICS.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <div className="flex rounded-full border border-sand overflow-hidden">
+              {PERIODS.map((p, index) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => setPeriod(index)}
+                  className={`text-xs font-semibold px-3 py-2 transition-colors ${
+                    period === index ? "bg-teal text-paper-fixed" : "text-ink-900/60 hover:bg-paper"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {points.length === 0 ? (
+          <p className="text-sm text-ink-900/50">No snapshots for that period yet.</p>
+        ) : (
+          <>
+            <div className="flex items-end gap-[3px] h-44">
+              {points.map((point, index) => {
+                const value = point[metric] || 0;
+                // The last point is today (or this month) — still being
+                // written to, so it is shown lighter rather than read as a
+                // sudden fall-off.
+                const partial = index === points.length - 1;
+                return (
+                  <div
+                    key={point.key}
+                    title={`${point.key}: ${value.toLocaleString()}${partial ? " (so far)" : ""}`}
+                    className="flex-1 flex flex-col justify-end h-full min-w-[3px]"
+                  >
+                    <div
+                      className={`w-full rounded-t-sm min-h-[2px] ${partial ? "bg-teal/40" : "bg-teal"}`}
+                      style={{ height: `${(value / max) * 100}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-between text-xs text-ink-900/45 mt-2">
+              <span>{points[0]?.key}</span>
+              <span className="tabular-nums">peak {max.toLocaleString()}</span>
+              <span>{points.at(-1)?.key} (partial)</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* — exports — */}
+      <div className="bg-surface border border-sand rounded-2xl p-6">
+        <h4 className="font-display text-base text-ink-900 mb-1">Exports</h4>
+        <p className="text-sm text-ink-900/55 mb-4">
+          Streamed from the database as CSV. Each download is recorded in the activity log.
+        </p>
+
+        <label className="flex items-start gap-2 bg-paper border border-sand rounded-lg px-4 py-3 mb-5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includePersonal}
+            onChange={(e) => setIncludePersonal(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm text-ink-900/70">
+            <span className="font-medium text-ink-900 flex items-center gap-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-sunset-dark" /> Include email addresses
+            </span>
+            Off by default. An export is the easiest way for personal data to leave the system by accident.
+          </span>
+        </label>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          {exports.map((report) => (
+            <button
+              key={report.key}
+              type="button"
+              onClick={() => runExport(report.key)}
+              disabled={Boolean(exporting)}
+              className="flex items-center gap-3 text-left border border-sand rounded-xl px-4 py-3 hover:border-teal disabled:opacity-50 transition-colors"
+            >
+              {exporting === report.key ? (
+                <Loader2 className="w-4 h-4 animate-spin text-teal shrink-0" />
+              ) : (
+                <Download className="w-4 h-4 text-teal shrink-0" />
+              )}
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-ink-900 truncate">{report.label}</span>
+                <span className="block text-xs text-ink-900/45 font-mono truncate">{report.key}.csv</span>
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -111,12 +249,12 @@ export default function Reports() {
         ) : (
           <div className="space-y-3">
             {topDestinations.map((row) => {
-              const max = topDestinations[0].count || 1;
+              const peak = topDestinations[0].count || 1;
               return (
                 <div key={row.destination} className="flex items-center gap-3">
                   <span className="w-32 shrink-0 text-sm text-ink-900/70 truncate">{row.destination}</span>
                   <div className="flex-1 bg-sand/60 rounded-full h-3 overflow-hidden">
-                    <div className="bg-teal h-full rounded-full" style={{ width: `${(row.count / max) * 100}%` }} />
+                    <div className="bg-teal h-full rounded-full" style={{ width: `${(row.count / peak) * 100}%` }} />
                   </div>
                   <span className="w-8 text-right font-mono text-xs text-ink-900/60">{row.count}</span>
                 </div>
@@ -127,13 +265,33 @@ export default function Reports() {
       </div>
 
       <div className="bg-surface border border-sand rounded-2xl p-6">
-        <h4 className="font-display text-base text-ink-900 mb-4">Moderation & catalogue</h4>
+        <h4 className="font-display text-base text-ink-900 mb-4">Moderation throughput</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-5">
+          <MiniStat label="Open reports" value={moderation?.reports?.open ?? 0} />
+          <MiniStat label="Posts held" value={moderation?.pending?.posts ?? 0} />
+          <MiniStat label="Reviews held" value={moderation?.pending?.reviews ?? 0} />
+          <MiniStat
+            label="Closed in 30 days"
+            value={
+              (moderation?.resolved_last_30_days?.actioned || 0) +
+              (moderation?.resolved_last_30_days?.dismissed || 0)
+            }
+          />
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
           <MiniStat label="Hidden posts" value={analytics?.hiddenPosts ?? 0} />
           <MiniStat label="Hidden reviews" value={analytics?.hiddenReviews ?? 0} />
           <MiniStat label="Attractions listed" value={analytics?.attractionCount ?? 0} />
           <MiniStat label="Booking value" value={`৳${(analytics?.bookingValue || 0).toLocaleString()}`} />
         </div>
+        {Object.keys(moderation?.by_reason || {}).length > 0 && (
+          <p className="text-xs text-ink-900/50 mt-5">
+            Reported for:{" "}
+            {Object.entries(moderation.by_reason)
+              .map(([reason, count]) => `${reason.replace("_", " ")} (${count})`)
+              .join(", ")}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -178,17 +336,4 @@ function BreakdownCard({ title, rows, total }) {
       )}
     </div>
   );
-}
-
-function downloadCsv(filename, rows) {
-  const csv = rows
-    .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
