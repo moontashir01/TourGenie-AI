@@ -25,8 +25,18 @@ export const listUsers = asyncHandler(async (req, res) => {
 
   // Filters are additive on top of the search term.
   if (req.query.role && ROLES.includes(req.query.role)) options.filter.role = req.query.role;
-  if (req.query.status === "active") options.filter.is_active = true;
-  if (req.query.status === "inactive") options.filter.is_active = false;
+
+  // Deleted accounts are hidden unless asked for, which is what makes the
+  // delete reversible rather than merely invisible. "Inactive" means
+  // deactivated and still there — a deleted account is deactivated too, and
+  // listing it under both would make the count of live accounts wrong.
+  if (req.query.status === "deleted") {
+    options.filter.deleted_at = { $ne: null };
+  } else {
+    options.filter.deleted_at = null;
+    if (req.query.status === "active") options.filter.is_active = true;
+    if (req.query.status === "inactive") options.filter.is_active = false;
+  }
 
   const result = await paginate(User, options, (q) => q.select("-password_hash"));
   res.json(result);
@@ -39,6 +49,11 @@ export const setUserStatus = asyncHandler(async (req, res) => {
 
   if (String(user._id) === String(req.user._id)) {
     return res.status(400).json({ message: "You can't change your own account's status" });
+  }
+  // Reactivating a deleted account through the status toggle would leave it
+  // live and still marked deleted, which is neither state.
+  if (user.deleted_at) {
+    return res.status(409).json({ message: "That account is deleted — restore it first." });
   }
   // Losing the last owner locks everyone out of role management for good.
   if (user.role === "owner" && is_active === false && (await lastOwner(user._id))) {
@@ -59,7 +74,7 @@ export const setUserStatus = asyncHandler(async (req, res) => {
     reason,
   });
 
-  res.json({ user: { ...user.toObject(), password_hash: undefined } });
+  res.json({ user: publicShape(user) });
 });
 
 /** True when this account is the last active owner. */
@@ -67,6 +82,7 @@ async function lastOwner(exceptId) {
   const others = await User.countDocuments({
     role: "owner",
     is_active: true,
+    deleted_at: null,
     _id: { $ne: exceptId },
   });
   return others === 0;
@@ -109,7 +125,7 @@ export const setUserRole = asyncHandler(async (req, res) => {
     reason,
   });
 
-  res.json({ user: { ...user.toObject(), password_hash: undefined } });
+  res.json({ user: publicShape(user) });
 });
 
 // What deleting this account would take with it — the confirmation screen
@@ -120,7 +136,19 @@ export const getUserFootprint = asyncHandler(async (req, res) => {
   res.json({ user, footprint: await summariseAccountFootprint(user._id) });
 });
 
+/**
+ * Soft by default, like the catalogue.
+ *
+ * Deleting an account used to mean the cascade and nothing else: forty
+ * documents gone, no way back, and the wrong answer to the ordinary case of
+ * a support mistake or someone who asks to come back next week. The row is
+ * now marked and deactivated, and `?hard=true` still runs the real cascade —
+ * owner-only, and behind a password confirmation and the account's own email
+ * typed out.
+ */
 export const deleteUser = asyncHandler(async (req, res) => {
+  const hard = req.query.hard === "true";
+
   if (req.params.id === String(req.user._id)) {
     return res.status(400).json({ message: "You can't delete your own account while logged in as it" });
   }
@@ -130,12 +158,42 @@ export const deleteUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "This is the only owner — promote someone else first" });
   }
 
+  if (!hard) {
+    if (user.deleted_at) return res.status(409).json({ message: "That account is already deleted" });
+
+    user.deleted_at = new Date();
+    user.deleted_by = req.user._id;
+    // Every query that already asks for active accounts — the login path
+    // included — treats it as closed from here without knowing about
+    // deletion at all.
+    user.is_active = false;
+    await user.save();
+
+    await recordAudit(req, {
+      action: "user.delete",
+      entity_type: "User",
+      entity_id: user._id,
+      entity_label: user.email,
+      before: { is_active: true, deleted_at: null },
+      after: { is_active: false, deleted_at: user.deleted_at },
+      reason: req.body?.reason,
+    });
+
+    return res.json({ message: "Account deleted — it can be restored from the Deleted filter", user: publicShape(user) });
+  }
+
+  // The floor for the cascade is higher than for the route, because the route
+  // also serves the reversible delete.
+  if (req.user.role !== "owner") {
+    return res.status(403).json({ message: "Only an owner can remove an account for good." });
+  }
+
   // Everything the account owns goes with it; the counts are recorded,
   // because "removed 1 user" hides the forty documents that went too.
   const removed = await deleteAccountAndContent(user._id);
 
   await recordAudit(req, {
-    action: "user.delete",
+    action: "user.hard_delete",
     entity_type: "User",
     entity_id: user._id,
     entity_label: user.email,
@@ -146,6 +204,33 @@ export const deleteUser = asyncHandler(async (req, res) => {
 
   res.json({ message: "Account and all of its content removed", removed });
 });
+
+export const restoreUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+  if (!user.deleted_at) return res.status(409).json({ message: "That account isn't deleted" });
+
+  user.deleted_at = null;
+  user.deleted_by = null;
+  user.is_active = true;
+  await user.save();
+
+  await recordAudit(req, {
+    action: "user.restore",
+    entity_type: "User",
+    entity_id: user._id,
+    entity_label: user.email,
+    after: { is_active: true },
+    reason: req.body?.reason,
+  });
+
+  res.json({ message: "Account restored", user: publicShape(user) });
+});
+
+/** The user document minus the hash, which the three handlers above return. */
+function publicShape(user) {
+  return { ...user.toObject(), password_hash: undefined };
+}
 
 // Trip oversight — lets admin see all trips across all travelers
 export const listTrips = asyncHandler(async (req, res) => {

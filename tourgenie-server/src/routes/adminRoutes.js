@@ -10,6 +10,7 @@ import {
   getAnalytics,
   getAnalyticsTrends,
   confirmPassword,
+  restoreUser,
 } from "../controllers/adminController.js";
 import {
   getModerationQueue,
@@ -58,7 +59,11 @@ import {
 } from "../controllers/adminCatalogueController.js";
 import { protect, requireRole } from "../middleware/auth.js";
 import { adminReadLimiter, adminExportLimiter, reauthLimiter } from "../middleware/rateLimit.js";
-import { requireRecentAuth, requireRecentAuthForPersonalData } from "../middleware/reauth.js";
+import {
+  requireRecentAuth,
+  requireRecentAuthForPersonalData,
+  requireRecentAuthForHardDelete,
+} from "../middleware/reauth.js";
 
 const router = Router();
 
@@ -106,7 +111,11 @@ router.patch("/users/:id/status", adminWrite, setUserStatus);
 // Granting staff access is the one thing an admin cannot do to another
 // account: it is what stops one compromised admin minting more.
 router.patch("/users/:id/role", ownerOnly, requireRecentAuth, setUserRole);
-router.delete("/users/:id", ownerOnly, requireRecentAuth, deleteUser);
+// Soft by default and reversible from the Deleted filter; `?hard=true` runs
+// the cascade and is owner-only, checked in the handler because this one
+// route serves both.
+router.delete("/users/:id", adminWrite, requireRecentAuthForHardDelete, deleteUser);
+router.post("/users/:id/restore", adminWrite, restoreUser);
 
 // — support notes —
 // What an admin knew, as opposed to what they did. Moderators may write them

@@ -376,8 +376,11 @@ export const adminApi = {
     request(`/admin/users/${id}/status`, { method: "PATCH", body: { is_active, reason } }),
   setUserRole: (id, role, reason, reauthToken) =>
     request(`/admin/users/${id}/role`, { method: "PATCH", body: { role, reason }, reauthToken }),
-  deleteUser: (id, reason, reauthToken) =>
-    request(`/admin/users/${id}`, { method: "DELETE", body: { reason }, reauthToken }),
+  // Soft by default and reversible; `hard` runs the cascade and is what the
+  // password confirmation is for.
+  deleteUser: (id, reason, { hard = false, reauthToken } = {}) =>
+    request(`/admin/users/${id}${hard ? "?hard=true" : ""}`, { method: "DELETE", body: { reason }, reauthToken }),
+  restoreUser: (id, reason) => request(`/admin/users/${id}/restore`, { method: "POST", body: { reason } }),
 
   trips: (params) => adminList("trips", params),
   tripDetail: (id) => request(`/admin/trips/${id}`),

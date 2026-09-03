@@ -52,7 +52,19 @@ export const requireRecentAuth = (req, res, next) => {
   next();
 };
 
-// An export of the seeded catalogue is routine; an export carrying email
-// addresses is the thing the password is protecting, so only that one asks.
-export const requireRecentAuthForPersonalData = (req, res, next) =>
-  req.query.include_personal === "true" ? requireRecentAuth(req, res, next) : next();
+/**
+ * Some routes are only sometimes privileged: the same endpoint exports the
+ * seeded catalogue or a list of email addresses, deletes an account
+ * reversibly or for good. Asking for the password every time would train
+ * admins to type it without reading the dialog.
+ */
+export const requireRecentAuthWhen = (predicate) => (req, res, next) =>
+  predicate(req) ? requireRecentAuth(req, res, next) : next();
+
+// An export carrying email addresses is the thing the password protects.
+export const requireRecentAuthForPersonalData = requireRecentAuthWhen(
+  (req) => req.query.include_personal === "true"
+);
+
+// A soft delete is reversible from the Deleted filter; the cascade is not.
+export const requireRecentAuthForHardDelete = requireRecentAuthWhen((req) => req.query.hard === "true");

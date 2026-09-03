@@ -19,6 +19,15 @@ const userSchema = new mongoose.Schema(
     // — already in use by the app —
     is_active: { type: Boolean, default: true },
 
+    // Deleting an account used to mean the cascade in accountDeletion.js and
+    // nothing else: irreversible, and the wrong answer to the ordinary case
+    // of a support mistake or a traveller who asks to come back. An admin
+    // delete now marks the row instead. `is_active: false` goes with it, so
+    // the login path and every existing query treat the account as closed
+    // without having to learn about deletion.
+    deleted_at: { type: Date, default: null },
+    deleted_by: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
     // — additive —
     phone: { type: String, default: "" },
     avatar_url: { type: String, default: null },
@@ -52,6 +61,7 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ role: 1, is_active: 1 });
+userSchema.index({ deleted_at: 1 });
 userSchema.index({ created_at: -1 });
 
 export default mongoose.model("User", userSchema);

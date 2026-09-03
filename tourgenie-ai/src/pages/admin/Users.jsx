@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Ban, CheckCircle2, Trash2, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Ban, CheckCircle2, Trash2, ShieldCheck, AlertTriangle, RotateCcw, Flame } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
@@ -26,6 +26,7 @@ export default function Users() {
   const list = useAdminList(adminApi.users, { role: "", status: "" }, { listKey: "users" });
   const [busyId, setBusyId] = useState(null);
   const [roleTarget, setRoleTarget] = useState(null); // { user, role }
+  const [softTarget, setSoftTarget] = useState(null); // the reversible delete
   const [deleteTarget, setDeleteTarget] = useState(null); // { user, footprint }
   const [openUserId, setOpenUserId] = useState(null);
 
@@ -56,6 +57,29 @@ export default function Users() {
     }
   }
 
+  async function confirmSoftDelete({ reason }) {
+    setBusyId(softTarget._id);
+    try {
+      await adminApi.deleteUser(softTarget._id, reason);
+      setSoftTarget(null);
+      list.reload();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function restoreUser(user) {
+    setBusyId(user._id);
+    try {
+      await adminApi.restoreUser(user._id, "restored from the Deleted filter");
+      list.reload();
+    } catch (err) {
+      list.setError(err.message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   // The footprint is fetched first: "delete user" reads much smaller than it
   // is, and the confirmation should say what is actually about to go.
   async function openDelete(user) {
@@ -74,7 +98,7 @@ export default function Users() {
     setBusyId(deleteTarget.user._id);
     try {
       const { reauth_token } = await adminApi.reauth(password);
-      await adminApi.deleteUser(deleteTarget.user._id, reason, reauth_token);
+      await adminApi.deleteUser(deleteTarget.user._id, reason, { hard: true, reauthToken: reauth_token });
       setDeleteTarget(null);
       list.reload();
     } finally {
@@ -105,6 +129,7 @@ export default function Users() {
             { value: "", label: "Any status" },
             { value: "active", label: "Active" },
             { value: "inactive", label: "Deactivated" },
+            { value: "deleted", label: "Deleted" },
           ]}
         />
       </AdminToolbar>
@@ -165,10 +190,14 @@ export default function Users() {
                     <td className="py-3">
                       <span
                         className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
-                          u.is_active ? "bg-teal-light text-teal-dark" : "bg-sunset-light text-sunset-dark"
+                          u.deleted_at
+                            ? "bg-sunset-light text-sunset-dark"
+                            : u.is_active
+                              ? "bg-teal-light text-teal-dark"
+                              : "bg-sand text-ink-900/60"
                         }`}
                       >
-                        {u.is_active ? "Active" : "Deactivated"}
+                        {u.deleted_at ? "Deleted" : u.is_active ? "Active" : "Deactivated"}
                       </span>
                     </td>
                     <td className="py-3 text-ink-900/50 text-xs">
@@ -176,22 +205,45 @@ export default function Users() {
                     </td>
                     <td className="py-3">
                       <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => toggleActive(u)}
-                          disabled={!canManage || busyId === u._id || self}
-                          title={canManage ? (u.is_active ? "Deactivate" : "Reactivate") : "Admins only"}
-                          className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
-                        >
-                          {u.is_active ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => openDelete(u)}
-                          disabled={!isOwner || busyId === u._id || self}
-                          title={isOwner ? "Delete account and all its content" : "Owners only"}
-                          className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {u.deleted_at ? (
+                          <>
+                            <button
+                              onClick={() => restoreUser(u)}
+                              disabled={!canManage || busyId === u._id}
+                              title={canManage ? "Restore this account" : "Admins only"}
+                              className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openDelete(u)}
+                              disabled={!isOwner || busyId === u._id || self}
+                              title={isOwner ? "Remove the account and all its content for good" : "Owners only"}
+                              className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+                            >
+                              <Flame className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => toggleActive(u)}
+                              disabled={!canManage || busyId === u._id || self}
+                              title={canManage ? (u.is_active ? "Deactivate" : "Reactivate") : "Admins only"}
+                              className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+                            >
+                              {u.is_active ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={() => setSoftTarget(u)}
+                              disabled={!canManage || busyId === u._id || self}
+                              title={canManage ? "Delete — reversible from the Deleted filter" : "Admins only"}
+                              className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -229,9 +281,20 @@ export default function Users() {
         </ConfirmPrompt>
       )}
 
+      {softTarget && (
+        <ConfirmPrompt
+          title={`Delete ${softTarget.name}'s account?`}
+          description="They are signed out and can no longer log in. Nothing they own is removed, and the account can be restored from the Deleted filter."
+          confirmLabel="Delete"
+          tone="danger"
+          onCancel={() => setSoftTarget(null)}
+          onConfirm={confirmSoftDelete}
+        />
+      )}
+
       {deleteTarget && (
         <ConfirmPrompt
-          title={`Delete ${deleteTarget.user.name}'s account?`}
+          title={`Permanently delete ${deleteTarget.user.name}'s account?`}
           description="This cannot be undone. Everything the account owns is removed with it."
           confirmLabel="Delete permanently"
           tone="danger"

@@ -256,7 +256,10 @@ export const globalSearch = asyncHandler(async (req, res) => {
   const LIMIT = 5;
 
   const [users, trips, bookings, posts] = await Promise.all([
-    User.find({ $or: [{ name: rx }, { email: rx }, { phone: rx }] })
+    // Deleted accounts stay out of the search box; they are reachable
+    // through the Users list's Deleted filter, which is where restoring
+    // one happens.
+    User.find({ deleted_at: null, $or: [{ name: rx }, { email: rx }, { phone: rx }] })
       .select("name email role is_active")
       .limit(LIMIT)
       .lean(),
