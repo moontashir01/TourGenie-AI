@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Button from "../../components/ui/Button";
 import { Plus, Pencil, Trash2, X, Star } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import useAdminList from "../../hooks/useAdminList";
@@ -122,9 +123,9 @@ export default function Hotels() {
             <input type="number" step="any" placeholder="Longitude (optional)" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} className="input" />
           </div>
           <input placeholder="Facilities (comma-separated, e.g. Wi-Fi, Pool, Breakfast)" value={form.facilities} onChange={(e) => setForm({ ...form, facilities: e.target.value })} className="input" />
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-paper-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
-            {saving ? "Saving…" : editing._id ? "Save changes" : "Create hotel"}
-          </button>
+          <Button type="submit" variant="teal" loading={saving} className="self-start">
+            {editing._id ? "Save changes" : "Create hotel"}
+          </Button>
         </form>
       )}
 

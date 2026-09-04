@@ -82,7 +82,7 @@ export default function Admin() {
           <Compass className="w-6 h-6 text-sunset" strokeWidth={1.75} />
           <span className="font-display text-lg text-paper">Admin console</span>
         </Link>
-        <p className="px-2 -mt-6 mb-8 text-[11px] uppercase tracking-wide text-paper/40 capitalize">
+        <p className="px-2 -mt-6 mb-8 text-2xs uppercase tracking-wide text-paper/40 capitalize">
           Signed in as {user.role}
         </p>
         <nav className="flex flex-col gap-1">

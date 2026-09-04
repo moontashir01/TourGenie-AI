@@ -99,13 +99,13 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
               className="flex-1 flex flex-col items-center gap-1 group"
             >
               <span
-                className={`w-full rounded-t-md transition-all duration-150 ${style.bar} ${
+                className={`w-full rounded-t-md transition duration-fast ${style.bar} ${
                   isSelected ? "ring-2 ring-ink-900/30" : "group-hover:opacity-80"
                 }`}
                 style={{ height: `${height}px` }}
               />
               <span
-                className={`text-[10px] leading-none font-mono ${
+                className={`text-3xs leading-none font-mono ${
                   isNow ? "text-ink-900 font-bold" : "text-ink-900/40"
                 }`}
               >
@@ -127,7 +127,7 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
         <div className="mt-2 p-3 rounded-xl bg-surface border border-sand animate-pop-in">
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <span className="font-semibold text-sm text-ink-900">{MONTH_NAMES[detail.month - 1]}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${BAND_STYLE[band(detail)].chip}`}>
+            <span className={`text-3xs px-2 py-0.5 rounded-full font-semibold ${BAND_STYLE[band(detail)].chip}`}>
               {BAND_STYLE[band(detail)].label}
             </span>
           </div>
@@ -152,7 +152,7 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
       )}
 
       {!compact && !detail && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-ink-900/45">
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-3xs text-ink-900/45">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-teal" /> Ideal</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-gold" /> Mixed</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-sunset" /> Avoid</span>

@@ -165,7 +165,7 @@ export default function TripPrint() {
         {(transport.length > 0 || hotels.length > 0) && (
           <section className="print-block mb-6">
             <h2 className="font-display text-lg text-ink-900 mb-2">Reservations</h2>
-            <p className="text-[11px] text-ink-900/55 mb-3">
+            <p className="text-2xs text-ink-900/55 mb-3">
               Demonstration records — no payment was taken and nothing is reserved with any operator or property.
             </p>
 
@@ -274,7 +274,7 @@ export default function TripPrint() {
           </section>
         )}
 
-        <footer className="print-block mt-6 pt-3 border-t border-sand text-[10px] text-ink-900/50 flex flex-wrap justify-between gap-2">
+        <footer className="print-block mt-6 pt-3 border-t border-sand text-3xs text-ink-900/50 flex flex-wrap justify-between gap-2">
           <span>Printed {formatDate(new Date())} · TourGenie AI</span>
           <span>Costs are estimates in BDT. Bookings shown are demonstration records.</span>
         </footer>

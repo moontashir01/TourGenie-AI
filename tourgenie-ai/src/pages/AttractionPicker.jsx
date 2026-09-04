@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import Button from "../components/ui/Button";
 import { Link } from "react-router-dom";
 import { MapPin, Star, Clock, CheckCircle2, Loader2, AlertCircle, Landmark } from "lucide-react";
 import AppShell from "../components/AppShell";
+import { NoTripState } from "../components/ui/States";
 import { tripsApi, attractionApi, destinationsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 
@@ -89,10 +91,7 @@ export default function AttractionPicker() {
   if (!currentTripId) {
     return (
       <AppShell title="Pick Your Attractions">
-        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
-          <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
-        </div>
+        <NoTripState what="Attractions" />
       </AppShell>
     );
   }
@@ -167,14 +166,14 @@ export default function AttractionPicker() {
               <button
                 key={a._id}
                 onClick={() => toggle(a._id)}
-                className={`group text-left bg-surface border rounded-2xl overflow-hidden transition-all duration-200 flex flex-col ${
+                className={`group text-left bg-surface border rounded-2xl overflow-hidden transition duration-base flex flex-col ${
                   isSelected
                     ? "border-teal shadow-lift ring-1 ring-teal -translate-y-0.5"
                     : "border-sand shadow-soft hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5"
                 }`}
               >
                 <div className="h-24 bg-gradient-to-br from-teal-light via-teal-light to-teal/25 flex items-center justify-center relative">
-                  <Landmark className="w-7 h-7 text-teal-dark transition-transform duration-300 group-hover:scale-110" strokeWidth={1.5} />
+                  <Landmark className="w-7 h-7 text-teal-dark transition-transform duration-base group-hover:scale-110" strokeWidth={1.5} />
                   {isSelected && (
                     <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-teal text-white flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4" />
@@ -182,7 +181,7 @@ export default function AttractionPicker() {
                   )}
                 </div>
                 <div className="p-4 flex flex-col flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-dark mb-1">{a.category}</p>
+                  <p className="text-3xs font-semibold uppercase tracking-wide text-teal-dark mb-1">{a.category}</p>
                   <h4 className="font-display text-base text-ink-900 mb-1.5 leading-snug">{a.name}</h4>
                   <div className="flex items-center gap-3 text-xs text-ink-900/50 mb-2">
                     {a.rating > 0 && (
@@ -211,14 +210,9 @@ export default function AttractionPicker() {
           <Link to="/itinerary" className="text-sm font-semibold text-ink-900/60 hover:text-ink-900">
             Skip to itinerary
           </Link>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {saving ? "Saving…" : "Save picks"}
-          </button>
+          <Button variant="teal" icon={CheckCircle2} loading={saving} onClick={handleSave}>
+            Save picks
+          </Button>
         </div>
       </div>
     </AppShell>

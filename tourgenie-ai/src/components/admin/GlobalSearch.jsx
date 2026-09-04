@@ -99,7 +99,7 @@ export default function GlobalSearch({ onPickUser, onPickTrip }) {
               if (rows.length === 0) return null;
               return (
                 <div key={key} className="border-b border-sand last:border-0">
-                  <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-900/40">
+                  <p className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wide text-ink-900/40">
                     {label}
                   </p>
                   {rows.map((row) => (

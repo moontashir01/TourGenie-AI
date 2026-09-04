@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Waves, Mountain, Trees, Clock, Users2, X } from "lucide-react";
+import { Plus, Waves, Mountain, Trees, Clock, Users2, X, MapPinned } from "lucide-react";
 import AppShell from "../components/AppShell";
 import Skeleton, { CardSkeleton } from "../components/Skeleton";
+import { StatusBadge } from "../components/ui/Badge";
+import EmptyState from "../components/ui/States";
+import Button from "../components/ui/Button";
 import { tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -15,13 +18,6 @@ const coverArt = [
   "from-sunset-light via-sunset-light to-gold/30",
   "from-sand/70 via-teal-light/70 to-teal/20",
 ];
-const statusStyle = {
-  draft: "bg-sand text-ink-900/60",
-  planned: "bg-teal-light text-teal-dark",
-  active: "bg-sunset-light text-sunset-dark",
-  completed: "bg-ink-900/10 text-ink-900/50",
-};
-
 function daysUntil(date) {
   return Math.ceil((new Date(date) - Date.now()) / 86400000);
 }
@@ -102,7 +98,7 @@ export default function Dashboard() {
                 {next.status === "planned" ? "Next departure" : "Latest trip"}
               </p>
               {next.status === "planned" && daysUntil(next.start_date) > 0 && (
-                <span className="text-[11px] font-bold bg-sunset/15 text-sunset px-2.5 py-1 rounded-full">
+                <span className="text-2xs font-bold bg-sunset/15 text-sunset px-2.5 py-1 rounded-full">
                   in {daysUntil(next.start_date)} day{daysUntil(next.start_date) > 1 ? "s" : ""}
                 </span>
               )}
@@ -131,15 +127,16 @@ export default function Dashboard() {
       </div>
 
       {trips.length === 0 ? (
-        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 mb-4">You haven't planned a trip yet.</p>
-          <Link
-            to="/plan"
-            className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Plan your first trip
-          </Link>
-        </div>
+        <EmptyState
+          icon={MapPinned}
+          title="No trips yet"
+          description="Plan one and it turns up here with its itinerary, budget and bookings attached."
+          action={
+            <Button as={Link} to="/plan" icon={Plus}>
+              Plan your first trip
+            </Button>
+          }
+        />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {trips.map((t, i) => {
@@ -196,16 +193,14 @@ export default function Dashboard() {
                     <path d="M0 14 Q 75 4, 150 12 T 300 8" fill="none" stroke="#0B1F2E" strokeWidth="1.5" strokeDasharray="1 7" strokeLinecap="round" />
                   </svg>
                   <Icon
-                    className="w-10 h-10 text-teal-dark transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
+                    className="w-10 h-10 text-teal-dark transition-transform duration-base group-hover:scale-110 group-hover:-rotate-3"
                     strokeWidth={1.5}
                   />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <h4 className="font-display text-lg text-ink-900 leading-snug">{t.destination}</h4>
-                    <span className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ${statusStyle[t.status]}`}>
-                      {t.status}
-                    </span>
+                    <StatusBadge status={t.status} size="md" className="shrink-0" />
                   </div>
                   <p className="text-xs text-ink-900/50 flex items-center gap-1.5 mb-1">
                     <Clock className="w-3.5 h-3.5" /> {new Date(t.start_date).toLocaleDateString()} – {new Date(t.end_date).toLocaleDateString()}
@@ -213,7 +208,7 @@ export default function Dashboard() {
                   <p className="text-xs text-ink-900/50 flex items-center gap-1.5 mb-4">
                     <Users2 className="w-3.5 h-3.5" /> {t.travelers} travelers · ৳{t.budget.toLocaleString()} budget
                   </p>
-                  <span className="mt-auto text-sm font-semibold text-teal-dark inline-flex items-center gap-1 transition-all group-hover:gap-2">
+                  <span className="mt-auto text-sm font-semibold text-teal-dark inline-flex items-center gap-1 transition-[gap] duration-base ease-tg-out group-hover:gap-2">
                     Open trip <span aria-hidden>→</span>
                   </span>
                 </div>

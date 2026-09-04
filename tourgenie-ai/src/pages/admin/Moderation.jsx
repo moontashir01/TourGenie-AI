@@ -3,6 +3,8 @@ import { Check, EyeOff, Trash2, Loader2, Flag, Star, RefreshCw, ShieldCheck } fr
 import { adminApi } from "../../lib/api";
 import useAdminList from "../../hooks/useAdminList";
 import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
+import Overlay from "../../components/ui/Overlay";
+import Button from "../../components/ui/Button";
 
 // FR-23 — moderation as a work queue.
 //
@@ -36,9 +38,7 @@ function DecisionPrompt({ target, busy, onCancel, onConfirm }) {
   const needsReason = target.action !== "approve";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-md card p-6 animate-pop-in">
+    <Overlay open onClose={onCancel} size="md" label="Moderation decision" dismissable={!busy} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">
           {removing ? "Remove this permanently?" : target.action === "hide" ? "Hide this from the feed?" : "Put this on the feed?"}
         </h3>
@@ -66,21 +66,20 @@ function DecisionPrompt({ target, busy, onCancel, onConfirm }) {
           />
         </label>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="btn-secondary">
+          <Button variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="button"
-            disabled={busy || (needsReason && !reason.trim())}
+          </Button>
+          <Button
+            // Approving isn't destructive, so it doesn't wear the danger ring.
+            variant={target.action === "approve" ? "teal" : "danger"}
+            loading={busy}
+            disabled={needsReason && !reason.trim()}
             onClick={() => onConfirm(reason.trim())}
-            className="inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50"
           >
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
             {removing ? "Remove" : target.action === "hide" ? "Hide" : "Approve"}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }
 
@@ -186,7 +185,7 @@ export default function Moderation() {
                           <Star className="w-3.5 h-3.5 text-gold fill-current" /> {entry.rating} · {entry.subject}
                         </span>
                       )}
-                      <span className="text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-sand text-ink-900/60">
+                      <span className="text-2xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-sand text-ink-900/60">
                         {entry.kind}
                       </span>
                     </p>
@@ -194,7 +193,7 @@ export default function Moderation() {
                       {entry.author?.name || "deleted account"} · {new Date(entry.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full bg-gold/15 text-ink-900/70 shrink-0">
+                  <span className="text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full bg-gold/15 text-ink-900/70 shrink-0">
                     {entry.trigger}
                   </span>
                 </div>
@@ -295,7 +294,7 @@ export default function Moderation() {
                     </td>
                     <td className="py-3">
                       <span
-                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                        className={`text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
                           report.status === "open"
                             ? "bg-sunset-light text-sunset-dark"
                             : "bg-teal-light text-teal-dark"

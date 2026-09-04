@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Button from "./ui/Button";
 import {
   Plane,
   ArrowRight,
@@ -98,7 +99,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
           <h3 className="font-display text-lg text-ink-900">Available Flights</h3>
           {sourceInfo && !loading && (
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+              className={`inline-flex items-center gap-1 text-3xs font-semibold px-2 py-0.5 rounded-full ${
                 sourceInfo.real ? "bg-teal-light text-teal-dark" : "bg-sunset-light text-sunset-dark"
               }`}
             >
@@ -130,7 +131,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
           )}
         </span>
         {trip.end_date && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-light text-teal-dark">Round trip</span>
+          <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-teal-light text-teal-dark">Round trip</span>
         )}
         <span className="mx-1">·</span>
         <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {trip.travelers} traveler{trip.travelers > 1 ? "s" : ""}</span>
@@ -214,12 +215,9 @@ export default function FlightSearch({ trip, onFlightSelected }) {
       {/* Setup instructions shown when not yet searched */}
       {!searched && !loading && (
         <div className="text-center py-6">
-          <button
-            onClick={doSearch}
-            className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
-          >
-            <Plane className="w-4 h-4" /> Search flights
-          </button>
+          <Button variant="teal" icon={Plane} onClick={doSearch}>
+            Search flights
+          </Button>
         </div>
       )}
     </div>
@@ -256,7 +254,7 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
   }).format(amount || 0);
 
   return (
-    <div className={`border rounded-xl p-4 transition-all ${
+    <div className={`border rounded-xl p-4 transition ${
       isSelected ? "border-teal bg-teal-light/10 shadow-sm" : "border-sand hover:border-teal/40 hover:shadow-sm"
     }`}>
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -288,7 +286,7 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
               <div className="w-8 h-px bg-sand" />
               <ChevronsRight className="w-3.5 h-3.5 text-sand" />
             </div>
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+            <span className={`text-3xs font-semibold px-2 py-0.5 rounded-full ${
               flight.stops === 0 ? "bg-teal-light text-teal-dark" : "bg-sand text-ink-900/60"
             }`}>
               {stopLabel}
@@ -312,22 +310,22 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
             <p className="text-xs text-ink-900/50">{formatMoney(perPerson)} / person</p>
           )}
           {flight.tripType === "round_trip" && (
-            <p className="text-[10px] text-teal-dark font-semibold">
+            <p className="text-3xs text-teal-dark font-semibold">
               both ways included
               {flight.returnAt && <> · returns {fmtDate(new Date(flight.returnAt))}</>}
             </p>
           )}
           <div className="flex items-center justify-end gap-2 mt-1.5 mb-2 flex-wrap">
-            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cabinColor}`}>
+            <span className={`text-3xs font-semibold px-2 py-0.5 rounded-full ${cabinColor}`}>
               {flight.cabin}
             </span>
             {flight.priceStatus === "indicative" && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sunset-light text-sunset-dark">
+              <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-sunset-light text-sunset-dark">
                 demo fare
               </span>
             )}
             {flight.priceStatus === "cached" && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sand text-ink-900/60">
+              <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-sand text-ink-900/60">
                 last seen fare
               </span>
             )}

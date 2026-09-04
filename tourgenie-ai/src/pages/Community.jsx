@@ -4,6 +4,8 @@ import { Heart, MapPin, Loader2, Flag, Clock } from "lucide-react";
 import AppShell from "../components/AppShell";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import Overlay from "../components/ui/Overlay";
+import Button from "../components/ui/Button";
 import { communityApi, reportApi } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -140,13 +142,9 @@ function CommunityBody() {
               className="w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 focus:outline-none focus:border-teal resize-none"
             />
             <div className="flex justify-end mt-3">
-              <button
-                type="submit"
-                disabled={posting}
-                className="bg-sunset hover:bg-sunset-dark disabled:opacity-60 text-ink-fixed text-sm font-semibold px-4 py-2 rounded-full transition-colors"
-              >
-                {posting ? "Posting…" : "Post"}
-              </button>
+              <Button type="submit" size="sm" loading={posting}>
+                Post
+              </Button>
             </div>
           </form>
         ) : (
@@ -188,7 +186,7 @@ function CommunityBody() {
                 </div>
               </div>
               {p.held_for_review && (
-                <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gold/15 text-ink-900/65 px-2 py-1 rounded-full mb-2">
+                <p className="inline-flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide bg-gold/15 text-ink-900/65 px-2 py-1 rounded-full mb-2">
                   <Clock className="w-3 h-3" /> Waiting for a moderator — only you can see this
                 </p>
               )}
@@ -253,7 +251,7 @@ function CommunityBody() {
 
             {groups.map((group) => (
               <div key={group.country_code || group.country} className="mt-3 first:mt-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-900/40 px-3 mb-1">
+                <p className="text-2xs font-semibold uppercase tracking-wide text-ink-900/40 px-3 mb-1">
                   {group.country}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -318,9 +316,8 @@ function ReportDialog({ post, onClose, onDone }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={submit} className="relative w-full max-w-md bg-surface border border-sand rounded-2xl p-6 animate-pop-in">
+    <Overlay open onClose={onClose} variant="adaptive" size="md" label="Report this post" dismissable={!sending}>
+      <form onSubmit={submit} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">Report this post</h3>
         <p className="text-sm text-ink-900/60 mb-4">
           A moderator reads every report. Nothing happens to the post until one of them decides.
@@ -356,20 +353,15 @@ function ReportDialog({ post, onClose, onDone }) {
         </label>
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="btn-secondary">
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={sending}
-            className="inline-flex items-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors disabled:opacity-60"
-          >
-            {sending && <Loader2 className="w-4 h-4 animate-spin" />}
+          </Button>
+          <Button type="submit" variant="danger" loading={sending}>
             Send report
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Overlay>
   );
 }
 

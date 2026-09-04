@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Star, Wifi, Loader2, CheckCircle2, ArrowUpDown, AlertCircle, MapPin } from "lucide-react";
 import AppShell from "../components/AppShell";
+import { NoTripState } from "../components/ui/States";
 import { CardSkeleton } from "../components/Skeleton";
 import Money from "../components/Money";
 import HotelBookingModal from "../components/HotelBookingModal";
@@ -159,10 +159,7 @@ export default function Hotels() {
   if (!currentTripId) {
     return (
       <AppShell title="Hotel Recommendations">
-        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
-          <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
-        </div>
+        <NoTripState what="Hotels" />
       </AppShell>
     );
   }
@@ -240,7 +237,7 @@ export default function Hotels() {
             return (
               <div key={h._id} className="group card card-hover overflow-hidden flex flex-col">
                 <div className="h-28 bg-gradient-to-br from-teal-light via-teal-light to-teal/25 flex items-center justify-center">
-                  <Wifi className="w-8 h-8 text-teal-dark transition-transform duration-300 group-hover:scale-110" strokeWidth={1.5} />
+                  <Wifi className="w-8 h-8 text-teal-dark transition-transform duration-base group-hover:scale-110" strokeWidth={1.5} />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <h4 className="font-display text-lg text-ink-900 mb-1">{h.name}</h4>
@@ -254,7 +251,7 @@ export default function Hotels() {
                   </p>
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {h.facilities.map((f) => (
-                      <span key={f} className="text-[11px] bg-paper text-ink-900/60 px-2 py-0.5 rounded-full">{f}</span>
+                      <span key={f} className="text-2xs bg-paper text-ink-900/60 px-2 py-0.5 rounded-full">{f}</span>
                     ))}
                   </div>
                   <div className="mt-auto flex flex-col gap-1.5">

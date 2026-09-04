@@ -44,7 +44,7 @@ function formatDuration(minutes) {
 function CompareRow({ label, icon: Icon, children }) {
   return (
     <div className="border-t border-sand pt-3 mt-3 first:border-0 first:pt-0 first:mt-0">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-900/40 mb-1.5">
+      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/40 mb-1.5">
         {Icon && <Icon className="w-3 h-3" />}
         {label}
       </p>
@@ -196,7 +196,7 @@ export default function Destinations() {
                         </button>
                       </div>
                       <p className="text-xs text-ink-900/50">{d.country}{d.division ? ` · ${d.division}` : ""}</p>
-                      <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold ${TYPE_TONE[d.type] || "bg-sand/60 text-ink-800"}`}>
+                      <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-3xs font-semibold ${TYPE_TONE[d.type] || "bg-sand/60 text-ink-800"}`}>
                         {d.type}
                       </span>
                     </header>
@@ -220,7 +220,7 @@ export default function Destinations() {
                               <span className="flex items-center gap-1"><Leaf className="w-3 h-3" />{col.journey.carbon_kg} kg CO₂</span>
                             )}
                           </p>
-                          <p className="text-[11px] text-ink-900/45">
+                          <p className="text-2xs text-ink-900/45">
                             by {col.journey.mode}
                             {!col.journey.direct && col.journey.via.length > 0 && ` · via ${col.journey.via.join(", ")}`}
                           </p>
@@ -236,7 +236,7 @@ export default function Destinations() {
                       <div className="grid grid-cols-3 gap-1.5 text-center">
                         {["budget", "mid", "luxury"].map((tier) => (
                           <div key={tier} className="p-2 rounded-lg bg-paper border border-sand">
-                            <p className="text-[10px] uppercase tracking-wide text-ink-900/40">{tier}</p>
+                            <p className="text-3xs uppercase tracking-wide text-ink-900/40">{tier}</p>
                             <p className="text-sm font-semibold text-ink-900 mt-0.5">
                               {col.cost[tier] ? `৳${col.cost[tier].per_day.toLocaleString()}` : "—"}
                             </p>
@@ -244,7 +244,7 @@ export default function Destinations() {
                         ))}
                       </div>
                       {col.cost.mid?.notes && (
-                        <p className="mt-1.5 text-[11px] text-ink-900/50 leading-snug">{col.cost.mid.notes}</p>
+                        <p className="mt-1.5 text-2xs text-ink-900/50 leading-snug">{col.cost.mid.notes}</p>
                       )}
                     </CompareRow>
 
@@ -258,7 +258,7 @@ export default function Destinations() {
                       {col.attractions.top.length > 0 && (
                         <ul className="mt-1.5 space-y-0.5">
                           {col.attractions.top.map((a) => (
-                            <li key={a.name} className="text-[11px] text-ink-900/60 truncate">· {a.name}</li>
+                            <li key={a.name} className="text-2xs text-ink-900/60 truncate">· {a.name}</li>
                           ))}
                         </ul>
                       )}
@@ -286,7 +286,7 @@ export default function Destinations() {
                         <span className="font-semibold text-ink-900">{d.recommended_days}</span> days
                       </p>
                       {d.summary && (
-                        <p className="mt-1.5 text-[11px] text-ink-900/55 leading-relaxed">{d.summary}</p>
+                        <p className="mt-1.5 text-2xs text-ink-900/55 leading-relaxed">{d.summary}</p>
                       )}
                     </CompareRow>
                   </article>
@@ -341,7 +341,7 @@ export default function Destinations() {
                 return (
                   <article
                     key={d.slug}
-                    className={`p-4 bg-surface rounded-2xl border transition-all ${
+                    className={`p-4 bg-surface rounded-2xl border transition ${
                       isSelected ? "border-teal ring-1 ring-teal/20 shadow-soft" : "border-sand hover:shadow-soft"
                     }`}
                   >
@@ -352,7 +352,7 @@ export default function Destinations() {
                           {d.country}{d.division ? ` · ${d.division}` : ""}
                         </p>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${TYPE_TONE[d.type] || "bg-sand/60 text-ink-800"}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-3xs font-semibold shrink-0 ${TYPE_TONE[d.type] || "bg-sand/60 text-ink-800"}`}>
                         {d.type}
                       </span>
                     </div>
@@ -361,7 +361,7 @@ export default function Destinations() {
                       <p className="mt-2 text-xs text-ink-900/60 leading-relaxed line-clamp-3">{d.summary}</p>
                     )}
 
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-[11px] text-ink-900/55">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-2xs text-ink-900/55">
                       <span className="flex items-center gap-1">
                         <Wallet className="w-3 h-3" /> ৳{d.avg_daily_cost?.toLocaleString()}/day
                       </span>

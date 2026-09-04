@@ -136,7 +136,7 @@ export default function DayMap({ items, cityCoordinates }) {
           <Marker key={i} position={s.position} icon={s.exact ? EXACT_ICON : APPROX_ICON}>
             <Popup>
               <span className="font-semibold">{s.item.time}</span> — {s.item.activity}
-              {!s.exact && <div className="text-[11px] opacity-60 mt-0.5">Approximate location ({s.city})</div>}
+              {!s.exact && <div className="text-2xs opacity-60 mt-0.5">Approximate location ({s.city})</div>}
             </Popup>
           </Marker>
         ))}

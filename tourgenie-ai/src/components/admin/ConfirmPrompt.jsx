@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Loader2, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
+import Overlay from "../ui/Overlay";
+import Button from "../ui/Button";
 
 // The dialog in front of an admin action that has to be accounted for.
 //
@@ -62,9 +64,10 @@ export default function ConfirmPrompt({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={busy ? undefined : onCancel} />
-      <form onSubmit={submit} className="relative w-full max-w-md card p-6 animate-pop-in">
+    // dismissable={!busy}: the request is already with the server, and
+    // closing here would lose the reason that was typed for nothing.
+    <Overlay open onClose={onCancel} size="md" label={title} dismissable={!busy}>
+      <form onSubmit={submit} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">{title}</h3>
         <p className="text-sm text-ink-900/60 mb-4">{description}</p>
         {children}
@@ -127,23 +130,14 @@ export default function ConfirmPrompt({
         )}
 
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} disabled={busy} className="btn-secondary">
+          <Button variant="secondary" onClick={onCancel} disabled={busy}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={busy || !ready}
-            className={`inline-flex items-center justify-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50 ${
-              tone === "danger"
-                ? "bg-sunset hover:bg-sunset-dark text-ink-fixed"
-                : "bg-teal hover:bg-teal-dark text-paper-fixed"
-            }`}
-          >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          </Button>
+          <Button type="submit" variant={tone === "danger" ? "danger" : "teal"} loading={busy} disabled={!ready}>
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Overlay>
   );
 }

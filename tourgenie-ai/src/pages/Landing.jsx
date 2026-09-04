@@ -12,6 +12,7 @@ import {
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import RouteLine from "../components/RouteLine";
+import Reveal from "../components/ui/Reveal";
 
 const features = [
   {
@@ -51,7 +52,11 @@ export default function Landing() {
       {/* Hero */}
       <section className="theme-ink relative bg-ink-900 bg-ink-glow overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 pt-20 pb-28 relative z-10">
-          <div className="max-w-2xl animate-fade-up">
+          {/* stagger, not one fade-up on the block: the hero has a reading
+              order — badge, headline, promise, the thing you type into — and
+              letting it arrive in that order is the difference between a page
+              appearing and a page introducing itself. */}
+          <div className="max-w-2xl stagger">
             <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-sunset bg-sunset/10 border border-sunset/20 px-3 py-1.5 rounded-full">
               <Sparkles className="w-3.5 h-3.5" /> Powered by Claude
             </span>
@@ -77,7 +82,7 @@ export default function Landing() {
               </div>
               <Link
                 to="/plan"
-                className="bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition-all hover:shadow-glow shrink-0 active:scale-[0.98]"
+                className="bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-3 rounded-xl flex items-center justify-center gap-2 transition hover:shadow-glow shrink-0 active:scale-[0.98]"
               >
                 Plan My Trip with AI <ArrowRight className="w-4 h-4" />
               </Link>
@@ -106,40 +111,42 @@ export default function Landing() {
         </div>
 
         {/* decorative route line across hero bottom */}
-        <svg className="absolute bottom-0 left-0 w-full h-24 opacity-40" viewBox="0 0 1200 100" preserveAspectRatio="none" aria-hidden="true">
+        <svg className="absolute bottom-0 left-0 w-full h-24 opacity-40 animate-drift" viewBox="0 0 1200 100" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 80 Q 300 10, 600 60 T 1200 40" fill="none" stroke="#1C8C82" strokeWidth="2" strokeDasharray="1 10" strokeLinecap="round" />
         </svg>
       </section>
 
       {/* Features */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-24">
-        <div className="max-w-xl mb-14">
+        <Reveal className="max-w-xl mb-14">
           <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3">What it does</p>
           <h2 className="font-display text-3xl md:text-4xl text-ink-900">
             Every planning tool a trip needs, already talking to each other.
           </h2>
-        </div>
-        <div className="grid sm:grid-cols-2 gap-6">
+        </Reveal>
+        <Reveal stagger className="grid sm:grid-cols-2 gap-6">
           {features.map((f) => (
             <div key={f.title} className="group card card-hover p-6">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-light to-teal/25 flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-light to-teal/25 flex items-center justify-center mb-4 transition-transform duration-base group-hover:scale-110 group-hover:-rotate-3">
                 <f.icon className="w-5 h-5 text-teal-dark" strokeWidth={1.75} />
               </div>
               <h3 className="font-display text-lg text-ink-900 mb-1.5">{f.title}</h3>
               <p className="text-sm text-ink-900/60 leading-relaxed">{f.desc}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </section>
 
       {/* How it works */}
       <section className="bg-teal-light/50 border-y border-sand">
         <div className="max-w-6xl mx-auto px-6 py-24">
-          <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3">How it works</p>
-          <h2 className="font-display text-3xl md:text-4xl text-ink-900 mb-14 max-w-xl">
-            Four steps, and the plan is already better than the one you'd have made alone.
-          </h2>
-          <div className="relative grid md:grid-cols-4 gap-10">
+          <Reveal>
+            <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3">How it works</p>
+            <h2 className="font-display text-3xl md:text-4xl text-ink-900 mb-14 max-w-xl">
+              Four steps, and the plan is already better than the one you'd have made alone.
+            </h2>
+          </Reveal>
+          <Reveal stagger className="relative grid md:grid-cols-4 gap-10">
             <div className="hidden md:block absolute top-6 left-0 right-0">
               <RouteLine className="w-full h-4" color="#1C8C82" />
             </div>
@@ -152,13 +159,13 @@ export default function Landing() {
                 <p className="text-sm text-ink-900/60 leading-relaxed">{s.desc}</p>
               </div>
             ))}
-          </div>
+          </Reveal>
         </div>
       </section>
 
       {/* Trust / community teaser */}
       <section className="max-w-6xl mx-auto px-6 py-24 grid md:grid-cols-2 gap-12 items-center">
-        <div>
+        <Reveal>
           <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3">Community</p>
           <h2 className="font-display text-3xl text-ink-900 mb-4">
             Real trips, reviewed by real travelers.
@@ -168,11 +175,11 @@ export default function Landing() {
             travelers who've actually been — read before you go, then post
             your own once you're back.
           </p>
-          <Link to="/community" className="inline-flex items-center gap-2 text-teal-dark font-semibold text-sm hover:gap-3 transition-all">
+          <Link to="/community" className="inline-flex items-center gap-2 text-teal-dark font-semibold text-sm hover:gap-3 transition-[gap] duration-base ease-tg-out">
             Browse the community <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
-        <div className="relative">
+        </Reveal>
+        <Reveal className="relative">
           <div className="absolute -top-3 -left-3 w-full h-full rounded-2xl bg-teal-light/60 -rotate-1" aria-hidden />
           <div className="relative card shadow-lift p-6 animate-drift">
             <div className="flex items-center gap-1 text-gold mb-3">
@@ -187,7 +194,7 @@ export default function Landing() {
               <p className="text-sm font-semibold text-ink-900">Farhana R. <span className="font-normal text-ink-900/50">— Cox's Bazar</span></p>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
       {/* CTA */}

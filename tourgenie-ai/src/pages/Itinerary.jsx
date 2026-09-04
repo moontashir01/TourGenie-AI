@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
+import Button from "../components/ui/Button";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer, GripVertical, Undo2 } from "lucide-react";
+import {
+  DndContext, DragOverlay, PointerSensor, KeyboardSensor,
+  useSensor, useSensors, closestCenter, pointerWithin,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import AppShell from "../components/AppShell";
+import { NoTripState } from "../components/ui/States";
 import DayMap from "../components/DayMap";
 import FlightSearch from "../components/FlightSearch";
 import WeatherBadge, { WeatherDetail } from "../components/WeatherBadge";
@@ -11,6 +23,7 @@ import Money from "../components/Money";
 import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, itineraryApi, weatherApi, nearbyApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import { useChat } from "../context/ChatContext";
 
 // FR-13 — "what's around me" for one itinerary day. Anchored on the day's
 // first catalogued attraction, falling back to the city center.
@@ -112,6 +125,98 @@ function NearbySection({ dayItems, cityCoordinates, city }) {
 }
 
 
+// --- Drag-and-drop reordering (time-slot swap) -----------------------------
+//
+// A day's time slots are treated as fixed and the activities move between
+// them: drag the museum above lunch and it takes the 09:00 slot while lunch
+// shifts to 12:00. That keeps `time` as the single source of order — the
+// server sorts on it — so the list can never display 15:00 above 09:00.
+
+/**
+ * Enough zero-padded slots to seat `count` activities, reusing the day's
+ * existing times first. A day that gains an item needs one more slot than it
+ * had, so the extra is pushed two hours past the last one.
+ */
+function slotsFor(count, existingTimes) {
+  const slots = [...new Set(existingTimes)].sort();
+
+  while (slots.length < count) {
+    const last = slots[slots.length - 1] || "07:00";
+    const [h, m] = last.split(":").map(Number);
+    let hh = Math.min(23, h + 2);
+    let mm = m;
+    let next = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+    // Clamping at 23:00 can collide with a slot that already exists, and
+    // duplicate times make the order ambiguous — nudge the minutes instead.
+    while (slots.includes(next) && mm < 55) {
+      mm += 5;
+      next = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+    }
+    if (slots.includes(next)) break; // give up rather than loop forever
+    slots.push(next);
+  }
+
+  return slots.slice(0, count);
+}
+
+/** Re-times one day's activities into that day's slots, in their new order. */
+function retimeDay(orderedItems, existingTimes) {
+  const slots = slotsFor(orderedItems.length, existingTimes);
+  return orderedItems.map((item, i) => ({ ...item, time: slots[i] || item.time }));
+}
+
+/**
+ * Which drop target the cursor is over.
+ *
+ * closestCenter measures the dragged element's box rather than the pointer,
+ * and the open day's card is many times taller than the collapsed ones — so
+ * it consistently resolved one day too far down: aiming at Day 2's header
+ * dropped the activity into Day 3. Going by the pointer fixes that, because
+ * containment doesn't care how big the boxes are.
+ *
+ * A row inside the open day is preferred over the day card wrapping it, so
+ * dropping between two activities sorts them instead of appending to the day.
+ * Keyboard dragging reports no pointer, hence the closestCenter fallback.
+ */
+function collisionStrategy(args) {
+  const hits = pointerWithin(args);
+  if (hits.length > 0) {
+    const row = hits.find((hit) => !String(hit.id).startsWith("day-"));
+    return row ? [row] : hits;
+  }
+  return closestCenter(args);
+}
+
+function SortableRow({ id, children, disabled }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled,
+  });
+
+  return children({
+    ref: setNodeRef,
+    style: {
+      transform: CSS.Translate.toString(transform),
+      transition,
+      // The original stays in place as a ghost while DragOverlay renders the
+      // travelling copy, so the list doesn't visually lose a row.
+      opacity: isDragging ? 0.35 : 1,
+    },
+    handleProps: { ...attributes, ...listeners },
+    isDragging,
+  });
+}
+
+/** A collapsed day header doubles as a drop target for cross-day moves. */
+function DayDropZone({ day, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `day-${day}`, data: { day } });
+  return (
+    <div ref={setNodeRef} className={isOver ? "bg-teal-light/50 transition-colors" : "transition-colors"}>
+      {children}
+    </div>
+  );
+}
+
 function isInternationalTrip(trip) {
   const originCountry = trip?.origin_destination_id?.country_code;
   const destinationCountry = trip?.multi_city ? trip.country_code : trip?.destination_id?.country_code;
@@ -120,6 +225,7 @@ function isInternationalTrip(trip) {
 
 export default function Itinerary() {
   const { currentTripId } = useCurrentTrip();
+  const { itineraryVersion } = useChat();
   const [trip, setTrip] = useState(null);
   const [items, setItems] = useState([]);
   const [cityCoordinates, setCityCoordinates] = useState({});
@@ -130,6 +236,18 @@ export default function Itinerary() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [activeDragId, setActiveDragId] = useState(null);
+  const [reordering, setReordering] = useState(false);
+  // Snapshot taken before an optimistic reorder so a failed save can roll the
+  // list back instead of leaving the screen disagreeing with the database.
+  const [undoSnapshot, setUndoSnapshot] = useState(null);
+
+  const sensors = useSensors(
+    // A small activation distance keeps a tap on the transport buttons inside
+    // a row from being swallowed as the start of a drag.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   function loadWeather(tripId) {
     weatherApi
@@ -154,6 +272,21 @@ export default function Itinerary() {
     loadWeather(currentTripId);
   }, [currentTripId]);
 
+  // An assistant edit replaces every itinerary row server-side — new ids and
+  // all — so when the dock reports one, refetch rather than trying to merge.
+  useEffect(() => {
+    if (!itineraryVersion || !currentTripId) return;
+    Promise.all([tripsApi.get(currentTripId), itineraryApi.get(currentTripId)])
+      .then(([tripRes, itemsRes]) => {
+        setTrip(tripRes.trip);
+        setItems(itemsRes.items);
+        setCityCoordinates(itemsRes.city_coordinates || {});
+        setUndoSnapshot(null); // the pre-edit order no longer exists to restore
+      })
+      .catch((err) => setError(err.message));
+    loadWeather(currentTripId);
+  }, [itineraryVersion, currentTripId]);
+
   async function handleGenerateAI() {
     setError("");
     setGenerating(true);
@@ -167,6 +300,102 @@ export default function Itinerary() {
       setError(err.message);
     } finally {
       setGenerating(false);
+    }
+  }
+
+  /**
+   * Applies a drop: works out the affected days, re-times them, saves the
+   * whole change in one request, and rolls back if that request fails.
+   */
+  async function handleDragEnd({ active, over }) {
+    setActiveDragId(null);
+    if (!over) return;
+
+    const moved = items.find((i) => i._id === active.id);
+    if (!moved) return;
+
+    // Dropping on a day header targets that day; dropping on a row targets
+    // whichever day that row belongs to.
+    const overDayHeader = String(over.id).startsWith("day-");
+    const targetDay = overDayHeader
+      ? Number(String(over.id).slice(4))
+      : items.find((i) => i._id === over.id)?.day;
+
+    if (targetDay == null) return;
+    if (over.id === active.id) return;
+
+    const sourceDay = moved.day;
+    const byDay = (d) => items.filter((i) => i.day === d).sort((a, b) => a.time.localeCompare(b.time));
+
+    let touched = [];
+
+    if (sourceDay === targetDay) {
+      const list = byDay(sourceDay);
+      const from = list.findIndex((i) => i._id === active.id);
+      const to = list.findIndex((i) => i._id === over.id);
+      if (from === -1 || to === -1 || from === to) return;
+
+      const reordered = [...list];
+      reordered.splice(to, 0, reordered.splice(from, 1)[0]);
+      touched = retimeDay(reordered, list.map((i) => i.time));
+    } else {
+      // Cross-day move: the item leaves one day and is inserted into another.
+      const source = byDay(sourceDay).filter((i) => i._id !== active.id);
+      const target = byDay(targetDay);
+
+      const insertAt = overDayHeader
+        ? target.length // a header drop appends to the end of that day
+        : Math.max(0, target.findIndex((i) => i._id === over.id));
+
+      const nextTarget = [...target];
+      nextTarget.splice(insertAt, 0, { ...moved, day: targetDay });
+
+      touched = [
+        ...retimeDay(source, byDay(sourceDay).map((i) => i.time)),
+        ...retimeDay(nextTarget, target.map((i) => i.time)).map((i) => ({ ...i, day: targetDay })),
+      ];
+    }
+
+    if (touched.length === 0) return;
+
+    const previous = items;
+    setUndoSnapshot(null);
+    // Optimistic: the list settles instantly, then the server confirms.
+    const touchedById = new Map(touched.map((i) => [i._id, i]));
+    setItems((prev) => prev.map((i) => touchedById.get(i._id) || i));
+    setReordering(true);
+    setError("");
+
+    try {
+      const { items: saved } = await itineraryApi.reorder(
+        currentTripId,
+        touched.map((i) => ({ _id: i._id, day: i.day, time: i.time }))
+      );
+      setItems(saved);
+      setUndoSnapshot(previous);
+    } catch (err) {
+      setItems(previous); // the save failed, so put the list back
+      setError(`Couldn't save the new order — ${err.message}`);
+    } finally {
+      setReordering(false);
+    }
+  }
+
+  async function handleUndoReorder() {
+    if (!undoSnapshot) return;
+    const restore = undoSnapshot;
+    setUndoSnapshot(null);
+    setReordering(true);
+    try {
+      const { items: saved } = await itineraryApi.reorder(
+        currentTripId,
+        restore.map((i) => ({ _id: i._id, day: i.day, time: i.time }))
+      );
+      setItems(saved);
+    } catch (err) {
+      setError(`Couldn't undo — ${err.message}`);
+    } finally {
+      setReordering(false);
     }
   }
 
@@ -198,12 +427,7 @@ export default function Itinerary() {
   if (!currentTripId) {
     return (
       <AppShell title="Itinerary">
-        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
-          <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">
-            ← Go to your trips
-          </Link>
-        </div>
+        <NoTripState what="The itinerary" />
       </AppShell>
     );
   }
@@ -324,6 +548,37 @@ export default function Itinerary() {
             </div>
           )}
 
+          {!generating && days.length > 0 && (
+            <div className="flex items-center justify-between gap-3 text-xs text-ink-900/45 px-1">
+              <span className="inline-flex items-center gap-1.5">
+                <GripVertical className="w-3.5 h-3.5" />
+                Drag an activity to reorder it, or onto another day's header to move it there.
+              </span>
+              <span className="flex items-center gap-3">
+                {reordering && (
+                  <span className="inline-flex items-center gap-1.5 text-teal-dark">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+                  </span>
+                )}
+                {undoSnapshot && !reordering && (
+                  <button
+                    onClick={handleUndoReorder}
+                    className="inline-flex items-center gap-1.5 font-semibold text-teal-dark hover:text-teal"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" /> Undo move
+                  </button>
+                )}
+              </span>
+            </div>
+          )}
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={collisionStrategy}
+            onDragStart={({ active }) => setActiveDragId(active.id)}
+            onDragCancel={() => setActiveDragId(null)}
+            onDragEnd={handleDragEnd}
+          >
           {!generating && days.map((day) => {
             const dayItems = items.filter((i) => i.day === day).sort((a, b) => a.time.localeCompare(b.time));
             const open = openDay === day;
@@ -332,7 +587,8 @@ export default function Itinerary() {
               : [];
             const dayCost = dayItems.reduce((s, i) => (isBookedFlightLeg(i) ? s : s + (i.est_cost || 0)), 0);
             return (
-              <div key={day} className={`card overflow-hidden transition-shadow ${open ? "shadow-lift" : ""}`}>
+              <DayDropZone key={day} day={day}>
+              <div className={`card overflow-hidden transition-shadow mb-4 ${open ? "shadow-lift" : ""}`}>
                 <button
                   onClick={() => setOpenDay(open ? null : day)}
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-paper/60 transition-colors"
@@ -357,11 +613,16 @@ export default function Itinerary() {
                     {dayCost > 0 && (
                       <span className="hidden sm:inline text-xs font-mono text-ink-900/50">৳{dayCost.toLocaleString()}</span>
                     )}
-                    <ChevronDown className={`w-4 h-4 text-ink-900/40 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 text-ink-900/40 transition-transform duration-base ${open ? "rotate-180" : ""}`} />
                   </div>
                 </button>
+                {/* Mounted only while open — the body carries a Leaflet map,
+                    and keeping ten of them alive to animate a height is not a
+                    trade worth making. So the open animates and the close is
+                    a cut, which is the right way round: you are looking at
+                    what appears, not at what you just dismissed. */}
                 {open && (
-                  <div className="px-6 pb-6">
+                  <div className="px-6 pb-6 animate-slide-down">
                     <WeatherDetail forecast={weatherByDay[day]?.forecast} />
                     {(weatherByDay[day]?.forecast?.alerts || []).map((a, i) => (
                       <div key={i} className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-xs rounded-xl px-4 py-2.5 mb-4">
@@ -372,10 +633,34 @@ export default function Itinerary() {
                       </div>
                     ))}
                     <DayMap items={dayItems} cityCoordinates={cityCoordinates} />
+                    <SortableContext
+                      items={dayItems.map((i) => i._id)}
+                      strategy={verticalListSortingStrategy}
+                    >
                     <ul className="space-y-4">
                       {dayItems.map((item) => (
-                        <li key={item._id} className="flex gap-4">
-                          <div className="w-16 shrink-0 text-xs font-mono text-teal-dark pt-0.5">{item.time}</div>
+                        <SortableRow key={item._id} id={item._id} disabled={reordering}>
+                        {({ ref, style, handleProps, isDragging }) => (
+                        <li
+                          ref={ref}
+                          style={style}
+                          // Lifting the dragged row off the page is what makes
+                          // a reorder feel like moving a card rather than
+                          // watching a list re-sort itself.
+                          className={`flex gap-2 group/row rounded-xl ${
+                            isDragging ? "relative z-10 bg-surface shadow-lift ring-1 ring-teal/30" : ""
+                          }`}
+                        >
+                          {/* Handle rather than whole-row dragging: the row
+                              contains its own buttons (transport picking). */}
+                          <button
+                            {...handleProps}
+                            className="shrink-0 self-start mt-0.5 w-5 h-6 flex items-center justify-center rounded text-ink-900/20 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 hover:text-teal-dark hover:bg-teal-light/50 cursor-grab active:cursor-grabbing transition touch-none"
+                            aria-label={`Reorder ${item.activity}`}
+                          >
+                            <GripVertical className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="w-14 shrink-0 text-xs font-mono text-teal-dark pt-0.5">{item.time}</div>
                           <div className="flex-1 border-l-2 border-teal-light pl-4 pb-1 relative">
                             <span
                               className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full ring-2 ring-surface"
@@ -414,7 +699,7 @@ export default function Itinerary() {
                                             setError(err.message);
                                           }
                                         }}
-                                        className={`w-full text-left text-xs p-2.5 rounded-lg border flex justify-between items-center transition-all duration-200 ${
+                                        className={`w-full text-left text-xs p-2.5 rounded-lg border flex justify-between items-center transition duration-base ${
                                           isSelected
                                             ? "bg-teal-light/20 border-teal shadow-sm text-teal-dark font-medium"
                                             : "bg-surface border-sand hover:border-teal/40 text-ink-900 hover:shadow-sm"
@@ -442,8 +727,11 @@ export default function Itinerary() {
                             )}
                           </div>
                         </li>
+                        )}
+                        </SortableRow>
                       ))}
                     </ul>
+                    </SortableContext>
                     <NearbySection
                       dayItems={dayItems}
                       cityCoordinates={cityCoordinates}
@@ -452,8 +740,26 @@ export default function Itinerary() {
                   </div>
                 )}
               </div>
+              </DayDropZone>
             );
           })}
+
+          {/* The travelling copy under the cursor. Rendering the row's essence
+              rather than the whole card keeps the drag light. */}
+          <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.16,1,0.3,1)" }}>
+            {activeDragId ? (
+              <div className="card shadow-lift px-4 py-2.5 flex items-center gap-3 cursor-grabbing">
+                <GripVertical className="w-3.5 h-3.5 text-teal-dark shrink-0" />
+                <span className="text-xs font-mono text-teal-dark shrink-0">
+                  {items.find((i) => i._id === activeDragId)?.time}
+                </span>
+                <span className="text-sm font-semibold text-ink-900 truncate">
+                  {items.find((i) => i._id === activeDragId)?.activity}
+                </span>
+              </div>
+            ) : null}
+          </DragOverlay>
+          </DndContext>
 
           {!generating && items.length > 0 && !showForm && (
             <div className="flex flex-wrap items-center gap-4">
@@ -516,13 +822,9 @@ export default function Itinerary() {
                   <input name="est_cost" type="number" min="0" defaultValue="0" className="input" />
                 </label>
               </div>
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors"
-              >
-                {saving ? "Saving…" : "Save activity"}
-              </button>
+              <Button type="submit" variant="teal" loading={saving}>
+                Save activity
+              </Button>
             </form>
           )}
         </div>

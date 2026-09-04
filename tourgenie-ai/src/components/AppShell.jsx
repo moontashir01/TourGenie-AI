@@ -3,13 +3,17 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Compass, LayoutGrid, MapPinned, FileStack, Users, Settings, Wallet,
   MessageCircleMore, LogOut, Building2, Landmark, Menu, X, Languages,
-  Scale, Route as RouteIcon, Ticket, CalendarRange, ChevronRight, Plus, Map, RefreshCw,
+  Scale, Route as RouteIcon, Ticket, CalendarRange, ChevronRight, Plus, Map, RefreshCw, Search,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useCurrentTrip } from "../context/TripContext";
 import NotificationBell from "./NotificationBell";
 import ThemeToggle from "./ThemeToggle";
+import ChatDock from "./ChatDock";
+import CommandPalette from "./CommandPalette";
+import Overlay from "./ui/Overlay";
+import { StatusBadge } from "./ui/Badge";
 
 // The sidebar is grouped rather than a flat list because the destinations
 // are not peers: three of them are things you do before a trip exists, seven
@@ -54,13 +58,6 @@ const GROUPS = [
     ],
   },
 ];
-
-const STATUS_TONE = {
-  draft: "bg-sand text-ink-900/60",
-  planned: "bg-teal-light text-teal-dark",
-  active: "bg-gold/25 text-ink-800",
-  completed: "bg-surface text-ink-900/45 border border-sand",
-};
 
 // "15 – 18 Aug" for a trip inside one month, "28 Aug – 2 Sep" across two.
 function formatRange(start, end) {
@@ -134,7 +131,7 @@ function CurrentTripCard({ onNavigate }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-xs font-semibold text-ink-900/75">Trip didn't load</span>
-          <span className="block text-[11px] text-ink-900/55 leading-snug">Still open — tap to retry</span>
+          <span className="block text-2xs text-ink-900/55 leading-snug">Still open — tap to retry</span>
         </span>
       </button>
     );
@@ -154,7 +151,7 @@ function CurrentTripCard({ onNavigate }) {
           <span className="block text-xs font-semibold text-ink-900/70">
             {t("nav.no_trip_selected", "No trip selected")}
           </span>
-          <span className="block text-[11px] text-ink-900/45 leading-snug">
+          <span className="block text-2xs text-ink-900/45 leading-snug">
             {t("nav.choose_trip", "Choose one from your trips")}
           </span>
         </span>
@@ -168,30 +165,52 @@ function CurrentTripCard({ onNavigate }) {
     <Link
       to="/itinerary"
       onClick={onNavigate}
-      className="group block mx-1 mb-3 px-3 py-2.5 rounded-xl bg-surface border border-sand hover:border-teal/50 hover:shadow-soft transition-all"
+      className="group block mx-1 mb-3 px-3 py-2.5 rounded-xl bg-surface border border-sand hover:border-teal/50 hover:shadow-soft transition"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0">
           <span className="block font-display text-sm text-ink-900 truncate">
             {currentTrip.destination}
           </span>
-          <span className="block text-[11px] text-ink-900/50 truncate">
+          <span className="block text-2xs text-ink-900/50 truncate">
             {currentTrip.origin} → {currentTrip.destination}
           </span>
         </span>
-        <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide shrink-0 ${STATUS_TONE[status]}`}>
-          {t(`trip.status_${status}`, status)}
-        </span>
+        <StatusBadge status={status} label={t(`trip.status_${status}`, status)} className="shrink-0" />
       </div>
       <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-sand">
-        <span className="text-[11px] font-mono text-ink-900/45">
+        <span className="text-2xs font-mono text-ink-900/45">
           {formatRange(currentTrip.start_date, currentTrip.end_date)}
         </span>
-        <span className="text-[10px] text-ink-900/35 group-hover:text-teal-dark">
+        <span className="text-3xs text-ink-900/35 group-hover:text-teal-dark">
           {t("nav.change", "Change")}
         </span>
       </div>
     </Link>
+  );
+}
+
+// A shortcut nobody knows about may as well not exist, so the sidebar advertises
+// it. Clicking dispatches the same key event the palette already listens for,
+// which keeps the open/close logic in one place.
+function SearchHint() {
+  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || "");
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "k", metaKey: isMac, ctrlKey: !isMac, bubbles: true })
+        )
+      }
+      className="flex items-center gap-2 w-[calc(100%-0.5rem)] mx-1 mb-3 px-3 py-2 rounded-xl border border-sand bg-surface/60 hover:bg-surface hover:border-teal/40 text-left transition-colors group"
+    >
+      <Search className="w-3.5 h-3.5 text-ink-900/30 group-hover:text-teal-dark shrink-0" />
+      <span className="text-xs text-ink-900/40 flex-1">Search…</span>
+      <kbd className="text-3xs font-mono text-ink-900/35 border border-sand rounded px-1.5 py-0.5 bg-paper">
+        {isMac ? "⌘" : "Ctrl "}K
+      </kbd>
+    </button>
   );
 }
 
@@ -205,24 +224,24 @@ function NavLinks({ onNavigate }) {
         const muted = group.needsTrip && !currentTripId;
         return (
           <div key={group.key}>
-            <p className="px-4 mb-1 text-[10px] font-bold uppercase tracking-wider text-ink-900/30">
+            <p className="px-4 mb-1 text-3xs font-bold uppercase tracking-wider text-ink-900/30">
               {t(group.key, group.fallback)}
             </p>
 
             {muted && (
-              <p className="px-4 mb-1.5 text-[10px] text-ink-900/35 leading-snug">
+              <p className="px-4 mb-1.5 text-3xs text-ink-900/35 leading-snug">
                 {t("nav.pick_trip_hint", "Pick a trip to use these")}
               </p>
             )}
 
             <div className="flex flex-col gap-0.5">
               {group.links.map((l) => (
-                <NavLink
+                <NavLink viewTransition
                   key={l.to}
                   to={l.to}
                   onClick={onNavigate}
                   className={({ isActive }) =>
-                    `group relative flex items-center gap-3 px-4 py-1.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                    `group relative flex items-center gap-3 px-4 py-1.5 rounded-xl text-sm font-medium transition duration-fast ${
                       isActive
                         ? "bg-teal-light text-teal-dark shadow-soft"
                         : muted
@@ -235,7 +254,7 @@ function NavLinks({ onNavigate }) {
                     <>
                       {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-teal" />}
                       <l.icon
-                        className={`w-4 h-4 transition-transform duration-150 group-hover:scale-110 ${
+                        className={`w-4 h-4 transition-transform duration-fast group-hover:scale-110 ${
                           isActive ? "text-teal-dark" : muted ? "text-ink-900/25" : "text-ink-900/40 group-hover:text-teal-dark"
                         }`}
                         strokeWidth={1.75}
@@ -275,7 +294,7 @@ function UserFooter({ user, onLogout, onNavigate }) {
         <ThemeToggle />
       </div>
       {["moderator", "admin", "owner"].includes(user?.role) && (
-        <NavLink to="/admin" className={adminLinkClass} onClick={onNavigate}>
+        <NavLink viewTransition to="/admin" className={adminLinkClass} onClick={onNavigate}>
           <Settings className="w-4 h-4" strokeWidth={1.75} />
           {t("nav.admin", "Admin console")}
         </NavLink>
@@ -283,7 +302,7 @@ function UserFooter({ user, onLogout, onNavigate }) {
       <div className="flex items-center gap-1 px-1 py-1 mt-1 bg-surface/70 border border-sand rounded-xl">
         {/* The account card is the way into settings — clicking your own name
             is where people look for it, and a thirteenth nav link isn't. */}
-        <NavLink
+        <NavLink viewTransition
           to="/settings"
           onClick={onNavigate}
           title={t("nav.settings", "Account settings")}
@@ -322,6 +341,7 @@ function SidebarBody({ onNavigate }) {
       <div className="relative flex-1 min-h-0">
         <div className="h-full overflow-y-auto -mr-2 pr-2">
           <CurrentTripCard onNavigate={onNavigate} />
+          <SearchHint />
           <NavLinks onNavigate={onNavigate} />
         </div>
         <div className="pointer-events-none absolute bottom-0 inset-x-0 h-6 bg-gradient-to-t from-paper/90 to-transparent" />
@@ -330,7 +350,10 @@ function SidebarBody({ onNavigate }) {
   );
 }
 
-export default function AppShell({ children, title, subtitle }) {
+// `actions` is the page's own controls — the one or two buttons that belong
+// beside its title rather than floating at the top of its content, which is
+// where every page had been putting them.
+export default function AppShell({ children, title, subtitle, actions }) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -352,26 +375,30 @@ export default function AppShell({ children, title, subtitle }) {
         <UserFooter user={user} onLogout={handleLogout} />
       </aside>
 
-      {/* Mobile slide-over nav */}
-      {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-paper flex flex-col py-6 px-4 shadow-lift animate-fade-up">
-            <div className="flex items-center justify-between mb-5 shrink-0">
-              <Brand />
-              <button
-                onClick={() => setMobileOpen(false)}
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-900/50 hover:bg-surface"
-                aria-label={t("common.close", "Close")}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <SidebarBody onNavigate={() => setMobileOpen(false)} />
-            <UserFooter user={user} onLogout={handleLogout} onNavigate={() => setMobileOpen(false)} />
-          </aside>
+      {/* Mobile slide-over nav. containerClassName carries the md:hidden so
+          the scrim disappears at the breakpoint along with the panel. */}
+      <Overlay
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        variant="drawer-left"
+        size="xs"
+        label={t("nav.menu", "Menu")}
+        containerClassName="md:hidden"
+        className="flex flex-col py-6 px-4"
+      >
+        <div className="flex items-center justify-between mb-5 shrink-0">
+          <Brand />
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-900/50 hover:bg-surface"
+            aria-label={t("common.close", "Close")}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-      )}
+        <SidebarBody onNavigate={() => setMobileOpen(false)} />
+        <UserFooter user={user} onLogout={handleLogout} onNavigate={() => setMobileOpen(false)} />
+      </Overlay>
 
       <div className="flex-1 min-w-0">
         {/* Mobile top bar — the sidebar is hidden below md, this is the nav */}
@@ -395,14 +422,21 @@ export default function AppShell({ children, title, subtitle }) {
           </div>
         </div>
 
-        {(title || subtitle) && (
-          <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6">
-            {title && <h1 className="font-display text-2xl text-ink-900">{title}</h1>}
-            {subtitle && <p className="text-sm text-ink-900/60 mt-1">{subtitle}</p>}
+        {(title || subtitle || actions) && (
+          <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6 flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              {title && <h1 className="font-display text-2xl text-ink-900">{title}</h1>}
+              {subtitle && <p className="text-sm text-ink-900/60 mt-1">{subtitle}</p>}
+            </div>
+            {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
           </header>
         )}
         <main className="px-6 md:px-10 py-8 animate-fade-up">{children}</main>
       </div>
+
+      {/* Available from every authenticated page. */}
+      <CommandPalette />
+      <ChatDock />
     </div>
   );
 }

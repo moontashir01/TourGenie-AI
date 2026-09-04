@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { XCircle, Loader2, Armchair } from "lucide-react";
+import { XCircle, Armchair } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
 import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
 import { StatusPill } from "../../components/admin/UserDetail";
 import Drawer from "../../components/admin/Drawer";
+import Overlay from "../../components/ui/Overlay";
+import Button from "../../components/ui/Button";
 
 const money = (n) => `৳${Math.round(n || 0).toLocaleString()}`;
 const date = (d) => (d ? new Date(d).toLocaleDateString() : "—");
@@ -22,9 +24,7 @@ const STATUS_OPTIONS = [
 function CancelPrompt({ target, busy, onCancel, onConfirm }) {
   const [reason, setReason] = useState("");
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-md card p-6 animate-pop-in">
+    <Overlay open onClose={onCancel} size="md" label={`Cancel ${target.reference}`} dismissable={!busy} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">Cancel {target.reference}?</h3>
         <p className="text-sm text-ink-900/60 mb-4">
           {target.kind === "transport"
@@ -43,21 +43,14 @@ function CancelPrompt({ target, busy, onCancel, onConfirm }) {
           />
         </label>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="btn-secondary">
+          <Button variant="secondary" onClick={onCancel}>
             Keep it
-          </button>
-          <button
-            type="button"
-            disabled={busy || !reason.trim()}
-            onClick={() => onConfirm(reason.trim())}
-            className="inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50"
-          >
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+          </Button>
+          <Button variant="danger" loading={busy} disabled={!reason.trim()} onClick={() => onConfirm(reason.trim())}>
             Cancel booking
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }
 

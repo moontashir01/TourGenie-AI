@@ -49,7 +49,9 @@ export default function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [ringing, setRinging] = useState(false);
   const panelRef = useRef(null);
+  const previousUnread = useRef(0);
 
   const pollCount = useCallback(() => {
     notificationApi
@@ -63,6 +65,21 @@ export default function NotificationBell() {
     const id = setInterval(pollCount, POLL_MS);
     return () => clearInterval(id);
   }, [pollCount]);
+
+  // The poll is silent by design, so something arriving mid-session used to
+  // change a number nobody was looking at. One shake is enough to catch the
+  // eye — and only on an *increase*, or reading your notifications would make
+  // the bell wave at you on the way down.
+  useEffect(() => {
+    if (unread > previousUnread.current) {
+      setRinging(true);
+      const id = setTimeout(() => setRinging(false), 600);
+      previousUnread.current = unread;
+      return () => clearTimeout(id);
+    }
+    previousUnread.current = unread;
+    return undefined;
+  }, [unread]);
 
   // Click-away and Escape, so the panel behaves like a menu.
   useEffect(() => {
@@ -126,13 +143,16 @@ export default function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={toggle}
-        className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-900/60 hover:bg-surface hover:text-ink-900 hover:shadow-soft transition-all"
+        className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-900/60 hover:bg-surface hover:text-ink-900 hover:shadow-soft transition"
         aria-label={t("notification.title", "Notifications")}
       >
-        <Bell className="w-4 h-4 text-ink-900/40" strokeWidth={1.75} />
+        <Bell
+          className={`w-4 h-4 text-ink-900/40 origin-top ${ringing ? "animate-shake" : ""}`}
+          strokeWidth={1.75}
+        />
         {t("notification.title", "Notifications")}
         {unread > 0 && (
-          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-sunset text-white text-[10px] font-bold flex items-center justify-center animate-pop-in">
+          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-sunset text-white text-3xs font-bold flex items-center justify-center animate-pop-in">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -149,7 +169,7 @@ export default function NotificationBell() {
                 <button
                   onClick={markAll}
                   title={t("notification.mark_all_read", "Mark all as read")}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] text-ink-900/55 hover:text-teal-dark hover:bg-teal-light"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-2xs text-ink-900/55 hover:text-teal-dark hover:bg-teal-light"
                 >
                   <Check className="w-3 h-3" /> {t("notification.mark_all_read", "Mark all as read")}
                 </button>
@@ -195,10 +215,10 @@ export default function NotificationBell() {
                             <p className="text-xs font-semibold text-ink-900 leading-snug flex-1">{n.title}</p>
                             {!n.is_read && <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${tone.dot}`} />}
                           </div>
-                          <p className="text-[11px] text-ink-900/60 leading-relaxed mt-0.5 line-clamp-3">
+                          <p className="text-2xs text-ink-900/60 leading-relaxed mt-0.5 line-clamp-3">
                             {n.message}
                           </p>
-                          <p className="text-[10px] text-ink-900/35 mt-1">{timeAgo(n.created_at)}</p>
+                          <p className="text-3xs text-ink-900/35 mt-1">{timeAgo(n.created_at)}</p>
                         </div>
                       </button>
                     </li>

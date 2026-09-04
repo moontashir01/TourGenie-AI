@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { EyeOff, Eye, Trash2, Star, Loader2 } from "lucide-react";
+import { EyeOff, Eye, Trash2, Star } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import useAdminList from "../../hooks/useAdminList";
 import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
+import Overlay from "../../components/ui/Overlay";
+import Button from "../../components/ui/Button";
 
 // FR-23 — moderation.
 //
@@ -14,9 +16,7 @@ function ModeratePrompt({ target, busy, onCancel, onConfirm }) {
   const removing = target.action === "remove";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-md card p-6 animate-pop-in">
+    <Overlay open onClose={onCancel} size="md" label="Moderate this" dismissable={!busy} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">
           {removing ? "Remove this permanently?" : "Hide this from the feed?"}
         </h3>
@@ -40,21 +40,14 @@ function ModeratePrompt({ target, busy, onCancel, onConfirm }) {
           />
         </label>
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="btn-secondary">
+          <Button variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
-          <button
-            type="button"
-            disabled={busy || !reason.trim()}
-            onClick={() => onConfirm(reason.trim())}
-            className="inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-all disabled:opacity-50"
-          >
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+          </Button>
+          <Button variant="danger" loading={busy} disabled={!reason.trim()} onClick={() => onConfirm(reason.trim())}>
             {removing ? "Remove" : "Hide"}
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }
 
@@ -161,7 +154,7 @@ export default function Reviews() {
                     </td>
                     <td className="py-3">
                       <span
-                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                        className={`text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
                           p.is_hidden ? "bg-sunset-light text-sunset-dark" : "bg-teal-light text-teal-dark"
                         }`}
                       >
@@ -224,7 +217,7 @@ export default function Reviews() {
                     </td>
                     <td className="py-3">
                       <span
-                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                        className={`text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
                           r.is_hidden ? "bg-sunset-light text-sunset-dark" : "bg-teal-light text-teal-dark"
                         }`}
                       >

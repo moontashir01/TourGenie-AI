@@ -1,20 +1,18 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus, Loader2, X, Plane, AlertTriangle } from "lucide-react";
+import Button from "../components/ui/Button";
+import useCountUp from "../hooks/useCountUp";
+import { Plus, X, Plane, AlertTriangle } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import AppShell from "../components/AppShell";
+import { NoTripState } from "../components/ui/States";
 import Skeleton, { PanelSkeleton } from "../components/Skeleton";
+import { ChartTooltip } from "../components/charts";
+import { CATEGORY_COLORS, CHART_COLORS } from "../lib/chartTheme";
 import { expenseApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useLanguage } from "../context/LanguageContext";
 
-const categoryColors = {
-  Transport: "#1C8C82",
-  Hotel: "#EF8354",
-  Food: "#D9A441",
-  Attractions: "#146560",
-  Shopping: "#D96B3B",
-  Miscellaneous: "#8A7F6A",
-};
+const categoryColors = CATEGORY_COLORS;
 
 export default function Budget() {
   const { t } = useLanguage();
@@ -25,6 +23,9 @@ export default function Budget() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Which donut arc is hovered. Declared up here with the other hooks because
+  // the empty/loading branches below return early.
+  const [activeSlice, setActiveSlice] = useState(null);
 
   function load() {
     return Promise.all([expenseApi.budgetSummary(currentTripId), expenseApi.list(currentTripId)]).then(
@@ -71,10 +72,7 @@ export default function Budget() {
   if (!currentTripId) {
     return (
       <AppShell title={t("budget.title", "Budget & Expenses")}>
-        <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 mb-4">No trip selected yet.</p>
-          <Link to="/dashboard" className="text-sm font-semibold text-teal-dark hover:text-teal">← Go to your trips</Link>
-        </div>
+        <NoTripState what="Budget & expenses" />
       </AppShell>
     );
   }
@@ -99,17 +97,19 @@ export default function Budget() {
   const symbol = summary?.symbol || "৳";
   const categories = Object.entries(summary?.byCategory || {}).filter(([, amount]) => amount > 0);
   const total = categories.reduce((s, [, v]) => s + v, 0);
-  let cumulative = 0;
-  // Guarded against a zero total — dividing by it produced NaN in every
-  // stroke-dasharray and the donut silently vanished.
-  const segments =
-    total > 0
-      ? categories.map(([category, amount]) => {
-          const start = cumulative;
-          cumulative += amount;
-          return { category, amount, start, end: cumulative, color: categoryColors[category] || "#8A7F6A" };
-        })
-      : [];
+  // The server has more expense categories than the six named ones, and
+  // sending every extra to the same grey made "Sightseeing" and "Checkout"
+  // indistinguishable. Unmapped ones take the next palette colour that isn't
+  // already spoken for, so nothing collides with a named category's shade.
+  const spoken = new Set(categories.map(([c]) => categoryColors[c]).filter(Boolean));
+  const spare = CHART_COLORS.filter((c) => !spoken.has(c));
+  let unmapped = 0;
+  const segments = categories.map(([category, amount]) => ({
+    category,
+    amount,
+    color: categoryColors[category] || spare[unmapped++ % spare.length] || "#8A7F6A",
+  }));
+  const active = activeSlice != null ? segments[activeSlice] : null;
 
   const overBudget = summary?.over_budget;
   const spentPercent = summary?.budget ? Math.min((summary.spent / summary.budget) * 100, 100) : 0;
@@ -143,8 +143,16 @@ export default function Budget() {
       </div>
 
       <div className="w-full h-2 bg-sand rounded-full overflow-hidden mb-2 flex">
-        <div className={overBudget ? "h-full bg-sunset-dark" : "h-full bg-sunset"} style={{ width: `${spentPercent}%` }} />
-        {overBudget && <div className="h-full bg-sunset/40 border-l border-surface" style={{ width: `${overPercent}%` }} />}
+        <div
+          className={`h-full transition-[width] duration-slow ease-tg-out ${overBudget ? "bg-sunset-dark" : "bg-sunset"}`}
+          style={{ width: `${spentPercent}%` }}
+        />
+        {overBudget && (
+          <div
+            className="h-full bg-sunset/40 border-l border-surface transition-[width] duration-slow ease-tg-out"
+            style={{ width: `${overPercent}%` }}
+          />
+        )}
       </div>
       <p className="text-xs text-ink-900/50 mb-10">
         {symbol}{(summary?.logged_total || 0).toLocaleString()} logged ·{" "}
@@ -198,36 +206,74 @@ export default function Budget() {
           {segments.length === 0 ? (
             <p className="text-sm text-ink-900/50">No expenses logged yet.</p>
           ) : (
-            <div className="flex items-center gap-8">
-              <div className="relative w-40 h-40 shrink-0">
-                <svg viewBox="0 0 42 42" className="w-full h-full -rotate-90">
-                  <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#EFE7D6" strokeWidth="5" />
-                  {segments.map((s) => (
-                    <circle
-                      key={s.category}
-                      cx="21" cy="21" r="15.9"
-                      fill="transparent"
-                      stroke={s.color}
-                      strokeWidth="5"
-                      strokeLinecap="butt"
-                      strokeDasharray={`${((s.end - s.start) / total) * 100} ${100 - ((s.end - s.start) / total) * 100}`}
-                      strokeDashoffset={-((s.start / total) * 100)}
+            <div className="flex flex-col sm:flex-row items-center gap-8">
+              <div className="relative w-44 h-44 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={segments}
+                      dataKey="amount"
+                      nameKey="category"
+                      innerRadius="66%"
+                      outerRadius="100%"
+                      paddingAngle={segments.length > 1 ? 2 : 0}
+                      stroke="none"
+                      // Sweeps the arcs in on first paint; the slight
+                      // out-easing keeps it from feeling mechanical.
+                      animationBegin={120}
+                      animationDuration={800}
+                      animationEasing="ease-out"
+                      onMouseEnter={(_, index) => setActiveSlice(index)}
+                      onMouseLeave={() => setActiveSlice(null)}
+                    >
+                      {segments.map((s, i) => (
+                        <Cell
+                          key={s.category}
+                          fill={s.color}
+                          // The hovered arc stays full strength and the rest
+                          // recede, so the centre figure has an obvious owner.
+                          opacity={activeSlice === null || activeSlice === i ? 1 : 0.35}
+                          style={{ transition: "opacity 150ms ease-out", outline: "none" }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={<ChartTooltip formatter={(v) => `${symbol}${v.toLocaleString()}`} />}
+                      cursor={false}
                     />
-                  ))}
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[10px] uppercase tracking-wide text-ink-900/40 font-semibold">Spent</span>
-                  <span className="font-mono text-lg font-bold text-ink-900">{symbol}{total.toLocaleString()}</span>
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Sits inside the donut hole; pointer-events-none so it never
+                    steals the hover from the arcs underneath. */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-3xs uppercase tracking-wide text-ink-900/40 font-semibold">
+                    {active ? active.category : "Spent"}
+                  </span>
+                  <span className="font-mono text-lg font-bold text-ink-900">
+                    {symbol}{(active ? active.amount : total).toLocaleString()}
+                  </span>
+                  {active && (
+                    <span className="text-3xs text-ink-900/45 font-mono">
+                      {Math.round((active.amount / total) * 100)}%
+                    </span>
+                  )}
                 </div>
               </div>
-              <ul className="space-y-2.5 text-sm flex-1">
-                {segments.map((s) => (
-                  <li key={s.category} className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-ink-900/70">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
-                      {s.category}
+              <ul className="space-y-2.5 text-sm flex-1 w-full">
+                {segments.map((s, i) => (
+                  <li
+                    key={s.category}
+                    onMouseEnter={() => setActiveSlice(i)}
+                    onMouseLeave={() => setActiveSlice(null)}
+                    className={`flex items-center justify-between gap-3 rounded-lg px-2 -mx-2 py-1 cursor-default transition-colors ${
+                      activeSlice === i ? "bg-paper" : ""
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-ink-900/70 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                      <span className="truncate">{s.category}</span>
                     </span>
-                    <span className="font-mono text-ink-900">{symbol}{s.amount.toLocaleString()}</span>
+                    <span className="font-mono text-ink-900 shrink-0">{symbol}{s.amount.toLocaleString()}</span>
                   </li>
                 ))}
               </ul>
@@ -260,13 +306,9 @@ export default function Budget() {
                 <input name="amount" type="number" min="0" placeholder="Amount (BDT)" required className="input" />
                 <input name="date" type="date" className="input" />
               </div>
-              <button
-                type="submit"
-                disabled={saving}
-                className="w-full bg-teal hover:bg-teal-dark disabled:opacity-60 text-white font-semibold text-sm py-2.5 rounded-lg transition-colors"
-              >
-                {saving ? "Saving…" : "Save expense"}
-              </button>
+              <Button type="submit" variant="teal" loading={saving} fullWidth>
+                Save expense
+              </Button>
             </form>
           )}
 
@@ -299,10 +341,17 @@ export default function Budget() {
 
 function SummaryCard({ label, value, symbol, tone }) {
   const toneClass = { ink: "text-ink-900", sunset: "text-sunset-dark", teal: "text-teal-dark" }[tone];
+  // These three move whenever an expense is logged, and a figure that slides
+  // to its new value shows *that* it moved — which is the whole question a
+  // budget page is asked. tabular-nums stops the digits jittering on the way.
+  const shown = useCountUp(value);
   return (
     <div className="bg-surface border border-sand rounded-2xl p-6">
       <p className="text-xs font-medium text-ink-900/50 mb-2">{label}</p>
-      <p className={`font-mono text-2xl font-semibold ${toneClass}`}>{symbol}{value.toLocaleString()}</p>
+      <p className={`font-mono text-2xl font-semibold tabular-nums ${toneClass}`}>
+        {symbol}
+        {Math.round(shown).toLocaleString()}
+      </p>
     </div>
   );
 }

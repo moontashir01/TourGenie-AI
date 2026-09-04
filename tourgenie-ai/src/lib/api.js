@@ -196,6 +196,11 @@ export const itineraryApi = {
   remove: (tripId, itemId) => request(`/trips/${tripId}/itinerary/${itemId}`, { method: "DELETE" }),
   selectTransport: (tripId, itemId, payload) =>
     request(`/trips/${tripId}/itinerary/${itemId}/transport`, { method: "PUT", body: payload }),
+  // Drag-and-drop reordering. Sends every affected row's new {day, time} in
+  // one call and gets the whole re-sorted itinerary back, so the list can't
+  // land half-updated the way one-PATCH-per-item did.
+  reorder: (tripId, items) =>
+    request(`/trips/${tripId}/itinerary/reorder`, { method: "PATCH", body: { items } }),
 };
 
 export const expenseApi = {
@@ -369,6 +374,11 @@ export const adminApi = {
   // role changes, account deletion and exports carrying email addresses. It
   // is deliberately not cached: each of those prompts asks again.
   reauth: (password) => request("/admin/reauth", { method: "POST", body: { password } }),
+  // FR-24 — the rolled-up history behind the headline counters, for the charts.
+  analyticsTimeseries: (period = "month", limit) => {
+    const qs = new URLSearchParams({ period, ...(limit && { limit }) }).toString();
+    return request(`/admin/analytics/timeseries?${qs}`);
+  },
 
   analytics: () => request("/admin/analytics"),
   // The time series, from AnalyticsSnapshot rather than counted live.

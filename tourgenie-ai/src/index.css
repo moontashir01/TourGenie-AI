@@ -47,6 +47,49 @@
   color-scheme: dark;
 }
 
+/* ── Motion ───────────────────────────────────────────────────────────
+   Three durations, not a continuum. Everything the interface does is one
+   of three sizes of change, and picking per-element milliseconds is how a
+   site ends up feeling like several sites: a 300ms hover next to a 150ms
+   one reads as inconsistency, not nuance.
+
+   These are consumed from tailwind.config.js (the `animation` entries and
+   the duration-fast/base/slow, ease-tg-out utilities), so a timing change
+   here moves every animation in the app at once.
+
+   --tg-ease-out is the same curve `pop-in` already used — a fast start
+   that settles, which is what an element *arriving* should do. The
+   symmetric in-out is for things that leave or travel. */
+:root {
+  --tg-dur-fast: 120ms; /* hover, press, anything leaving */
+  --tg-dur-base: 220ms; /* enter, expand, dialogs */
+  --tg-dur-slow: 420ms; /* page and hero entrances */
+  --tg-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --tg-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --tg-stagger-step: 45ms; /* gap between siblings in a .stagger list */
+}
+
+/* Motion sensitivity is a vestibular condition, not a taste — for some
+   people the entrances below cause nausea. Everything still *happens*,
+   it just happens instantly.
+
+   Deliberately outside @layer so it outranks the utilities, and the delay
+   has to go too: a 0.01ms animation held behind a 400ms stagger delay is
+   still 400ms of an invisible element. -1ms puts it past its own end, so
+   `both` fill paints the final frame immediately. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: -1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -55,7 +98,7 @@
     @apply bg-paper text-ink-900 font-body antialiased;
     /* The theme flip is a whole-page repaint; easing it stops the switch
        reading as a flash. */
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color var(--tg-dur-base) ease, color var(--tg-dur-base) ease;
   }
   ::selection {
     @apply bg-sunset/30;
@@ -88,21 +131,21 @@
 
 @layer components {
   .input {
-    @apply w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/15 transition-all;
+    @apply w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/15 transition;
   }
   .card {
     @apply bg-surface border border-sand rounded-2xl shadow-soft;
   }
   .card-hover {
-    @apply transition-all duration-200 hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5;
+    @apply transition duration-base hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5;
   }
   /* text-ink-fixed, not text-ink-900: the sunset fill is the same orange in
      both themes, so its label has to stay dark ink in both. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-all shadow-sm hover:shadow-glow disabled:opacity-60 disabled:shadow-none active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition shadow-sm hover:shadow-glow disabled:opacity-60 disabled:shadow-none active:scale-[0.98];
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-surface border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition-all hover:shadow-soft active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 bg-surface border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition hover:shadow-soft active:scale-[0.98];
   }
   /* Loading placeholder with a light sweep. Size it with w-/h- utilities. */
   .skeleton {
@@ -165,6 +208,86 @@
     background-image:
       radial-gradient(ellipse 60% 55% at 75% 15%, rgba(239, 131, 84, 0.14), transparent 60%),
       radial-gradient(ellipse 50% 50% at 10% 90%, rgba(28, 140, 130, 0.16), transparent 60%);
+  }
+
+  /* A list whose children arrive one after another. One class on the
+     container instead of an index-derived inline delay on every row, which
+     is what the pages would otherwise have to compute.
+
+     The ladder stops at 12 and everything past it shares the last delay:
+     beyond about half a second the sequence stops reading as sequence and
+     starts reading as the page being slow, and a 40-row admin table would
+     otherwise take two seconds to finish appearing.
+
+     Children must not carry their own animate-* class — it would win on
+     specificity order and lose the delay. */
+  .stagger > * {
+    animation: fade-up var(--tg-dur-base) var(--tg-ease-out) both;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: calc(var(--tg-stagger-step) * 1);
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: calc(var(--tg-stagger-step) * 2);
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: calc(var(--tg-stagger-step) * 3);
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: calc(var(--tg-stagger-step) * 4);
+  }
+  .stagger > *:nth-child(6) {
+    animation-delay: calc(var(--tg-stagger-step) * 5);
+  }
+  .stagger > *:nth-child(7) {
+    animation-delay: calc(var(--tg-stagger-step) * 6);
+  }
+  .stagger > *:nth-child(8) {
+    animation-delay: calc(var(--tg-stagger-step) * 7);
+  }
+  .stagger > *:nth-child(9) {
+    animation-delay: calc(var(--tg-stagger-step) * 8);
+  }
+  .stagger > *:nth-child(10) {
+    animation-delay: calc(var(--tg-stagger-step) * 9);
+  }
+  .stagger > *:nth-child(11) {
+    animation-delay: calc(var(--tg-stagger-step) * 10);
+  }
+  .stagger > *:nth-child(n + 12) {
+    animation-delay: calc(var(--tg-stagger-step) * 11);
+  }
+
+  /* Pairs with animate-check-draw: the dash pattern the keyframe walks.
+     24 is the length of a tick drawn in a 24-unit lucide viewBox. */
+  .check-path {
+    stroke-dasharray: 24;
+  }
+}
+
+/* ── Route transitions ────────────────────────────────────────────────
+   The sidebar's NavLinks pass `viewTransition`, so React Router hands the
+   navigation to the View Transitions API where the browser has it and
+   navigates normally where it doesn't — nothing to feature-detect.
+
+   A cross-fade, deliberately, and nothing cleverer: the twelve destinations
+   share no common element to morph between, and a page sliding in from a
+   direction would be claiming a spatial relationship the nav doesn't have.
+   The outgoing page leaves at the fast step so the incoming one isn't kept
+   waiting behind it.
+
+   The reduced-motion guard above can't reach these — they are pseudo
+   elements on the document, not descendants of anything — so the whole
+   block is gated instead. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: fade-out var(--tg-dur-fast) var(--tg-ease-out) both;
+  }
+  ::view-transition-new(root) {
+    animation: fade-in var(--tg-dur-base) var(--tg-ease-out) both;
   }
 }
 

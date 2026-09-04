@@ -244,11 +244,11 @@ export default function RouteMap() {
                     <Marker key={s._id} position={[s.lat_lng.lat, s.lat_lng.lng]} icon={SERVICE_ICON}>
                       <Popup>
                         <span className="font-semibold">{s.name}</span>
-                        <div className="text-[11px] opacity-70 mt-0.5">
+                        <div className="text-2xs opacity-70 mt-0.5">
                           {s.subcategory || s.category}
                           {s.distance_m != null && ` · ${(s.distance_m / 1000).toFixed(1)} km`}
                         </div>
-                        {s.opening_hours && <div className="text-[11px] opacity-60">{s.opening_hours}</div>}
+                        {s.opening_hours && <div className="text-2xs opacity-60">{s.opening_hours}</div>}
                       </Popup>
                     </Marker>
                   ))}
@@ -311,7 +311,7 @@ export default function RouteMap() {
                       <button
                         key={v._id || i}
                         onClick={() => setVariantIndex(i)}
-                        className={`p-3 rounded-xl border text-left transition-all ${
+                        className={`p-3 rounded-xl border text-left transition ${
                           selected
                             ? "bg-surface border-teal shadow-soft ring-1 ring-teal/20"
                             : "bg-surface/60 border-sand hover:border-teal/30"
@@ -322,7 +322,7 @@ export default function RouteMap() {
                           <span className="text-sm font-semibold text-ink-900">
                             {label ? t(label.key, label.fallback) : v.variant}
                           </span>
-                          <span className="text-[10px] uppercase tracking-wide text-ink-900/40">{v.mode}</span>
+                          <span className="text-3xs uppercase tracking-wide text-ink-900/40">{v.mode}</span>
                           {selected && <span className="ml-auto w-2 h-2 rounded-full bg-teal" />}
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-900/65">
@@ -340,7 +340,7 @@ export default function RouteMap() {
                         </div>
                         {v.carbon_per_person_kg > 0 && (
                           <span
-                            className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-3xs font-semibold ${
                               CARBON_TONE[v.carbon_rating] || "bg-sand/50 text-ink-900/60"
                             }`}
                           >
@@ -349,7 +349,7 @@ export default function RouteMap() {
                           </span>
                         )}
                         {v.flight && (
-                          <p className="mt-1.5 text-[11px] text-ink-900/50">
+                          <p className="mt-1.5 text-2xs text-ink-900/50">
                             {v.flight.airline} {v.flight.flight_number} · {v.flight.depart_time}–{v.flight.arrive_time}
                             {v.flight.stops > 0 && ` · ${v.flight.stops} stop`}
                           </p>
@@ -377,7 +377,7 @@ export default function RouteMap() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-ink-900 leading-snug">{step.instruction}</p>
-                        <p className="text-[11px] text-ink-900/45 mt-0.5 font-mono">
+                        <p className="text-2xs text-ink-900/45 mt-0.5 font-mono">
                           {step.distance_km} km · {formatDuration(step.duration_min)}
                           {step.road && ` · ${step.road}`}
                         </p>
@@ -388,7 +388,7 @@ export default function RouteMap() {
               </section>
             )}
             {leg?.reversed && (
-              <p className="text-[11px] text-ink-900/45 -mt-3">
+              <p className="text-2xs text-ink-900/45 -mt-3">
                 This leg is the return direction of a recorded route, so step-by-step directions are not shown.
               </p>
             )}
@@ -398,7 +398,7 @@ export default function RouteMap() {
               <h2 className="font-display text-base text-ink-900 mb-1">
                 {t("route.nearby_services", "Nearby services")}
               </h2>
-              <p className="text-[11px] text-ink-900/45 mb-2">
+              <p className="text-2xs text-ink-900/45 mb-2">
                 Around {leg?.to?.name || "your destination"}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -440,12 +440,12 @@ export default function RouteMap() {
                       <MapPin className="w-3.5 h-3.5 text-gold shrink-0 mt-0.5" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-ink-900 truncate">{s.name}</p>
-                        <p className="text-[11px] text-ink-900/50">
+                        <p className="text-2xs text-ink-900/50">
                           {s.is_24h ? "Open 24 hours" : s.opening_hours || s.subcategory || s.category}
                         </p>
                       </div>
                       {s.distance_m != null && (
-                        <span className="text-[11px] font-mono text-ink-900/45 shrink-0">
+                        <span className="text-2xs font-mono text-ink-900/45 shrink-0">
                           {(s.distance_m / 1000).toFixed(1)} km
                         </span>
                       )}

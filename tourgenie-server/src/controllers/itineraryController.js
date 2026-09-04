@@ -371,17 +371,95 @@ export const getItinerary = asyncHandler(async (req, res) => {
   res.json({ items, city_coordinates });
 });
 
+// Only these may be set from a request body. Passing req.body straight to
+// findOneAndUpdate let a client rewrite trip_id (moving an item onto someone
+// else's trip), forge `source`, or set selected_transport_option without the
+// cost recalculation selectTransportOption does.
+const EDITABLE_ITEM_FIELDS = [
+  "day", "time", "end_time", "duration_min", "activity", "location",
+  "city", "from_city", "to_city", "est_cost", "category", "day_theme",
+  "notes", "weather_dependent", "is_locked", "is_completed",
+];
+
+function pickEditableFields(body = {}) {
+  const update = {};
+  for (const field of EDITABLE_ITEM_FIELDS) {
+    if (body[field] !== undefined) update[field] = body[field];
+  }
+  return update;
+}
+
 export const updateItineraryItem = asyncHandler(async (req, res) => {
   const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
+  const update = pickEditableFields(req.body);
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ message: "No editable fields supplied" });
+  }
+
   const item = await ItineraryItem.findOneAndUpdate(
     { _id: req.params.itemId, trip_id: trip._id },
-    req.body,
+    update,
     { new: true, runValidators: true }
   );
   if (!item) return res.status(404).json({ message: "Itinerary item not found" });
   res.json({ item });
+});
+
+// Drag-and-drop reordering. The client sends the whole affected set in its
+// new arrangement and gets the re-sorted itinerary back, so a reorder is one
+// atomic round trip rather than one PATCH per moved row — which raced with
+// itself and left the list half-updated when a drag touched several days.
+//
+// Times must arrive zero-padded: getItinerary sorts on `time` as a string,
+// so "9:00" would sort after "14:00" and silently corrupt the day's order.
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export const reorderItineraryItems = asyncHandler(async (req, res) => {
+  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+  const { items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ message: "items must be a non-empty array" });
+  }
+  if (items.length > 300) {
+    return res.status(400).json({ message: "Too many items in one reorder" });
+  }
+
+  const ops = [];
+  for (const entry of items) {
+    if (!entry?._id) {
+      return res.status(400).json({ message: "Every item needs an _id" });
+    }
+    const day = Number(entry.day);
+    if (!Number.isInteger(day) || day < 1) {
+      return res.status(400).json({ message: `Invalid day for item ${entry._id}` });
+    }
+    if (typeof entry.time !== "string" || !HHMM.test(entry.time)) {
+      return res.status(400).json({ message: `Invalid time for item ${entry._id} — expected zero-padded HH:MM` });
+    }
+    ops.push({
+      updateOne: {
+        // trip_id in the filter is what stops an id from another traveler's
+        // trip being dragged into this one.
+        filter: { _id: entry._id, trip_id: trip._id },
+        update: { $set: { day, time: entry.time } },
+      },
+    });
+  }
+
+  const result = await ItineraryItem.bulkWrite(ops);
+  if (result.matchedCount === 0) {
+    return res.status(404).json({ message: "None of those items belong to this trip" });
+  }
+
+  const updated = await ItineraryItem.find({ trip_id: trip._id })
+    .sort({ day: 1, time: 1 })
+    .populate("attraction_id", "name lat_lng city");
+
+  res.json({ items: updated, matched: result.matchedCount, modified: result.modifiedCount });
 });
 
 export const deleteItineraryItem = asyncHandler(async (req, res) => {

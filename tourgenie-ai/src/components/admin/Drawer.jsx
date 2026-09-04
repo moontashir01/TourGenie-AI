@@ -1,62 +1,28 @@
-import { useEffect } from "react";
-import { X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import Overlay, { OverlayHeader } from "../ui/Overlay";
 
 // A side panel for the detail views. A drawer rather than a route because
 // admin work is a stream of lookups: you open a traveller, read it, close it
 // and carry on down the list you were already scrolling.
+//
+// The scrim, the Escape key, the scroll lock and the focus handling all moved
+// to Overlay — this drawer used to own the first three and none of the
+// fourth, and it was the only one of the twelve overlays that even tried.
+// What is left here is the shape of the panel's contents.
 export default function Drawer({ open, title, subtitle, loading, onClose, children }) {
-  // Escape closes it, and the page behind it stops scrolling while it is up.
-  useEffect(() => {
-    if (!open) return undefined;
-    function onKey(e) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previous;
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="relative w-full max-w-2xl bg-paper border-l border-sand shadow-lift overflow-y-auto animate-fade-up"
-      >
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 px-6 py-4 bg-paper/95 backdrop-blur border-b border-sand">
-          <div className="min-w-0">
-            <h2 className="font-display text-xl text-ink-900 truncate">{title}</h2>
-            {subtitle && <p className="text-sm text-ink-900/55 truncate">{subtitle}</p>}
+    <Overlay open={open} onClose={onClose} variant="drawer" size="xl" label={title}>
+      <OverlayHeader title={title} subtitle={subtitle} onClose={onClose} sticky />
+      <div className="px-6 py-5">
+        {loading ? (
+          <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-ink-900 hover:bg-sand/50 shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </header>
-
-        <div className="px-6 py-5">
-          {loading ? (
-            <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-            </div>
-          ) : (
-            children
-          )}
-        </div>
-      </aside>
-    </div>
+        ) : (
+          children
+        )}
+      </div>
+    </Overlay>
   );
 }
 
@@ -76,7 +42,7 @@ export function DrawerSection({ title, count, empty, children }) {
 export function Field({ label, children }) {
   return (
     <div>
-      <dt className="text-[11px] text-ink-900/45">{label}</dt>
+      <dt className="text-2xs text-ink-900/45">{label}</dt>
       <dd className="text-sm text-ink-900 break-words">{children ?? "—"}</dd>
     </div>
   );

@@ -36,13 +36,13 @@ function Changes({ before, after }) {
   return (
     <div className="space-y-0.5">
       {keys.slice(0, 4).map((key) => (
-        <p key={key} className="text-[11px] text-ink-900/60 font-mono truncate max-w-xs">
+        <p key={key} className="text-2xs text-ink-900/60 font-mono truncate max-w-xs">
           <span className="text-ink-900/40">{key}:</span>{" "}
           {before?.[key] !== undefined && <span className="line-through opacity-60">{format(before[key])}</span>}{" "}
           {after?.[key] !== undefined && <span>{format(after[key])}</span>}
         </p>
       ))}
-      {keys.length > 4 && <p className="text-[11px] text-ink-900/40">+{keys.length - 4} more</p>}
+      {keys.length > 4 && <p className="text-2xs text-ink-900/40">+{keys.length - 4} more</p>}
     </div>
   );
 }
@@ -98,7 +98,7 @@ export default function Activity() {
                     <span className="block text-ink-900/35 capitalize">{row.actor_role}</span>
                   </td>
                   <td className="py-3">
-                    <span className={`text-[11px] font-semibold px-2 py-1 rounded-full font-mono ${toneFor(row.action)}`}>
+                    <span className={`text-2xs font-semibold px-2 py-1 rounded-full font-mono ${toneFor(row.action)}`}>
                       {row.action}
                     </span>
                   </td>

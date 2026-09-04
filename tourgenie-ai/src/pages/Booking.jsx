@@ -263,7 +263,7 @@ export default function Booking() {
                     <button
                       key={o._id}
                       onClick={() => setSelectedId(isSelected ? null : o._id)}
-                      className={`w-full p-4 rounded-xl border text-left transition-all ${
+                      className={`w-full p-4 rounded-xl border text-left transition ${
                         isSelected
                           ? "bg-surface border-teal shadow-soft ring-1 ring-teal/20"
                           : "bg-surface/70 border-sand hover:border-teal/30"
@@ -277,7 +277,7 @@ export default function Booking() {
                           <div className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-semibold text-ink-900">{o.operator}</span>
                             {o.service_class && (
-                              <span className="text-[11px] text-ink-900/50">{o.service_class}</span>
+                              <span className="text-2xs text-ink-900/50">{o.service_class}</span>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-ink-900/65">
@@ -295,12 +295,12 @@ export default function Booking() {
                             </span>
                           </div>
                           {o.boarding_point && (
-                            <p className="text-[11px] text-ink-900/45 mt-1">From {o.boarding_point}</p>
+                            <p className="text-2xs text-ink-900/45 mt-1">From {o.boarding_point}</p>
                           )}
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-display text-lg text-ink-900">৳{o.fare.toLocaleString()}</p>
-                          <p className="text-[10px] text-ink-900/45">per passenger</p>
+                          <p className="text-3xs text-ink-900/45">per passenger</p>
                         </div>
                       </div>
                     </button>
@@ -333,14 +333,14 @@ export default function Booking() {
                         const gap = aisleAfter(availability.layout);
                         return (
                           <div key={i} className="flex items-center gap-1.5">
-                            <span className="w-5 text-[10px] font-mono text-ink-900/30 shrink-0">{i + 1}</span>
+                            <span className="w-5 text-3xs font-mono text-ink-900/30 shrink-0">{i + 1}</span>
                             {seats.map((seat, j) => (
                               <span key={seat.label} className="flex items-center">
                                 <button
                                   onClick={() => toggleSeat(seat.label, seat.taken)}
                                   disabled={seat.taken}
                                   title={seat.taken ? "Already booked" : seat.label}
-                                  className={`w-9 h-8 rounded-md text-[10px] font-mono transition-colors ${
+                                  className={`w-9 h-8 rounded-md text-3xs font-mono transition-colors ${
                                     seat.taken
                                       ? "bg-sand/60 text-ink-900/25 cursor-not-allowed line-through"
                                       : chosenSeats.includes(seat.label)
@@ -357,7 +357,7 @@ export default function Booking() {
                         );
                       })}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-3 text-[10px] text-ink-900/45">
+                    <div className="flex flex-wrap items-center gap-3 mt-3 text-3xs text-ink-900/45">
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-paper border border-sand" /> Free</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-teal" /> Yours</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-sand/60" /> Taken</span>
@@ -386,7 +386,7 @@ export default function Booking() {
                           <div className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-mono font-bold text-sm text-ink-900">{b.reference || "—"}</span>
                             <span
-                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                              className={`text-3xs px-2 py-0.5 rounded-full font-semibold ${
                                 b.status === "cancelled"
                                   ? "bg-sand text-ink-900/50"
                                   : "bg-teal-light text-teal-dark"
@@ -401,7 +401,7 @@ export default function Booking() {
                             {b.journey?.to_city || b.transport_id?.to_city} ·{" "}
                             {b.journey?.depart_time || b.transport_id?.depart_time}
                           </p>
-                          <p className="text-[11px] text-ink-900/45 mt-0.5">
+                          <p className="text-2xs text-ink-900/45 mt-0.5">
                             {b.passengers.length} passenger{b.passengers.length > 1 ? "s" : ""} · seats{" "}
                             {b.seats.join(", ")} · ৳{b.total_fare.toLocaleString()}
                           </p>
@@ -433,11 +433,11 @@ export default function Booking() {
               {passengers.map((p, i) => (
                 <div key={i} className="p-3 bg-paper border border-sand rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-900/40">
+                    <span className="text-2xs font-semibold uppercase tracking-wide text-ink-900/40">
                       Passenger {i + 1}
                     </span>
                     {chosenSeats[i] && (
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-light text-teal-dark">
+                      <span className="text-3xs font-mono px-1.5 py-0.5 rounded bg-teal-light text-teal-dark">
                         {chosenSeats[i]}
                       </span>
                     )}
@@ -504,13 +504,13 @@ export default function Booking() {
             </button>
 
             {!selected && (
-              <p className="mt-2 text-[11px] text-ink-900/45 text-center">Pick a departure first.</p>
+              <p className="mt-2 text-2xs text-ink-900/45 text-center">Pick a departure first.</p>
             )}
             {selected && !namesFilled && (
-              <p className="mt-2 text-[11px] text-ink-900/45 text-center">Every passenger needs a name.</p>
+              <p className="mt-2 text-2xs text-ink-900/45 text-center">Every passenger needs a name.</p>
             )}
             {selected && namesFilled && !seatsOk && (
-              <p className="mt-2 text-[11px] text-sunset-dark text-center">
+              <p className="mt-2 text-2xs text-sunset-dark text-center">
                 Pick one seat per passenger, or none to auto-assign.
               </p>
             )}

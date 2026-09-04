@@ -259,7 +259,7 @@ export default function Settings() {
                 </Field>
                 <Field label="Email" icon={Mail}>
                   <input type="email" value={user.email} disabled className="input opacity-60 cursor-not-allowed" />
-                  <span className="text-[11px] text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-900/40 mt-1 block">
                     Your email is your login — it can't be changed here.
                   </span>
                 </Field>
@@ -282,7 +282,7 @@ export default function Settings() {
                     placeholder="Dhaka"
                     className="input"
                   />
-                  <span className="text-[11px] text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-900/40 mt-1 block">
                     Pre-fills the "travelling from" box when you plan a trip.
                   </span>
                 </Field>
@@ -320,7 +320,7 @@ export default function Settings() {
                       </option>
                     ))}
                   </select>
-                  <span className="text-[11px] text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-900/40 mt-1 block">
                     Saved to your account, so it follows you to another device.
                   </span>
                 </Field>
@@ -352,7 +352,7 @@ export default function Settings() {
                       </option>
                     ))}
                   </select>
-                  <span className="text-[11px] text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-900/40 mt-1 block">
                     The currency your budget is entered in. Costs are still stored and totalled in BDT.
                   </span>
                 </Field>
@@ -369,7 +369,7 @@ export default function Settings() {
                         type="button"
                         onClick={() => setPrefs({ ...prefs, default_budget_tier: tier.value })}
                         aria-pressed={active}
-                        className={`text-left px-3.5 py-3 rounded-xl border transition-all ${
+                        className={`text-left px-3.5 py-3 rounded-xl border transition ${
                           active
                             ? "border-teal bg-teal-light shadow-soft"
                             : "border-sand bg-paper hover:border-teal/40"
@@ -378,7 +378,7 @@ export default function Settings() {
                         <span className={`block text-sm font-semibold ${active ? "text-teal-dark" : "text-ink-900"}`}>
                           {tier.label}
                         </span>
-                        <span className="block text-[11px] text-ink-900/50 leading-snug mt-0.5">{tier.hint}</span>
+                        <span className="block text-2xs text-ink-900/50 leading-snug mt-0.5">{tier.hint}</span>
                       </button>
                     );
                   })}
@@ -398,7 +398,7 @@ export default function Settings() {
                         type="button"
                         onClick={() => toggleInterest(interest)}
                         aria-pressed={active}
-                        className={`text-sm px-3.5 py-1.5 rounded-full border transition-all ${
+                        className={`text-sm px-3.5 py-1.5 rounded-full border transition ${
                           active
                             ? "bg-ink-900 border-ink-900 text-paper"
                             : "bg-paper border-sand text-ink-900/70 hover:border-teal/50"
@@ -431,7 +431,7 @@ export default function Settings() {
                     type="button"
                     onClick={() => setTheme(value)}
                     aria-pressed={active}
-                    className={`text-left px-3.5 py-3 rounded-xl border transition-all ${
+                    className={`text-left px-3.5 py-3 rounded-xl border transition ${
                       active ? "border-teal bg-teal-light shadow-soft" : "border-sand bg-paper hover:border-teal/40"
                     }`}
                   >
@@ -442,13 +442,13 @@ export default function Settings() {
                     <span className={`block text-sm font-semibold ${active ? "text-teal-dark" : "text-ink-900"}`}>
                       {label}
                     </span>
-                    <span className="block text-[11px] text-ink-900/50 leading-snug mt-0.5">{hint}</span>
+                    <span className="block text-2xs text-ink-900/50 leading-snug mt-0.5">{hint}</span>
                   </button>
                 );
               })}
             </div>
             {theme === "system" && (
-              <p className="text-[11px] text-ink-900/45 mt-3">
+              <p className="text-2xs text-ink-900/45 mt-3">
                 Your device is currently asking for {resolved} mode.
               </p>
             )}
@@ -529,7 +529,7 @@ export default function Settings() {
                   />
                 </Field>
               </div>
-              <p className="text-[11px] text-ink-900/40">
+              <p className="text-2xs text-ink-900/40">
                 At least 6 characters. Changing it cancels any reset code you've been emailed.
               </p>
               <button type="submit" disabled={passwordState.saving} className="btn-primary">

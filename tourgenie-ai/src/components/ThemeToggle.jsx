@@ -29,13 +29,13 @@ export default function ThemeToggle({ tone = "app", className = "" }) {
           makes the button flicker on every press. */}
       <span className="relative w-4 h-4">
         <Sun
-          className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${
+          className={`absolute inset-0 w-4 h-4 transition duration-base ${
             isDark ? "opacity-0 -rotate-90 scale-75" : "opacity-100 rotate-0 scale-100"
           }`}
           strokeWidth={1.75}
         />
         <Moon
-          className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${
+          className={`absolute inset-0 w-4 h-4 transition duration-base ${
             isDark ? "opacity-100 rotate-0 scale-100" : "opacity-0 rotate-90 scale-75"
           }`}
           strokeWidth={1.75}

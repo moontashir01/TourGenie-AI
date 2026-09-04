@@ -4,6 +4,7 @@ import {
   generateItinerary,
   getItinerary,
   updateItineraryItem,
+  reorderItineraryItems,
   deleteItineraryItem,
   selectTransportOption,
 } from "../controllers/itineraryController.js";
@@ -19,6 +20,9 @@ const router = Router({ mergeParams: true });
 router.post("/trips/:tripId/itinerary/generate", protect, generateAIItinerary);
 router.post("/trips/:tripId/itinerary", protect, generateItinerary);
 router.get("/trips/:tripId/itinerary", protect, getItinerary);
+// Must precede the /:itemId PATCH below — Express matches in order, so the
+// parameterised route would otherwise capture "reorder" as an item id.
+router.patch("/trips/:tripId/itinerary/reorder", protect, reorderItineraryItems);
 router.patch("/trips/:tripId/itinerary/:itemId", protect, updateItineraryItem);
 router.delete("/trips/:tripId/itinerary/:itemId", protect, deleteItineraryItem);
 router.put("/trips/:tripId/itinerary/:itemId/transport", protect, selectTransportOption);

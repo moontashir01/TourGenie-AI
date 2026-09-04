@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import Overlay from "./ui/Overlay";
 import { X, BedDouble, Users, CalendarRange, Loader2, Check, CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { hotelBookingApi } from "../lib/api";
 import Money from "./Money";
@@ -30,18 +30,6 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
   const [confirmation, setConfirmation] = useState(null);
 
   const nights = nightsBetween(checkIn, checkOut);
-
-  // Escape closes it, and the page behind stays put while it's open.
-  useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previous;
-    };
-  }, [onClose]);
 
   useEffect(() => {
     if (!checkIn || !checkOut || nights < 1) {
@@ -98,11 +86,8 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
     }
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-
-      <div className="relative w-full sm:max-w-lg max-h-[92vh] overflow-y-auto bg-paper rounded-t-2xl sm:rounded-2xl shadow-lift animate-fade-up">
+  return (
+    <Overlay open onClose={onClose} variant="adaptive" size="lg" label={hotel.name}>
         <header className="sticky top-0 z-10 flex items-start justify-between gap-3 px-5 py-4 bg-paper/95 backdrop-blur border-b border-sand">
           <div className="min-w-0">
             <h2 className="font-display text-lg text-ink-900 truncate">{hotel.name}</h2>
@@ -155,7 +140,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
               </div>
             </dl>
 
-            <p className="mt-3 text-[11px] text-ink-900/55 leading-relaxed">
+            <p className="mt-3 text-2xs text-ink-900/55 leading-relaxed">
               Check-in from {confirmation.booking.property.checkin_time}, check-out by{" "}
               {confirmation.booking.property.checkout_time}.
               {confirmation.booking.property.cancellation_policy
@@ -185,25 +170,25 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
             {/* Dates */}
             <div>
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
                 <CalendarRange className="w-3 h-3" /> Stay
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="block text-[11px] text-ink-900/55 mb-1">Check in</span>
+                  <span className="block text-2xs text-ink-900/55 mb-1">Check in</span>
                   <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="input" />
                 </label>
                 <label className="block">
-                  <span className="block text-[11px] text-ink-900/55 mb-1">Check out</span>
+                  <span className="block text-2xs text-ink-900/55 mb-1">Check out</span>
                   <input type="date" value={checkOut} min={checkIn} onChange={(e) => setCheckOut(e.target.value)} className="input" />
                 </label>
               </div>
-              {nights < 1 && <p className="mt-1 text-[11px] text-sunset-dark">Check-out has to be after check-in.</p>}
+              {nights < 1 && <p className="mt-1 text-2xs text-sunset-dark">Check-out has to be after check-in.</p>}
             </div>
 
             {/* Rooms */}
             <div>
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
                 <BedDouble className="w-3 h-3" /> Room
               </p>
               {loading ? (
@@ -221,7 +206,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                         key={r.name}
                         onClick={() => !soldOut && setRoomType(r.name)}
                         disabled={soldOut}
-                        className={`w-full p-3 rounded-xl border text-left transition-all ${
+                        className={`w-full p-3 rounded-xl border text-left transition ${
                           soldOut
                             ? "bg-sand/30 border-sand text-ink-900/35 cursor-not-allowed"
                             : r.name === roomType
@@ -235,7 +220,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                             <Money bdt={r.price_per_night} local={localCurrency} localClassName="text-xs" />
                           </span>
                         </div>
-                        <p className="text-[11px] text-ink-900/55 mt-0.5">
+                        <p className="text-2xs text-ink-900/55 mt-0.5">
                           Sleeps {r.capacity}
                           {r.beds ? ` · ${r.beds}` : ""}
                           {r.breakfast_included ? " · breakfast included" : ""}
@@ -266,7 +251,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
             {/* Guests */}
             <div>
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
                 <Users className="w-3 h-3" /> Guests
                 {room && <span className="font-normal normal-case tracking-normal text-ink-900/40">· sleeps {capacity}</span>}
               </p>
@@ -291,7 +276,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                   + Add guest
                 </button>
                 {namedGuests.length > capacity && (
-                  <span className="text-[11px] text-sunset-dark">
+                  <span className="text-2xs text-sunset-dark">
                     {namedGuests.length} guests need more than {rooms} room{rooms > 1 ? "s" : ""}.
                   </span>
                 )}
@@ -299,7 +284,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
             </div>
 
             <label className="block">
-              <span className="block text-[11px] font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <span className="block text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
                 Special requests
               </span>
               <textarea
@@ -332,8 +317,6 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
             </button>
           </div>
         )}
-      </div>
-    </div>,
-    document.body
+    </Overlay>
   );
 }

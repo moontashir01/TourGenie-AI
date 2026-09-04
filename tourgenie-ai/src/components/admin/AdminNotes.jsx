@@ -111,7 +111,7 @@ export default function AdminNotes({ targetType, targetId }) {
               } ${busyId === note._id ? "opacity-50" : ""}`}
             >
               <p className="text-ink-900/80 whitespace-pre-wrap break-words">{note.body}</p>
-              <div className="flex items-center gap-2 mt-1.5 text-[11px] text-ink-900/45">
+              <div className="flex items-center gap-2 mt-1.5 text-2xs text-ink-900/45">
                 <span>{note.author_name || note.author_email}</span>
                 <span>·</span>
                 <span>{when(note.created_at)}</span>

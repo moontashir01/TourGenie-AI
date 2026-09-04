@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Button from "../../components/ui/Button";
 import { Loader2, Plus, Pencil, Trash2, X } from "lucide-react";
 import { adminApi } from "../../lib/api";
 
@@ -111,9 +112,9 @@ export default function Attractions() {
             <input type="number" step="any" required placeholder="Longitude" value={form.lng} onChange={(e) => setForm({ ...form, lng: e.target.value })} className="input" />
           </div>
           <input placeholder="Open hours (e.g. 9:00 AM - 5:00 PM)" value={form.open_hours} onChange={(e) => setForm({ ...form, open_hours: e.target.value })} className="input" />
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-white font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
-            {saving ? "Saving…" : editing._id ? "Save changes" : "Create attraction"}
-          </button>
+          <Button type="submit" variant="teal" loading={saving} className="self-start">
+            {editing._id ? "Save changes" : "Create attraction"}
+          </Button>
         </form>
       )}
 

@@ -176,7 +176,7 @@ export default function Users() {
                       >
                         {u.name}
                       </button>
-                      {self && <span className="text-[11px] text-ink-900/40 ml-1.5">(you)</span>}
+                      {self && <span className="text-2xs text-ink-900/40 ml-1.5">(you)</span>}
                     </td>
                     <td className="py-3 text-ink-900/70">{u.email}</td>
                     <td className="py-3">
@@ -194,7 +194,7 @@ export default function Users() {
                         </select>
                       ) : (
                         <span
-                          className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${ROLE_TONE[u.role] || ROLE_TONE.traveler}`}
+                          className={`text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${ROLE_TONE[u.role] || ROLE_TONE.traveler}`}
                         >
                           {u.role}
                         </span>
@@ -202,7 +202,7 @@ export default function Users() {
                     </td>
                     <td className="py-3">
                       <span
-                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                        className={`text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
                           u.deleted_at
                             ? "bg-sunset-light text-sunset-dark"
                             : u.is_active

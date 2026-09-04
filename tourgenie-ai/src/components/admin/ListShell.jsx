@@ -61,7 +61,7 @@ export function AdminToolbar({ list, placeholder = "Search…", children }) {
             placeholder={placeholder}
             className="bg-transparent text-sm text-ink-900 py-2 w-full focus:outline-none placeholder:text-ink-900/30"
           />
-          <kbd className="hidden sm:block text-[10px] text-ink-900/30 border border-sand rounded px-1.5 py-0.5 shrink-0">
+          <kbd className="hidden sm:block text-3xs text-ink-900/30 border border-sand rounded px-1.5 py-0.5 shrink-0">
             /
           </kbd>
         </label>

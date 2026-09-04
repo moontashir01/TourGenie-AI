@@ -1,18 +1,12 @@
 import { useState } from "react";
 import { adminApi } from "../../lib/api";
 import useAdminList from "../../hooks/useAdminList";
+import { StatusBadge } from "../../components/ui/Badge";
 import { AdminToolbar, AdminSelect, Pager, ListState, ErrorBanner } from "../../components/admin/ListShell";
 import TripDetail from "../../components/admin/TripDetail";
 
 const money = (n) => `৳${Math.round(n || 0).toLocaleString()}`;
 const date = (d) => (d ? new Date(d).toLocaleDateString() : "—");
-
-const STATUS_TONE = {
-  draft: "bg-sand text-ink-900/60",
-  planned: "bg-teal-light text-teal-dark",
-  active: "bg-gold/20 text-ink-800",
-  completed: "bg-surface text-ink-900/45 border border-sand",
-};
 
 // Trip oversight. The list answers "what is being planned"; the row opens the
 // whole trip, including which AI wrote the itinerary and whether the fare on
@@ -72,11 +66,7 @@ export default function Trips() {
                     {date(t.start_date)} – {date(t.end_date)}
                   </td>
                   <td className="py-3">
-                    <span
-                      className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${STATUS_TONE[t.status] || STATUS_TONE.draft}`}
-                    >
-                      {t.status}
-                    </span>
+                    <StatusBadge status={t.status} size="md" />
                   </td>
                   <td className="py-3 font-mono text-ink-900/70">{money(t.budget)}</td>
                   <td className="py-3 text-xs text-ink-900/45 capitalize">{t.itinerary_source || "—"}</td>

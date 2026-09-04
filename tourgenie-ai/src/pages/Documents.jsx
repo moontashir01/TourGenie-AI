@@ -134,7 +134,7 @@ function PackingPanel() {
               </p>
               <div className="w-full h-1.5 bg-paper rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-teal transition-all duration-300"
+                  className="h-full bg-teal transition duration-base"
                   style={{ width: `${totals.total ? (totals.done / totals.total) * 100 : 0}%` }}
                 />
               </div>
@@ -161,7 +161,7 @@ function PackingPanel() {
                           {item.name}
                           {item.qty > 1 && <span className="text-ink-900/40 font-mono text-xs"> ×{item.qty}</span>}
                           {item.essential && !item.checked && (
-                            <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-sunset-dark">
+                            <span className="ml-1.5 text-3xs font-semibold uppercase tracking-wide text-sunset-dark">
                               essential
                             </span>
                           )}
@@ -313,7 +313,7 @@ export default function Documents() {
                       <p className="text-sm font-semibold text-ink-900 truncate capitalize">{d.title || d.type}</p>
                       <p className="text-xs text-ink-900/50 capitalize">{d.type}</p>
                       {badge && (
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full mt-1.5 ${badge.tone}`}>
+                        <span className={`inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full mt-1.5 ${badge.tone}`}>
                           <CalendarClock className="w-3 h-3" /> {badge.label}
                         </span>
                       )}

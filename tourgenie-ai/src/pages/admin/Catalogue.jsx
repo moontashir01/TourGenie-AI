@@ -3,6 +3,8 @@ import { Plus, Pencil, Trash2, RotateCcw, X, Loader2, AlertTriangle, Database } 
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import useAdminList from "../../hooks/useAdminList";
+import Overlay from "../../components/ui/Overlay";
+import Button from "../../components/ui/Button";
 import {
   AdminToolbar,
   AdminSelect,
@@ -431,9 +433,7 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
   const held = (refs?.references || []).filter((r) => r.count > 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-md card p-6 animate-pop-in">
+    <Overlay open onClose={onCancel} size="md" label={`Delete ${label}`} dismissable={!busy} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">Delete {label}?</h3>
         <p className="text-sm text-ink-900/60 mb-4">
           It is hidden from the app and can be restored from the Deleted filter.
@@ -487,7 +487,7 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
               placeholder={label}
               className="input font-mono"
             />
-            <span className="text-[11px] text-ink-900/40 mt-1 block">
+            <span className="text-2xs text-ink-900/40 mt-1 block">
               Leave it empty to delete reversibly instead.
             </span>
           </label>
@@ -512,18 +512,11 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
           >
             Delete permanently
           </button>
-          <button
-            type="button"
-            disabled={busy || !reason.trim()}
-            onClick={() => onConfirm(reason.trim(), false)}
-            className="inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full disabled:opacity-50"
-          >
-            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+          <Button variant="danger" loading={busy} disabled={!reason.trim()} onClick={() => onConfirm(reason.trim(), false)}>
             Delete
-          </button>
+          </Button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }
 
@@ -718,7 +711,7 @@ export default function Catalogue() {
                     className="input"
                   />
                 )}
-                {f.hint && <span className="text-[11px] text-ink-900/40 mt-1 block">{f.hint}</span>}
+                {f.hint && <span className="text-2xs text-ink-900/40 mt-1 block">{f.hint}</span>}
               </label>
             ))}
           </div>
@@ -834,7 +827,7 @@ export default function Catalogue() {
                     })}
                     <td className="py-3">
                       <span
-                        className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
+                        className={`text-2xs font-semibold uppercase tracking-wide px-2 py-1 rounded-full ${
                           row.deleted_at
                             ? "bg-sunset-light text-sunset-dark"
                             : row.is_active
@@ -845,7 +838,7 @@ export default function Catalogue() {
                         {row.deleted_at ? "Deleted" : row.is_active ? "Live" : "Inactive"}
                       </span>
                       {row.source_kind === "admin" && (
-                        <span className="block text-[10px] text-ink-900/35 mt-0.5">added here</span>
+                        <span className="block text-3xs text-ink-900/35 mt-0.5">added here</span>
                       )}
                     </td>
                     <td className="py-3">
@@ -965,7 +958,7 @@ function RateCachePanel({ canWrite }) {
           {busy ? "Clearing…" : "Clear cache"}
         </button>
       </div>
-      <p className="text-[11px] text-ink-900/40 mt-2">
+      <p className="text-2xs text-ink-900/40 mt-2">
         Clearing makes the next hotel search call the provider again. Prices reappear as travellers browse.
       </p>
     </div>

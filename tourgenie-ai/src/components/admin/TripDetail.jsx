@@ -43,7 +43,7 @@ function Provenance({ provenance }) {
               traveller's page; the difference matters when a price is
               disputed. */}
           <span
-            className={`ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+            className={`ml-auto text-2xs font-semibold px-2 py-0.5 rounded-full ${
               flight.is_real ? "bg-teal-light text-teal-dark" : "bg-gold/20 text-ink-800"
             }`}
           >

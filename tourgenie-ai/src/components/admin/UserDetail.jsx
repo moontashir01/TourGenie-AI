@@ -121,7 +121,7 @@ export default function UserDetail({ userId, onClose }) {
                 </li>
               ))}
             </ul>
-            <p className="text-[11px] text-ink-900/35 mt-2">
+            <p className="text-2xs text-ink-900/35 mt-2">
               File links are never shown here — only whether a document exists and when it lapses.
             </p>
           </DrawerSection>
@@ -133,7 +133,7 @@ export default function UserDetail({ userId, onClose }) {
                   <div className="flex items-center gap-2 mb-1">
                     <MessageSquare className="w-3.5 h-3.5 text-teal-dark" />
                     <span className="text-xs text-ink-900/60">{p.place}</span>
-                    {p.is_hidden && <span className="text-[11px] text-sunset-dark font-semibold">hidden</span>}
+                    {p.is_hidden && <span className="text-2xs text-sunset-dark font-semibold">hidden</span>}
                     <span className="text-xs text-ink-900/40 ml-auto">{p.likes || 0} likes</span>
                   </div>
                   <p className="text-ink-900/75 text-xs line-clamp-2">{p.content}</p>
@@ -150,7 +150,7 @@ export default function UserDetail({ userId, onClose }) {
                     <Star className="w-3.5 h-3.5 text-gold fill-current" />
                     <span className="text-xs text-ink-900/70">{r.rating}</span>
                     <span className="text-xs text-ink-900/50">{r.attraction_id?.name || "—"}</span>
-                    {r.is_hidden && <span className="text-[11px] text-sunset-dark font-semibold ml-auto">hidden</span>}
+                    {r.is_hidden && <span className="text-2xs text-sunset-dark font-semibold ml-auto">hidden</span>}
                   </div>
                   <p className="text-ink-900/75 text-xs line-clamp-2">{r.comment}</p>
                 </li>
@@ -182,7 +182,7 @@ function Stat({ label, value }) {
   return (
     <div className="bg-surface border border-sand rounded-xl px-3 py-2.5">
       <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
-      <p className="text-[11px] text-ink-900/50">{label}</p>
+      <p className="text-2xs text-ink-900/50">{label}</p>
     </div>
   );
 }
@@ -195,7 +195,7 @@ export function StatusPill({ status }) {
         ? "bg-gold/20 text-ink-800"
         : "bg-teal-light text-teal-dark";
   return (
-    <span className={`text-[11px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${tone}`}>
+    <span className={`text-2xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${tone}`}>
       {status}
     </span>
   );

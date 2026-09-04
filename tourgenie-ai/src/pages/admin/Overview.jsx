@@ -185,7 +185,7 @@ export default function Overview({ onNavigate }) {
             </div>
             {/* A chart that doesn't admit its own staleness is worse than no
                 chart: the last point is still being written to. */}
-            <p className="text-[11px] text-ink-900/40 mt-2">
+            <p className="text-2xs text-ink-900/40 mt-2">
               From the daily roll-up
               {trend?.points?.at(-1)?.computed_at &&
                 ` · last computed ${new Date(trend.points.at(-1).computed_at).toLocaleString()}`}
@@ -228,7 +228,7 @@ export default function Overview({ onNavigate }) {
         )}
 
         {clear.length > 0 && outstanding.length > 0 && (
-          <p className="text-[11px] text-ink-900/40 mt-3">
+          <p className="text-2xs text-ink-900/40 mt-3">
             Clear: {clear.map((row) => row.label.toLowerCase()).join(", ")}.
           </p>
         )}
@@ -267,7 +267,7 @@ export default function Overview({ onNavigate }) {
             </table>
           </div>
         )}
-        <p className="text-[11px] text-ink-900/40 mt-4">
+        <p className="text-2xs text-ink-900/40 mt-4">
           {analytics?.totalTrips?.toLocaleString()} trips in total — the Trips tab has all of them.
         </p>
       </section>

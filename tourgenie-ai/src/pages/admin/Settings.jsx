@@ -138,14 +138,14 @@ function AppSettings() {
                 <div key={setting.key} className="border-b border-sand/70 last:border-0 pb-5 last:pb-0">
                   <div className="flex flex-wrap items-baseline gap-2 mb-1">
                     <span className="text-sm font-medium text-ink-900">{setting.label || setting.key}</span>
-                    <code className="text-[11px] text-ink-900/40 font-mono">{setting.key}</code>
+                    <code className="text-2xs text-ink-900/40 font-mono">{setting.key}</code>
                     {!setting.is_editable && (
-                      <span className="text-[10px] uppercase tracking-wide font-semibold bg-sand text-ink-900/55 px-2 py-0.5 rounded-full">
+                      <span className="text-3xs uppercase tracking-wide font-semibold bg-sand text-ink-900/55 px-2 py-0.5 rounded-full">
                         fixed
                       </span>
                     )}
                     {!setting.is_public && (
-                      <span className="text-[10px] uppercase tracking-wide font-semibold bg-sand text-ink-900/55 px-2 py-0.5 rounded-full">
+                      <span className="text-3xs uppercase tracking-wide font-semibold bg-sand text-ink-900/55 px-2 py-0.5 rounded-full">
                         server only
                       </span>
                     )}
@@ -689,7 +689,7 @@ function Translations() {
             {filtered.map((entry) => (
               <div key={entry.key} className="grid sm:grid-cols-2 gap-2 items-start border-b border-sand/60 pb-3">
                 <div className="min-w-0">
-                  <code className="text-[11px] font-mono text-ink-900/45 block truncate">{entry.key}</code>
+                  <code className="text-2xs font-mono text-ink-900/45 block truncate">{entry.key}</code>
                   <p className="text-sm text-ink-900/70">{entry.english || <span className="text-ink-900/30">—</span>}</p>
                 </div>
                 <input
@@ -719,7 +719,7 @@ function Translations() {
               {orphans.map((key) => (
                 <span
                   key={key}
-                  className="inline-flex items-center gap-1 text-[11px] font-mono bg-paper border border-sand rounded-full pl-2.5 pr-1.5 py-1 text-ink-900/60"
+                  className="inline-flex items-center gap-1 text-2xs font-mono bg-paper border border-sand rounded-full pl-2.5 pr-1.5 py-1 text-ink-900/60"
                 >
                   {key}
                   <button
@@ -748,7 +748,7 @@ function Field({ label, hint, wide, children }) {
     <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
       <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">{label}</span>
       {children}
-      {hint && <span className="text-[11px] text-ink-900/40 mt-1 block font-mono">{hint}</span>}
+      {hint && <span className="text-2xs text-ink-900/40 mt-1 block font-mono">{hint}</span>}
     </label>
   );
 }

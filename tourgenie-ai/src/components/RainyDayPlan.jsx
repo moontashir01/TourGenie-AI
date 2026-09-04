@@ -94,7 +94,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
             <span
               key={d.day}
               title={`${d.city} · ${d.description}${d.rain_chance_pct != null ? ` · ${d.rain_chance_pct}%` : ""}`}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+              className={`px-2 py-0.5 rounded-full text-3xs font-semibold ${
                 d.severe ? "bg-sunset-light text-sunset-dark" : "bg-teal-light text-teal-dark"
               }`}
             >
@@ -113,7 +113,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
               <li key={s.item_id} className="flex items-start gap-2.5 p-2.5 bg-paper border border-sand rounded-xl">
                 <Icon className="w-3.5 h-3.5 text-teal-dark shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1 text-xs">
-                  <p className="text-ink-900/45 font-mono text-[10px]">
+                  <p className="text-ink-900/45 font-mono text-3xs">
                     Day {s.day} · {s.time}
                   </p>
                   <p className="flex flex-wrap items-center gap-1.5 mt-0.5">
@@ -121,7 +121,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
                     <ArrowRight className="w-3 h-3 text-ink-900/30 shrink-0" />
                     <span className="font-semibold text-ink-900">{s.to.activity}</span>
                   </p>
-                  <p className="text-[10px] text-ink-900/40 mt-0.5">{meta.label}</p>
+                  <p className="text-3xs text-ink-900/40 mt-0.5">{meta.label}</p>
                 </div>
               </li>
             );
@@ -132,7 +132,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
       {plan?.unmatched?.length > 0 && (
         <ul className="mt-2 space-y-1">
           {plan.unmatched.map((u) => (
-            <li key={u.item_id} className="text-[11px] text-ink-900/45 leading-relaxed">
+            <li key={u.item_id} className="text-2xs text-ink-900/45 leading-relaxed">
               · Day {u.day} {u.time} — <span className="text-ink-900/60">{u.activity}</span>: {u.reason}
             </li>
           ))}

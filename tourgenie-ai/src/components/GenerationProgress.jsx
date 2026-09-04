@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Loader2, MapPinned, Landmark, CalendarRange, Bus, UtensilsCrossed, Sparkles } from "lucide-react";
+import { Loader2, MapPinned, Landmark, CalendarRange, Bus, UtensilsCrossed, Sparkles } from "lucide-react";
 import { DayCardSkeleton } from "./Skeleton";
 
 // The app's slowest moment (15s for a weekend, a couple of minutes for a
@@ -42,6 +42,14 @@ export default function GenerationProgress({ trip }) {
   const mm = String(Math.floor(elapsed / 60));
   const ss = String(elapsed % 60).padStart(2, "0");
 
+  // The bar is paced off the clock rather than off the stage index, so it
+  // keeps creeping while a long stage runs instead of sitting still for
+  // twenty seconds and then jumping. It is capped short of full: the request
+  // is what finishes this, and a bar sitting at 100% while nothing happens is
+  // worse than one sitting at 96%.
+  const nominalTotal = longTrip ? 110 : 34;
+  const percent = Math.min(96, (elapsed / nominalTotal) * 100);
+
   return (
     <div className="space-y-4 animate-fade-up">
       <div className="card shadow-lift p-6">
@@ -52,27 +60,54 @@ export default function GenerationProgress({ trip }) {
             </span>
             Planning your {trip?.destination || ""} trip
           </h3>
-          <span className="font-mono text-xs text-ink-900/40">{mm}:{ss}</span>
+          <span className="font-mono text-xs text-ink-900/40 tabular-nums">{mm}:{ss}</span>
         </div>
 
-        <ol className="space-y-3">
+        {/* Slower than the motion scale's `slow` step on purpose — this bar
+            is measuring minutes, and a 400ms jump between readings would
+            read as a glitch rather than progress. */}
+        <div className="h-1 rounded-full bg-sand/60 overflow-hidden mb-5" role="presentation">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-sunset to-gold transition-[width] ease-tg-out"
+            style={{ width: `${percent}%`, transitionDuration: "900ms" }}
+          />
+        </div>
+
+        <ol className="space-y-3 stagger">
           {stages.map((stage, i) => {
             const done = i < currentIndex;
             const current = i === currentIndex;
             return (
               <li
                 key={stage.label}
-                className={`flex items-center gap-3 text-sm transition-opacity duration-300 ${
+                className={`flex items-center gap-3 text-sm transition-opacity duration-base ${
                   done ? "text-ink-900/50" : current ? "text-ink-900 font-medium" : "text-ink-900/25"
                 }`}
               >
                 <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                    done ? "bg-teal text-white" : current ? "bg-sunset/15 text-sunset-dark" : "bg-paper text-ink-900/30"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors duration-base ${
+                    done
+                      ? "bg-teal text-white"
+                      : current
+                        ? "bg-sunset/15 text-sunset-dark animate-pulse-ring"
+                        : "bg-paper text-ink-900/30"
                   }`}
                 >
                   {done ? (
-                    <Check className="w-3.5 h-3.5" />
+                    // Hand-rolled rather than lucide's <Check>, because the
+                    // stroke has to be reachable to draw it on.
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-3.5 h-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M20 6 9 17l-5-5" className="check-path animate-check-draw" />
+                    </svg>
                   ) : current ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (

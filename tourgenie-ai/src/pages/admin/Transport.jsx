@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Button from "../../components/ui/Button";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import useAdminList from "../../hooks/useAdminList";
@@ -101,9 +102,9 @@ export default function Transport() {
             <input required type="time" placeholder="Arrives" value={form.arrive_time} onChange={(e) => setForm({ ...form, arrive_time: e.target.value })} className="input" />
             <input required type="number" min="0" placeholder="Fare (BDT)" value={form.fare} onChange={(e) => setForm({ ...form, fare: e.target.value })} className="input" />
           </div>
-          <button type="submit" disabled={saving} className="inline-flex items-center gap-2 bg-teal hover:bg-teal-dark disabled:opacity-60 text-paper-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition-colors">
-            {saving ? "Saving…" : editing._id ? "Save changes" : "Create option"}
-          </button>
+          <Button type="submit" variant="teal" loading={saving} className="self-start">
+            {editing._id ? "Save changes" : "Create option"}
+          </Button>
         </form>
       )}
 
