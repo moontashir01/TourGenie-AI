@@ -2,9 +2,16 @@ import Trip from "../models/Trip.js";
 import Destination from "../models/Destination.js";
 import Country from "../models/Country.js";
 import TransportOption from "../models/TransportOption.js";
+import FlightOption from "../models/FlightOption.js";
+import ItineraryItem from "../models/ItineraryItem.js";
+import Booking from "../models/Booking.js";
+import HotelBooking from "../models/HotelBooking.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { toBdt, normalizeCode } from "../utils/currency.js";
 import { estimateTripBudget, resolveBudgetTier, verdictFor } from "../services/budgetEstimator.js";
+import { buildBudgetSummary } from "./expenseController.js";
+import { buildTripPdf, tripPdfFilename } from "../services/tripPdf.js";
+import { sendMail, tripConfirmationEmail } from "../services/mailer.js";
 
 const DESTINATION_FIELDS = "name country country_code timezone currency pricing_currency nearest_airport type";
 const MAX_TRIP_DAYS = 60;
@@ -482,4 +489,106 @@ export const deleteTrip = asyncHandler(async (req, res) => {
   const trip = await Trip.findOneAndDelete({ _id: req.params.id, user_id: req.user._id });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
   res.json({ message: "Trip deleted" });
+});
+
+// ── FR-03 — confirming a trip, and the email that follows ────────────
+//
+// Deliberately its own action rather than a hook on the draft → planned
+// transition `persistItinerary` performs: that transition repeats on every
+// regeneration, and a traveller tweaking their plan four times should not
+// receive four confirmations.
+
+/**
+ * Renders the plan and mails it. Runs after the response has gone out, so a
+ * slow SMTP handshake never shows up as a slow confirm — the trip is
+ * confirmed whether or not the mail lands.
+ *
+ * `confirmation_email_sent_at` is claimed by the caller *before* this runs
+ * and released here if nothing was actually delivered, so the field means
+ * "the traveller has this email", not "we tried once".
+ */
+async function sendConfirmationEmail(trip, user) {
+  const release = () =>
+    Trip.updateOne({ _id: trip._id }, { $set: { confirmation_email_sent_at: null } }).catch(() => {});
+
+  try {
+    const [items, budget, transport, hotels] = await Promise.all([
+      ItineraryItem.find({ trip_id: trip._id }).sort({ day: 1, time: 1 }).lean(),
+      // The same summary the Budget page renders — the confirmation must not
+      // be a fourth place that adds a trip up for itself.
+      buildBudgetSummary(trip),
+      Booking.find({ trip_id: trip._id, status: { $ne: "cancelled" } }).populate("transport_id").lean(),
+      HotelBooking.find({ trip_id: trip._id, status: { $ne: "cancelled" } }).lean(),
+    ]);
+
+    const pdf = await buildTripPdf({ trip, items, budget, transport, hotels });
+    const { subject, text, html } = tripConfirmationEmail({ name: user.name, trip, budget });
+
+    const result = await sendMail({
+      to: user.email,
+      subject,
+      text,
+      html,
+      attachments: [{ filename: tripPdfFilename(trip), content: pdf, contentType: "application/pdf" }],
+    });
+
+    if (!result.delivered) await release();
+    return result;
+  } catch (err) {
+    await release();
+    console.error("[trips] confirmation email failed:", err.message);
+    return { delivered: false, reason: "build_failed", error: err.message };
+  }
+}
+
+export const confirmTrip = asyncHandler(async (req, res) => {
+  const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id })
+    .populate("hotel_id")
+    .populate("hotel_selections.hotel_id")
+    .populate("destination_id", DESTINATION_FIELDS);
+  if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+  const itemCount = await ItineraryItem.countDocuments({ trip_id: trip._id });
+  if (itemCount === 0) {
+    throw badRequest(
+      "Generate the itinerary before confirming — the confirmation email carries the day-by-day plan."
+    );
+  }
+
+  const alreadySent = Boolean(trip.confirmation_email_sent_at);
+
+  if (!trip.confirmed_at) {
+    trip.confirmed_at = new Date();
+    if (trip.status === "draft") trip.status = "planned";
+    await trip.save();
+  }
+
+  // Two clicks landing together both read confirmation_email_sent_at as
+  // null, so the claim is the update itself: only the one that still matches
+  // null modifies a document, and only that one sends.
+  let queued = false;
+  if (!alreadySent) {
+    const claimedAt = new Date();
+    const claim = await Trip.updateOne(
+      { _id: trip._id, confirmation_email_sent_at: null },
+      { $set: { confirmation_email_sent_at: claimedAt } }
+    );
+    queued = claim.modifiedCount === 1;
+    if (queued) trip.confirmation_email_sent_at = claimedAt;
+  }
+
+  if (queued) {
+    // Not awaited on purpose — see sendConfirmationEmail. It swallows its own
+    // errors, so there is no unhandled rejection to catch here.
+    sendConfirmationEmail(trip, req.user);
+  }
+
+  res.json({
+    trip,
+    email: {
+      queued,
+      already_sent: alreadySent,
+      to: queued ? req.user.email : null,
+    },
+  });
 });

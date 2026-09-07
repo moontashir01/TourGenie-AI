@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Button from "../components/ui/Button";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer, GripVertical, Undo2 } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer, GripVertical, Undo2, MailCheck, Route, Pencil } from "lucide-react";
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, closestCenter, pointerWithin,
@@ -24,6 +24,8 @@ import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton
 import { tripsApi, itineraryApi, weatherApi, nearbyApi, notificationApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useChat } from "../context/ChatContext";
+import { useToast } from "../context/ToastContext";
+import { useCurrency } from "../context/CurrencyContext";
 import PageHeroPanel from "../components/ui/PageHeroPanel";
 import DataRow from "../components/ui/DataRow";
 import Badge from "../components/ui/Badge";
@@ -227,6 +229,8 @@ function dayDate(startISO, day) {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
+const CONFIRMED_DATE = { day: "numeric", month: "short", year: "numeric" };
+
 function isInternationalTrip(trip) {
   const originCountry = trip?.origin_destination_id?.country_code;
   const destinationCountry = trip?.multi_city ? trip.country_code : trip?.destination_id?.country_code;
@@ -234,8 +238,10 @@ function isInternationalTrip(trip) {
 }
 
 export default function Itinerary() {
-  const { currentTripId } = useCurrentTrip();
+  const { currentTripId, refreshCurrentTrip } = useCurrentTrip();
   const { itineraryVersion } = useChat();
+  const toast = useToast();
+  const { rates } = useCurrency();
   const [trip, setTrip] = useState(null);
   const [items, setItems] = useState([]);
   const [cityCoordinates, setCityCoordinates] = useState({});
@@ -248,6 +254,14 @@ export default function Itinerary() {
   const [generating, setGenerating] = useState(false);
   const [activeDragId, setActiveDragId] = useState(null);
   const [reordering, setReordering] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  // FR-09 — the budget is edited in place here rather than sending the
+  // traveller back to the Plan form to change one number.
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetDraft, setBudgetDraft] = useState("");
+  const [budgetCurrency, setBudgetCurrency] = useState("BDT");
+  const [savingBudget, setSavingBudget] = useState(false);
+  const [budgetError, setBudgetError] = useState("");
   // Snapshot taken before an optimistic reorder so a failed save can roll the
   // list back instead of leaving the screen disagreeing with the database.
   const [undoSnapshot, setUndoSnapshot] = useState(null);
@@ -409,6 +423,66 @@ export default function Itinerary() {
       setError(`Couldn't undo — ${err.message}`);
     } finally {
       setReordering(false);
+    }
+  }
+
+  // FR-03 — confirm the trip and have the plan emailed as a PDF. The server
+  // answers before it sends, so the toast promises a mail on its way rather
+  // than one that has landed.
+  async function handleConfirmTrip() {
+    setConfirming(true);
+    setError("");
+    try {
+      const { trip: confirmed, email } = await tripsApi.confirm(currentTripId);
+      setTrip(confirmed);
+      refreshCurrentTrip(); // the sidebar card shows trip status
+      if (email.queued) {
+        toast.success("Trip confirmed", `Your plan is on its way to ${email.to} as a PDF.`);
+      } else {
+        toast.info("Trip confirmed", "The confirmation email was already sent for this trip.");
+      }
+    } catch (err) {
+      toast.error("Couldn't confirm this trip", err.message);
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  function startEditingBudget() {
+    // Show the traveller back what they typed, in the currency they typed it
+    // in — trip.budget is always the converted BDT figure.
+    setBudgetCurrency(trip?.budget_currency || "BDT");
+    setBudgetDraft(String(trip?.budget_input ?? trip?.budget ?? ""));
+    setBudgetError("");
+    setEditingBudget(true);
+  }
+
+  async function handleSaveBudget(e) {
+    e.preventDefault();
+    const value = Number(budgetDraft);
+    if (!Number.isFinite(value) || value <= 0) {
+      setBudgetError("Enter a budget greater than zero.");
+      return;
+    }
+
+    setSavingBudget(true);
+    setBudgetError("");
+    try {
+      // The server converts to BDT and re-runs the estimate, so the stored
+      // breakdown and the verdict can't drift from the new figure.
+      await tripsApi.update(currentTripId, { budget: value, budget_currency: budgetCurrency });
+      // One fetch, two consumers: the sidebar card reads the context copy and
+      // this page reads its own.
+      const saved = await refreshCurrentTrip();
+      if (saved) setTrip(saved);
+      setEditingBudget(false);
+      toast.success("Budget updated", `This trip is now planned against ৳${(saved?.budget ?? 0).toLocaleString()}.`);
+    } catch (err) {
+      // A budget under the trip's floor is refused with the same sentence the
+      // Plan form gives — show it here rather than a generic failure.
+      setBudgetError(err.message);
+    } finally {
+      setSavingBudget(false);
     }
   }
 

@@ -85,6 +85,17 @@ export const adminReadLimiter = rateLimit({
   message: "Too many admin requests in the last minute. Wait a moment and try again.",
 });
 
+// Confirming a trip renders a PDF and sends mail. It is the only endpoint a
+// logged-in traveller can use to make this server send email to themselves,
+// so it gets a ceiling — generous enough that confirming several trips in a
+// sitting never meets it.
+export const tripConfirmLimiter = rateLimit({
+  name: "trip-confirm",
+  max: 10,
+  windowMs: 10 * 60 * 1000,
+  message: "That's ten trip confirmations in ten minutes. Wait a few minutes before confirming another.",
+});
+
 // Exports read entire collections. Ten in ten minutes is more than a person
 // downloads and far less than a loop wants.
 export const adminExportLimiter = rateLimit({

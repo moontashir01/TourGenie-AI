@@ -159,6 +159,9 @@ export const tripsApi = {
   get: (id) => request(`/trips/${id}`),
   update: (id, payload) => request(`/trips/${id}`, { method: "PATCH", body: payload }),
   remove: (id) => request(`/trips/${id}`, { method: "DELETE" }),
+  // FR-03 — confirms the trip and emails the plan as a PDF. Returns as soon
+  // as the trip is confirmed; `email.queued` says whether a send was started.
+  confirm: (id) => request(`/trips/${id}/confirm`, { method: "POST" }),
 };
 
 export const referenceApi = {

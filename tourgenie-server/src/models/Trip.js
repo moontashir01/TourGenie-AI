@@ -105,6 +105,13 @@ const tripSchema = new mongoose.Schema(
 
     itinerary_generated_at: { type: Date, default: null },
     itinerary_source: { type: String, default: "" }, // template | groq | claude | openai | manual
+
+    // FR-03 — confirmation is an explicit act, not the draft → planned move
+    // that regenerating an itinerary already performs. The two timestamps are
+    // separate on purpose: the mail one is claimed atomically before the send
+    // so two confirm requests in flight together can only produce one email.
+    confirmed_at: { type: Date, default: null },
+    confirmation_email_sent_at: { type: Date, default: null },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }
 );

@@ -164,10 +164,12 @@ async function amountInBdt(expense) {
 }
 
 // FR-09 — Budget Management: categorized breakdown from itinerary + hotel + bookings
-export const getBudgetSummary = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
-  if (!trip) return res.status(404).json({ message: "Trip not found" });
-
+//
+// Exported rather than inlined into the handler because the confirmation PDF
+// (FR-03) has to print exactly what the Budget page shows. A second place
+// summing expenses is how the print view came to disagree with the app.
+// `trip` must arrive with hotel_id and hotel_selections.hotel_id populated.
+export async function buildBudgetSummary(trip) {
   const [expenses, virtuals, money] = await Promise.all([
     Expense.find({ trip_id: trip._id }),
     getVirtualExpenses(trip),
@@ -182,11 +184,14 @@ export const getBudgetSummary = asyncHandler(async (req, res) => {
   let total = 0;
   let loggedTotal = 0;
   let estimatedTotal = 0;
-  let flightsExcluded = 0;
+  // The journey in and out when the budget isn't meant to cover it — a booked
+  // fare or a road leg, whichever this trip has. Reported as
+  // `flights_excluded` because that is the name the client already reads.
+  let travelExcluded = 0;
 
   for (const e of [...logged, ...virtuals]) {
     if (e.counts_toward_budget === false) {
-      flightsExcluded += e.amount;
+      travelExcluded += e.amount;
       continue;
     }
     const cat = mapCategory(e.category);
@@ -196,7 +201,7 @@ export const getBudgetSummary = asyncHandler(async (req, res) => {
     else loggedTotal += e.amount;
   }
 
-  res.json({
+  return {
     budget: trip.budget,
     spent: total,
     remaining: trip.budget - total,
@@ -214,9 +219,15 @@ export const getBudgetSummary = asyncHandler(async (req, res) => {
     planned_breakdown: trip.budget_breakdown || [],
     planned_total: trip.estimated_total || 0,
     budget_includes_flights: trip.budget_includes_flights !== false,
-    flights_excluded: flightsExcluded,
+    flights_excluded: travelExcluded,
     budget_tier: trip.budget_tier,
-  });
+  };
+}
+
+export const getBudgetSummary = asyncHandler(async (req, res) => {
+  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  if (!trip) return res.status(404).json({ message: "Trip not found" });
+  res.json(await buildBudgetSummary(trip));
 });
 
 // FR-10 — Expense Tracker
