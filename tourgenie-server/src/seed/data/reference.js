@@ -105,15 +105,24 @@ export const appSettings = [
 
 const TIER_MULTIPLIER = { budget: 0.55, mid: 1.0, luxury: 2.15 };
 
-// Fractions of the mid-tier daily spend, per destination type.
+// Fractions of the mid-tier daily spend, per destination type. Each row sums
+// to 1.0, so these only decide the split — the size of the day is
+// avg_daily_cost.
+//
+// Attractions used to take 11–16% of a day, which priced a region where the
+// beach is free and a typical entry fee is ৳20–100 as though every day held a
+// paid excursion. It now sits at 5–8%, highest for heritage sites (which do
+// charge) and lowest for beaches and hills (which mostly don't). The freed
+// share went back to accommodation and food, the two things travellers
+// actually spend on.
 const CATEGORY_SHARE = {
-  default: { accommodation: 0.4, food: 0.26, local_transport: 0.14, attractions: 0.12, shopping: 0.05, misc: 0.03 },
-  metro: { accommodation: 0.38, food: 0.24, local_transport: 0.14, attractions: 0.1, shopping: 0.11, misc: 0.03 },
-  beach: { accommodation: 0.42, food: 0.28, local_transport: 0.12, attractions: 0.11, shopping: 0.04, misc: 0.03 },
-  island: { accommodation: 0.44, food: 0.3, local_transport: 0.1, attractions: 0.11, shopping: 0.02, misc: 0.03 },
-  hill: { accommodation: 0.38, food: 0.24, local_transport: 0.2, attractions: 0.13, shopping: 0.02, misc: 0.03 },
-  forest: { accommodation: 0.35, food: 0.22, local_transport: 0.25, attractions: 0.14, shopping: 0.01, misc: 0.03 },
-  heritage: { accommodation: 0.36, food: 0.26, local_transport: 0.18, attractions: 0.16, shopping: 0.01, misc: 0.03 },
+  default: { accommodation: 0.44, food: 0.29, local_transport: 0.14, attractions: 0.06, shopping: 0.04, misc: 0.03 },
+  metro: { accommodation: 0.41, food: 0.27, local_transport: 0.14, attractions: 0.05, shopping: 0.1, misc: 0.03 },
+  beach: { accommodation: 0.46, food: 0.31, local_transport: 0.12, attractions: 0.05, shopping: 0.03, misc: 0.03 },
+  island: { accommodation: 0.48, food: 0.32, local_transport: 0.1, attractions: 0.05, shopping: 0.02, misc: 0.03 },
+  hill: { accommodation: 0.42, food: 0.28, local_transport: 0.2, attractions: 0.05, shopping: 0.02, misc: 0.03 },
+  forest: { accommodation: 0.38, food: 0.25, local_transport: 0.25, attractions: 0.08, shopping: 0.01, misc: 0.03 },
+  heritage: { accommodation: 0.4, food: 0.3, local_transport: 0.18, attractions: 0.08, shopping: 0.01, misc: 0.03 },
 };
 
 // Local transport rates in BDT, by country.

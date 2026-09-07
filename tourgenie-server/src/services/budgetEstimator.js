@@ -35,6 +35,25 @@ export function nightsFromDays(days) {
   return Math.max(1, Number(days) - 1);
 }
 
+// Rooms are sold, not beds. Two travellers share one room, so a group needs
+// ceil(n / 2) of them. Without this a nightly rate was charged once no matter
+// how many people were going — a family of four paid for a single room — while
+// the per-person fallback below charged a solo traveller as though sharing.
+const ROOM_OCCUPANCY = 2;
+
+export function roomsFor(travelers) {
+  return Math.max(1, Math.ceil(Math.max(1, Number(travelers) || 1) / ROOM_OCCUPANCY));
+}
+
+// A CNG, rickshaw or ride-share is hired per vehicle, so a group splits one
+// fare rather than paying it each. Three to a vehicle is the realistic
+// average once luggage is accounted for.
+const SEATS_PER_VEHICLE = 3;
+
+export function vehiclesFor(travelers) {
+  return Math.max(1, Math.ceil(Math.max(1, Number(travelers) || 1) / SEATS_PER_VEHICLE));
+}
+
 export async function benchmarkFor(destination, tier) {
   if (!destination) return null;
   if (destination._id) {
@@ -65,12 +84,20 @@ export function buildBudgetBreakdown({ benchmark, categories, days, travelers, h
   const perDay = benchmark?.per_person_per_day || benchmark || {};
   const nights = nightsFromDays(days);
 
+  // A nightly rate buys a room; the per-person benchmark figure is already
+  // "one traveller's share of a shared room", so the two are reconciled by
+  // pricing the hotel per room and the fallback per head.
   const accommodation = hotelPricePerNight != null
-    ? hotelPricePerNight * nights
+    ? hotelPricePerNight * nights * roomsFor(travelers)
     : (perDay.accommodation || 0) * nights * travelers;
 
+  // Intercity fare is per seat, both ways. Getting around town is per vehicle,
+  // which a group shares.
+  const intercity = transportFare != null ? transportFare * travelers * 2 : 0;
+  const local = (perDay.local_transport || 0) * days * vehiclesFor(travelers);
+
   const amounts = {
-    transport: (transportFare != null ? transportFare * travelers * 2 : 0) + (perDay.local_transport || 0) * days * travelers,
+    transport: intercity + local,
     hotel: Math.round(accommodation),
     food: (perDay.food || 0) * days * travelers,
     attractions: (perDay.attractions || 0) * days * travelers,
@@ -153,7 +180,10 @@ export async function estimateTripBudget({
   const floor = floorPerDay || perDay;
   const minimum_total = Math.round(
     (floor.accommodation || 0) * nights * safeTravelers +
-      ((floor.food || 0) + (floor.local_transport || 0)) * safeDays * safeTravelers
+      (floor.food || 0) * safeDays * safeTravelers +
+      // Shared the same way the estimate shares it, or the floor could land
+      // above the estimate for a group.
+      (floor.local_transport || 0) * safeDays * vehiclesFor(safeTravelers)
   );
 
   return {
