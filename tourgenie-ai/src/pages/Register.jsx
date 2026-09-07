@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Compass, Mail, Lock, User, AlertCircle, Globe2 } from "lucide-react";
+import { Mail, Lock, User, AlertCircle, Globe2 } from "lucide-react";
 import RouteLine from "../components/RouteLine";
 import { useAuth } from "../context/AuthContext";
 import { destinationsApi } from "../lib/api";
+import AuthLayout from "../components/AuthLayout";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -51,17 +52,10 @@ export default function Register() {
   }
 
   return (
-    <div className="theme-ink min-h-screen bg-ink-900 flex items-center justify-center px-6 py-12 relative overflow-hidden">
-      <svg className="absolute -top-10 -right-10 w-72 h-72 opacity-20" viewBox="0 0 200 200" aria-hidden="true">
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#EF8354" strokeWidth="1" strokeDasharray="1 8" />
-      </svg>
-      <div className="w-full max-w-sm relative z-10">
-        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <Compass className="w-7 h-7 text-sunset" strokeWidth={1.75} />
-          <span className="font-display text-xl text-paper">TourGenie <span className="text-sunset">AI</span></span>
-        </Link>
-
-        <div className="bg-ink-800 border border-ink-700 rounded-2xl p-8">
+    <AuthLayout
+      headline="Your first itinerary is four questions away."
+      sub="Tell us where, when, how many and how much. The rest — days, routes, hotels, costs — is filled in for you."
+    >
           <h1 className="font-display text-2xl text-paper mb-1">Create your account</h1>
           <p className="text-sm text-paper/50 mb-6">Start planning your first AI-generated trip.</p>
 
@@ -74,7 +68,7 @@ export default function Register() {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Full name</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Full name</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <User className="w-4 h-4 text-paper/30" />
                 <input
@@ -88,7 +82,7 @@ export default function Register() {
               </div>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Home country</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Home country</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <Globe2 className="w-4 h-4 text-paper/30" />
                 <select
@@ -104,7 +98,7 @@ export default function Register() {
               </div>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Email</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Email</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <Mail className="w-4 h-4 text-paper/30" />
                 <input
@@ -118,7 +112,7 @@ export default function Register() {
               </div>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Password</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Password</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <Lock className="w-4 h-4 text-paper/30" />
                 <input
@@ -133,7 +127,7 @@ export default function Register() {
               </div>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Confirm password</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Confirm password</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <Lock className="w-4 h-4 text-paper/30" />
                 <input
@@ -147,7 +141,7 @@ export default function Register() {
               </div>
             </label>
 
-            <label className="flex items-start gap-2 text-xs text-paper/50">
+            <label className="flex items-start gap-2 text-sm text-paper/50">
               <input type="checkbox" required className="mt-0.5 accent-sunset" />
               I agree to the Terms of Service and Privacy Policy.
             </label>
@@ -169,8 +163,6 @@ export default function Register() {
               Log in
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }

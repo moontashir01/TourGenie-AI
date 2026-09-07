@@ -52,7 +52,7 @@ export default function App() {
             <ProtectedRoute>
               <Suspense
                 fallback={
-                  <div className="min-h-screen flex items-center justify-center bg-paper text-ink-900/50 text-sm">
+                  <div className="min-h-screen flex items-center justify-center bg-paper text-ink-500 text-sm">
                     Loading the admin console…
                   </div>
                 }

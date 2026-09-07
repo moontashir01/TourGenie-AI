@@ -25,14 +25,14 @@ function CancelPrompt({ target, busy, onCancel, onConfirm }) {
   const [reason, setReason] = useState("");
   return (
     <Overlay open onClose={onCancel} size="md" label={`Cancel ${target.reference}`} dismissable={!busy} className="p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">Cancel {target.reference}?</h3>
-        <p className="text-sm text-ink-900/60 mb-4">
+        <h3 className="font-display text-xl text-ink-900 mb-1">Cancel {target.reference}?</h3>
+        <p className="text-sm text-ink-600 mb-4">
           {target.kind === "transport"
             ? "The seats go back to the departure straight away, the same as if the traveller had cancelled it themselves."
             : "The room is released straight away, the same as if the traveller had cancelled it themselves."}
         </p>
         <label className="block mb-4">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Reason (recorded in the activity log)</span>
+          <span className="text-xs font-medium text-ink-600 mb-1.5 block">Reason (recorded in the activity log)</span>
           <input
             type="text"
             autoFocus
@@ -103,7 +103,7 @@ export default function Bookings() {
   return (
     <div className="space-y-8">
       <section className="card p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-4">Transport bookings</h3>
+        <h3 className="font-display text-xl text-ink-900 mb-4">Transport bookings</h3>
         <ErrorBanner message={transport.error} onDismiss={() => transport.setError("")} />
 
         <AdminToolbar list={transport} placeholder="Search reference, operator, city or passenger…">
@@ -121,7 +121,7 @@ export default function Bookings() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   <th className="pb-3 font-medium">Reference</th>
                   <th className="pb-3 font-medium">Traveller</th>
                   <th className="pb-3 font-medium">Journey</th>
@@ -137,14 +137,14 @@ export default function Bookings() {
                   <tr key={b._id} className={busyId === b._id ? "opacity-50" : ""}>
                     <td className="py-3 font-mono text-xs text-ink-900">{b.reference}</td>
                     <td className="py-3 text-ink-900/70 text-xs">
-                      {b.user_id?.name || <span className="text-ink-900/35">no longer exists</span>}
+                      {b.user_id?.name || <span className="text-ink-500">no longer exists</span>}
                     </td>
                     <td className="py-3 text-ink-900/70 text-xs">
                       {b.journey?.from_city} → {b.journey?.to_city}
-                      <span className="block text-ink-900/40">{b.journey?.operator}</span>
+                      <span className="block text-ink-500">{b.journey?.operator}</span>
                     </td>
-                    <td className="py-3 text-ink-900/50 text-xs whitespace-nowrap">{date(b.travel_date)}</td>
-                    <td className="py-3 text-ink-900/60 text-xs">{(b.seats || []).join(", ") || "—"}</td>
+                    <td className="py-3 text-ink-500 text-xs whitespace-nowrap">{date(b.travel_date)}</td>
+                    <td className="py-3 text-ink-600 text-xs">{(b.seats || []).join(", ") || "—"}</td>
                     <td className="py-3 font-mono text-ink-900/70 text-xs">{money(b.total_fare)}</td>
                     <td className="py-3">
                       <StatusPill status={b.status} />
@@ -154,7 +154,7 @@ export default function Bookings() {
                         <button
                           onClick={() => openSeatMap(b)}
                           title="Who holds which seat on this departure"
-                          className="text-ink-900/40 hover:text-teal-dark"
+                          className="text-ink-500 hover:text-teal-dark"
                         >
                           <Armchair className="w-4 h-4" />
                         </button>
@@ -164,7 +164,7 @@ export default function Bookings() {
                           }
                           disabled={!canCancel || b.status === "cancelled" || busyId === b._id}
                           title={canCancel ? "Cancel on the traveller's behalf" : "Admins only"}
-                          className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-25"
+                          className="text-ink-500 hover:text-sunset-dark disabled:opacity-25"
                         >
                           <XCircle className="w-4 h-4" />
                         </button>
@@ -180,7 +180,7 @@ export default function Bookings() {
       </section>
 
       <section className="card p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-4">Hotel reservations</h3>
+        <h3 className="font-display text-xl text-ink-900 mb-4">Hotel reservations</h3>
         <ErrorBanner message={hotels.error} onDismiss={() => hotels.setError("")} />
 
         <AdminToolbar list={hotels} placeholder="Search reference, hotel, city or room…">
@@ -198,7 +198,7 @@ export default function Bookings() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   <th className="pb-3 font-medium">Reference</th>
                   <th className="pb-3 font-medium">Guest</th>
                   <th className="pb-3 font-medium">Property</th>
@@ -213,13 +213,13 @@ export default function Bookings() {
                   <tr key={b._id} className={busyId === b._id ? "opacity-50" : ""}>
                     <td className="py-3 font-mono text-xs text-ink-900">{b.reference}</td>
                     <td className="py-3 text-ink-900/70 text-xs">
-                      {b.user_id?.name || <span className="text-ink-900/35">no longer exists</span>}
+                      {b.user_id?.name || <span className="text-ink-500">no longer exists</span>}
                     </td>
                     <td className="py-3 text-ink-900/70 text-xs">
                       {b.property?.name}
-                      <span className="block text-ink-900/40">{b.room_type}</span>
+                      <span className="block text-ink-500">{b.room_type}</span>
                     </td>
-                    <td className="py-3 text-ink-900/50 text-xs whitespace-nowrap">
+                    <td className="py-3 text-ink-500 text-xs whitespace-nowrap">
                       {date(b.check_in)} · {b.nights} night{b.nights === 1 ? "" : "s"}
                     </td>
                     <td className="py-3 font-mono text-ink-900/70 text-xs">{money(b.total_amount)}</td>
@@ -232,7 +232,7 @@ export default function Bookings() {
                           onClick={() => setPrompt({ kind: "hotel", id: b._id, reference: b.reference })}
                           disabled={!canCancel || b.status === "cancelled" || busyId === b._id}
                           title={canCancel ? "Cancel on the traveller's behalf" : "Admins only"}
-                          className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-25"
+                          className="text-ink-500 hover:text-sunset-dark disabled:opacity-25"
                         >
                           <XCircle className="w-4 h-4" />
                         </button>
@@ -264,15 +264,15 @@ export default function Bookings() {
         onClose={() => setSeatMap(null)}
       >
         {seatMap?.held?.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No seats held on this departure.</p>
+          <p className="text-sm text-ink-500">No seats held on this departure.</p>
         ) : (
           <ul className="space-y-1.5">
             {(seatMap?.held || []).map((h) => (
               <li key={`${h.reference}-${h.seat}`} className="flex items-center gap-3 text-sm bg-surface border border-sand rounded-xl px-3 py-2">
                 <span className="font-mono font-semibold text-ink-900 w-12 shrink-0">{h.seat}</span>
                 <span className="text-ink-900/75 flex-1 min-w-0 truncate">{h.passenger || "—"}</span>
-                <span className="text-xs text-ink-900/45 shrink-0">{h.traveller}</span>
-                <span className="font-mono text-xs text-ink-900/40 shrink-0">{h.reference}</span>
+                <span className="text-xs text-ink-500 shrink-0">{h.traveller}</span>
+                <span className="font-mono text-xs text-ink-500 shrink-0">{h.reference}</span>
               </li>
             ))}
           </ul>

@@ -4,13 +4,13 @@
 // intended. STATUS_TONE below is now the one map.
 
 const TONES = {
-  neutral: "bg-sand text-ink-900/60",
+  neutral: "bg-sand text-ink-600",
   teal: "bg-teal-light text-teal-dark",
   sunset: "bg-sunset-light text-sunset-dark",
   gold: "bg-gold/25 text-ink-800",
   // For anything finished or inactive — present, deliberately quiet.
-  muted: "bg-ink-900/10 text-ink-900/50",
-  outline: "bg-surface text-ink-900/45 border border-sand",
+  muted: "bg-ink-900/10 text-ink-500",
+  outline: "bg-surface text-ink-500 border border-sand",
 };
 
 // The four chip sizes actually in use across the app, measured off the

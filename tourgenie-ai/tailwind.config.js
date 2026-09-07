@@ -29,6 +29,10 @@ export default {
           900: "rgb(var(--tg-ink-900) / <alpha-value>)",
           800: "rgb(var(--tg-ink-800) / <alpha-value>)",
           700: "rgb(var(--tg-ink-700) / <alpha-value>)",
+          // The two muted steps. They exist so secondary and meta text stop
+          // being ink-900 at an opacity — see the note in src/index.css.
+          600: "rgb(var(--tg-ink-600) / <alpha-value>)",
+          500: "rgb(var(--tg-ink-500) / <alpha-value>)",
           // Never themed: text sitting on a brand colour (the sunset CTA,
           // the teal brand mark) needs the same dark ink in both themes.
           fixed: "#0B1F2E",
@@ -64,6 +68,19 @@ export default {
         "2xs": "0.6875rem", // 11px — the small-print default
         "3xs": "0.625rem", // 10px — chips and meta
         "4xs": "0.5625rem", // 9px — uppercase status pills only
+        // The other end of the ladder, which the app didn't have: over 85% of
+        // its type sat at 14px or below, so no page had an entry point for
+        // the eye and every screen read as an administrative form regardless
+        // of how good the palette was. Clamp-based, so a headline scales with
+        // the viewport instead of needing three responsive variants at every
+        // call site.
+        //
+        // The negative tracking isn't decoration. Fraunces set at default
+        // tracking above ~32px reads as loose and unfinished, and the bigger
+        // the step the harder it has to come in.
+        "display-sm": ["clamp(1.5rem, 1.2rem + 1.2vw, 2rem)", { lineHeight: "1.15", letterSpacing: "-0.01em" }],
+        "display-md": ["clamp(2rem, 1.5rem + 2.2vw, 3rem)", { lineHeight: "1.08", letterSpacing: "-0.02em" }],
+        "display-lg": ["clamp(2.75rem, 1.8rem + 4vw, 4.5rem)", { lineHeight: "1.02", letterSpacing: "-0.03em" }],
       },
       fontFamily: {
         display: ["'Fraunces'", "serif"],

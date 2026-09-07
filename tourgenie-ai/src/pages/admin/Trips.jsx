@@ -40,7 +40,7 @@ export default function Trips() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">Traveller</th>
                 <th className="pb-3 font-medium">Route</th>
                 <th className="pb-3 font-medium">Dates</th>
@@ -57,19 +57,19 @@ export default function Trips() {
                   className="cursor-pointer hover:bg-paper/60 transition-colors"
                 >
                   <td className="py-3 font-medium text-ink-900">
-                    {t.user_id?.name || <span className="text-ink-900/35 font-normal">no longer exists</span>}
+                    {t.user_id?.name || <span className="text-ink-500 font-normal">no longer exists</span>}
                   </td>
                   <td className="py-3 text-ink-900/70">
                     {t.origin} → {t.destination}
                   </td>
-                  <td className="py-3 text-ink-900/50 text-xs whitespace-nowrap">
+                  <td className="py-3 text-ink-500 text-xs whitespace-nowrap">
                     {date(t.start_date)} – {date(t.end_date)}
                   </td>
                   <td className="py-3">
                     <StatusBadge status={t.status} size="md" />
                   </td>
                   <td className="py-3 font-mono text-ink-900/70">{money(t.budget)}</td>
-                  <td className="py-3 text-xs text-ink-900/45 capitalize">{t.itinerary_source || "—"}</td>
+                  <td className="py-3 text-xs text-ink-500 capitalize">{t.itinerary_source || "—"}</td>
                 </tr>
               ))}
             </tbody>

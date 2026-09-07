@@ -65,6 +65,10 @@ import {
   itineraryTemplates,
 } from "./data/catalog.js";
 import { generateAreaServices } from "./data/nearbyServices.js";
+// Uploaded by `npm run images:upload`. Merged in here because this seeder
+// replaces all three collections wholesale — a URL written onto a document
+// by the upload script would otherwise be lost on the next reseed.
+import { destinationImages, attractionImages, hotelImages } from "./data/placeImages.js";
 import {
   expenseCategories, interestTags, carbonFactors, exchangeRates,
   appSettings, buildCostBenchmarks,
@@ -145,6 +149,7 @@ async function seedReference() {
       ...d,
       country_code: d.country_code || "BD",
       pricing_currency: d.pricing_currency || "BDT",
+      hero_image: destinationImages[d.slug] || d.hero_image || null,
       is_international: d.is_international ?? (d.country_code ? d.country_code !== "BD" : false),
     }))
   );
@@ -168,6 +173,7 @@ async function seedReference() {
         ...a,
         currency: a.currency || "BDT",
         destination_id: d?._id || null,
+        image_url: attractionImages[a.slug] || a.image_url || null,
         is_free: a.is_free ?? a.entry_fee === 0,
       };
     })
@@ -185,6 +191,7 @@ async function seedReference() {
         ...h,
         currency: h.currency || "BDT",
         destination_id: d?._id || null,
+        image_url: hotelImages[h.slug] || h.image_url || null,
         price_range: prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : { min: h.price_per_night, max: h.price_per_night },
       };
     })

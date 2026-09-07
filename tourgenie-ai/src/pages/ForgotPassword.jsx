@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Compass, Mail, Lock, AlertCircle, CheckCircle2, ArrowLeft, Timer } from "lucide-react";
+import { Mail, Lock, AlertCircle, CheckCircle2, ArrowLeft, Timer } from "lucide-react";
 import RouteLine from "../components/RouteLine";
 import { authApi } from "../lib/api";
+import AuthLayout from "../components/AuthLayout";
 
 const OTP_LENGTH = 6;
 
@@ -152,17 +153,10 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="theme-ink min-h-screen bg-ink-900 flex items-center justify-center px-6 py-12 relative overflow-hidden">
-      <svg className="absolute -bottom-10 -left-10 w-72 h-72 opacity-20" viewBox="0 0 200 200" aria-hidden="true">
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#1C8C82" strokeWidth="1" strokeDasharray="1 8" />
-      </svg>
-      <div className="w-full max-w-sm relative z-10">
-        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <Compass className="w-7 h-7 text-sunset" strokeWidth={1.75} />
-          <span className="font-display text-xl text-paper">TourGenie <span className="text-sunset">AI</span></span>
-        </Link>
-
-        <div className="bg-ink-800 border border-ink-700 rounded-2xl p-8">
+    <AuthLayout
+      headline="Getting back in takes two minutes."
+      sub="We email a six-digit code, it lasts two minutes, and your trips are exactly where you left them."
+    >
           {step === "email" && (
             <>
               <h1 className="font-display text-2xl text-paper mb-1">Forgot your password?</h1>
@@ -199,7 +193,7 @@ export default function ForgotPassword() {
             </div>
           )}
           {devOtp && step === "otp" && (
-            <p className="text-xs text-paper/40 mb-4">
+            <p className="text-sm text-paper/40 mb-4">
               Development code: <span className="font-mono text-paper/70 tracking-widest">{devOtp}</span>
             </p>
           )}
@@ -207,7 +201,7 @@ export default function ForgotPassword() {
           {step === "email" && (
             <form className="space-y-4" onSubmit={handleEmailSubmit}>
               <label className="block">
-                <span className="text-xs font-medium text-paper/60 mb-1.5 block">Email</span>
+                <span className="text-sm font-medium text-paper/60 mb-1.5 block">Email</span>
                 <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                   <Mail className="w-4 h-4 text-paper/30" />
                   <input
@@ -251,7 +245,7 @@ export default function ForgotPassword() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs">
+              <div className="flex items-center gap-1.5 text-sm">
                 <Timer className="w-3.5 h-3.5 text-paper/40" />
                 {expired ? (
                   <span className="text-sunset">Code expired — send a new one.</span>
@@ -282,7 +276,7 @@ export default function ForgotPassword() {
           {step === "password" && (
             <form className="space-y-4" onSubmit={handlePasswordSubmit}>
               <label className="block">
-                <span className="text-xs font-medium text-paper/60 mb-1.5 block">New password</span>
+                <span className="text-sm font-medium text-paper/60 mb-1.5 block">New password</span>
                 <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                   <Lock className="w-4 h-4 text-paper/30" />
                   <input
@@ -298,7 +292,7 @@ export default function ForgotPassword() {
                 </div>
               </label>
               <label className="block">
-                <span className="text-xs font-medium text-paper/60 mb-1.5 block">Confirm password</span>
+                <span className="text-sm font-medium text-paper/60 mb-1.5 block">Confirm password</span>
                 <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                   <Lock className="w-4 h-4 text-paper/30" />
                   <input
@@ -349,8 +343,6 @@ export default function ForgotPassword() {
               </Link>
             </>
           )}
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }

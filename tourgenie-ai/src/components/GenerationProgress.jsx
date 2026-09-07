@@ -52,15 +52,15 @@ export default function GenerationProgress({ trip }) {
 
   return (
     <div className="space-y-4 animate-fade-up">
-      <div className="card shadow-lift p-6">
+      <div className="card shadow-soft p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-display text-lg text-ink-900 flex items-center gap-2">
             <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-sunset to-sunset-dark flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+              <Sparkles className="w-4 h-4 text-paper-fixed" />
             </span>
             Planning your {trip?.destination || ""} trip
           </h3>
-          <span className="font-mono text-xs text-ink-900/40 tabular-nums">{mm}:{ss}</span>
+          <span className="font-mono text-xs text-ink-500 tabular-nums">{mm}:{ss}</span>
         </div>
 
         {/* Slower than the motion scale's `slow` step on purpose — this bar
@@ -81,13 +81,13 @@ export default function GenerationProgress({ trip }) {
               <li
                 key={stage.label}
                 className={`flex items-center gap-3 text-sm transition-opacity duration-base ${
-                  done ? "text-ink-900/50" : current ? "text-ink-900 font-medium" : "text-ink-900/25"
+                  done ? "text-ink-500" : current ? "text-ink-900 font-medium" : "text-ink-900/25"
                 }`}
               >
                 <span
                   className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors duration-base ${
                     done
-                      ? "bg-teal text-white"
+                      ? "bg-teal text-paper-fixed"
                       : current
                         ? "bg-sunset/15 text-sunset-dark animate-pulse-ring"
                         : "bg-paper text-ink-900/30"
@@ -121,7 +121,7 @@ export default function GenerationProgress({ trip }) {
         </ol>
 
         {longTrip && (
-          <p className="text-xs text-ink-900/40 mt-5 pt-4 border-t border-sand">
+          <p className="text-xs text-ink-500 mt-5 pt-4 border-t border-sand">
             Long trips are planned in chunks so every one of your {days} days gets real detail — this can take a
             couple of minutes. Worth the wait.
           </p>

@@ -68,13 +68,13 @@ export default function ConfirmPrompt({
     // closing here would lose the reason that was typed for nothing.
     <Overlay open onClose={onCancel} size="md" label={title} dismissable={!busy}>
       <form onSubmit={submit} className="p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">{title}</h3>
-        <p className="text-sm text-ink-900/60 mb-4">{description}</p>
+        <h3 className="font-display text-xl text-ink-900 mb-1">{title}</h3>
+        <p className="text-sm text-ink-600 mb-4">{description}</p>
         {children}
 
         {requireReason && (
           <label className="block mb-4">
-            <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+            <span className="text-xs font-medium text-ink-600 mb-1.5 block">
               Reason (recorded in the activity log)
             </span>
             <input
@@ -90,7 +90,7 @@ export default function ConfirmPrompt({
 
         {confirmPhrase && (
           <label className="block mb-4">
-            <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+            <span className="text-xs font-medium text-ink-600 mb-1.5 block">
               Type <span className="font-mono text-ink-900">{confirmPhrase}</span> to confirm
             </span>
             <input
@@ -107,7 +107,7 @@ export default function ConfirmPrompt({
 
         {requirePassword && (
           <label className="block mb-4">
-            <span className="text-xs font-medium text-ink-900/60 mb-1.5 flex items-center gap-1.5">
+            <span className="text-xs font-medium text-ink-600 mb-1.5 flex items-center gap-1.5">
               <Lock className="w-3 h-3" /> Your password
             </span>
             <input
@@ -119,7 +119,7 @@ export default function ConfirmPrompt({
               placeholder="Confirm it's you"
               className="input"
             />
-            <span className="text-xs text-ink-900/45 mt-1.5 block">{passwordNote}</span>
+            <span className="text-xs text-ink-500 mt-1.5 block">{passwordNote}</span>
           </label>
         )}
 

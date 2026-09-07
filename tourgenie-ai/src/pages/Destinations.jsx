@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Search, Scale, X, Check, Loader2, ArrowLeft, Navigation, Clock, Wallet, Leaf,
   Landmark, Building2, CalendarRange, Plane, Train, Ship, Bus, Car, TriangleAlert, Star,
+  Waves, Mountain, Trees,
 } from "lucide-react";
+import PlaceImage from "../components/ui/PlaceImage";
 import AppShell from "../components/AppShell";
 import { CardSkeleton } from "../components/Skeleton";
 import BestTimeStrip from "../components/BestTimeStrip";
@@ -19,6 +21,19 @@ import { useLanguage } from "../context/LanguageContext";
 const MAX_COMPARE = 4;
 
 const MODE_ICON = { flight: Plane, train: Train, launch: Ship, bus: Bus, driving: Car };
+
+// The glyph the card falls back to when a destination has no photograph.
+// Paired with TYPE_TONE below so the two never disagree about what a type is.
+const TYPE_ICON = {
+  beach: Waves,
+  island: Waves,
+  hill: Mountain,
+  forest: Trees,
+  nature: Trees,
+  heritage: Landmark,
+  city: Building2,
+  metro: Building2,
+};
 
 const TYPE_TONE = {
   beach: "bg-teal-light text-teal-dark",
@@ -44,7 +59,7 @@ function formatDuration(minutes) {
 function CompareRow({ label, icon: Icon, children }) {
   return (
     <div className="border-t border-sand pt-3 mt-3 first:border-0 first:pt-0 first:mt-0">
-      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/40 mb-1.5">
+      <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5">
         {Icon && <Icon className="w-3 h-3" />}
         {label}
       </p>
@@ -158,7 +173,7 @@ export default function Destinations() {
             </button>
             <label className="flex items-center gap-2 px-3 py-2 bg-surface border border-sand rounded-xl text-sm">
               <Navigation className="w-4 h-4 text-teal-dark shrink-0" />
-              <span className="text-ink-900/50 text-xs">{t("destination.travelling_from", "Travelling from")}</span>
+              <span className="text-ink-500 text-sm">{t("destination.travelling_from", "Travelling from")}</span>
               <input
                 value={origin}
                 onChange={(e) => setOrigin(e.target.value)}
@@ -179,7 +194,7 @@ export default function Destinations() {
                 const d = col.destination;
                 const JourneyIcon = MODE_ICON[col.journey?.mode] || Navigation;
                 return (
-                  <article key={d.slug} className="p-4 bg-surface border border-sand rounded-2xl shadow-soft">
+                  <article key={d.slug} className="p-4 card shadow-soft">
                     <header className="mb-3">
                       <div className="flex items-start justify-between gap-2">
                         <h2 className="font-display text-lg text-ink-900 leading-tight">{d.name}</h2>
@@ -195,7 +210,7 @@ export default function Destinations() {
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="text-xs text-ink-900/50">{d.country}{d.division ? ` · ${d.division}` : ""}</p>
+                      <p className="text-sm text-ink-500">{d.country}{d.division ? ` · ${d.division}` : ""}</p>
                       <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-3xs font-semibold ${TYPE_TONE[d.type] || "bg-sand/60 text-ink-800"}`}>
                         {d.type}
                       </span>
@@ -207,7 +222,7 @@ export default function Destinations() {
 
                     <CompareRow label={t("destination.getting_there", "Getting there")} icon={JourneyIcon}>
                       {col.journey ? (
-                        <div className="text-xs text-ink-900/70 space-y-1">
+                        <div className="text-sm text-ink-900/70 space-y-1">
                           <p className="flex flex-wrap gap-x-3">
                             <span className="flex items-center gap-1"><Navigation className="w-3 h-3" />{col.journey.distance_km} km</span>
                             <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDuration(col.journey.duration_min)}</span>
@@ -220,13 +235,13 @@ export default function Destinations() {
                               <span className="flex items-center gap-1"><Leaf className="w-3 h-3" />{col.journey.carbon_kg} kg CO₂</span>
                             )}
                           </p>
-                          <p className="text-2xs text-ink-900/45">
+                          <p className="text-2xs text-ink-500">
                             by {col.journey.mode}
                             {!col.journey.direct && col.journey.via.length > 0 && ` · via ${col.journey.via.join(", ")}`}
                           </p>
                         </div>
                       ) : (
-                        <p className="text-xs text-ink-900/40">
+                        <p className="text-sm text-ink-500">
                           No route recorded from {comparison.origin || "your origin"}.
                         </p>
                       )}
@@ -236,7 +251,7 @@ export default function Destinations() {
                       <div className="grid grid-cols-3 gap-1.5 text-center">
                         {["budget", "mid", "luxury"].map((tier) => (
                           <div key={tier} className="p-2 rounded-lg bg-paper border border-sand">
-                            <p className="text-3xs uppercase tracking-wide text-ink-900/40">{tier}</p>
+                            <p className="text-3xs uppercase tracking-wide text-ink-500">{tier}</p>
                             <p className="text-sm font-semibold text-ink-900 mt-0.5">
                               {col.cost[tier] ? `৳${col.cost[tier].per_day.toLocaleString()}` : "—"}
                             </p>
@@ -244,21 +259,21 @@ export default function Destinations() {
                         ))}
                       </div>
                       {col.cost.mid?.notes && (
-                        <p className="mt-1.5 text-2xs text-ink-900/50 leading-snug">{col.cost.mid.notes}</p>
+                        <p className="mt-1.5 text-2xs text-ink-500 leading-snug">{col.cost.mid.notes}</p>
                       )}
                     </CompareRow>
 
                     <CompareRow label={t("destination.what_to_do", "What there is to do")} icon={Landmark}>
-                      <p className="text-xs text-ink-900/70">
+                      <p className="text-sm text-ink-900/70">
                         <span className="font-semibold text-ink-900">{col.attractions.count}</span> attractions
                         {col.attractions.free_count > 0 && (
-                          <span className="text-ink-900/50"> · {col.attractions.free_count} free</span>
+                          <span className="text-ink-500"> · {col.attractions.free_count} free</span>
                         )}
                       </p>
                       {col.attractions.top.length > 0 && (
                         <ul className="mt-1.5 space-y-0.5">
                           {col.attractions.top.map((a) => (
-                            <li key={a.name} className="text-2xs text-ink-900/60 truncate">· {a.name}</li>
+                            <li key={a.name} className="text-2xs text-ink-600 truncate">· {a.name}</li>
                           ))}
                         </ul>
                       )}
@@ -266,27 +281,27 @@ export default function Destinations() {
 
                     <CompareRow label={t("destination.staying", "Where to stay")} icon={Building2}>
                       {col.hotels.count > 0 ? (
-                        <p className="text-xs text-ink-900/70">
+                        <p className="text-sm text-ink-900/70">
                           <span className="font-semibold text-ink-900">{col.hotels.count}</span> hotels ·
                           ৳{col.hotels.min_price?.toLocaleString()}–৳{col.hotels.max_price?.toLocaleString()}
                           {col.hotels.avg_rating > 0 && (
-                            <span className="inline-flex items-center gap-0.5 ml-1.5 text-ink-900/50">
+                            <span className="inline-flex items-center gap-0.5 ml-1.5 text-ink-500">
                               <Star className="w-3 h-3 fill-gold text-gold" />
                               {col.hotels.avg_rating.toFixed(1)}
                             </span>
                           )}
                         </p>
                       ) : (
-                        <p className="text-xs text-ink-900/40">No hotels recorded yet.</p>
+                        <p className="text-sm text-ink-500">No hotels recorded yet.</p>
                       )}
                     </CompareRow>
 
                     <CompareRow label={t("destination.suggested_length", "Suggested length")} icon={CalendarRange}>
-                      <p className="text-xs text-ink-900/70">
+                      <p className="text-sm text-ink-900/70">
                         <span className="font-semibold text-ink-900">{d.recommended_days}</span> days
                       </p>
                       {d.summary && (
-                        <p className="mt-1.5 text-2xs text-ink-900/55 leading-relaxed">{d.summary}</p>
+                        <p className="mt-1.5 text-2xs text-ink-600 leading-relaxed">{d.summary}</p>
                       )}
                     </CompareRow>
                   </article>
@@ -300,15 +315,15 @@ export default function Destinations() {
           {/* Filters */}
           <div className="flex flex-wrap gap-3 mb-6">
             <label className="flex items-center gap-2 px-3 py-2 bg-surface border border-sand rounded-xl flex-1 min-w-[200px] max-w-sm">
-              <Search className="w-4 h-4 text-ink-900/35 shrink-0" />
+              <Search className="w-4 h-4 text-ink-500 shrink-0" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("destination.search", "Search destinations…")}
-                className="flex-1 min-w-0 bg-transparent text-sm text-ink-900 placeholder:text-ink-900/35 focus:outline-none"
+                className="flex-1 min-w-0 bg-transparent text-sm text-ink-900 placeholder:text-ink-500 focus:outline-none"
               />
               {query && (
-                <button onClick={() => setQuery("")} className="text-ink-900/30 hover:text-ink-900/60">
+                <button onClick={() => setQuery("")} className="text-ink-900/30 hover:text-ink-600">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -332,7 +347,7 @@ export default function Destinations() {
               {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} media={false} />)}
             </div>
           ) : visible.length === 0 ? (
-            <p className="text-sm text-ink-900/50">{t("common.no_results", "No results found.")}</p>
+            <p className="text-sm text-ink-500">{t("common.no_results", "No results found.")}</p>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-24">
               {visible.map((d) => {
@@ -341,14 +356,21 @@ export default function Destinations() {
                 return (
                   <article
                     key={d.slug}
-                    className={`p-4 bg-surface rounded-2xl border transition ${
+                    className={`group p-4 bg-surface rounded-2xl border overflow-hidden transition ${
                       isSelected ? "border-teal ring-1 ring-teal/20 shadow-soft" : "border-sand hover:shadow-soft"
                     }`}
                   >
+                    <PlaceImage
+                      src={d.hero_image}
+                      alt={d.name}
+                      icon={TYPE_ICON[d.type] || Landmark}
+                      ratio="21/9"
+                      className="-mx-4 -mt-4 mb-3"
+                    />
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <h2 className="font-display text-base text-ink-900 leading-tight truncate">{d.name}</h2>
-                        <p className="text-xs text-ink-900/50 truncate">
+                        <p className="text-sm text-ink-500 truncate">
                           {d.country}{d.division ? ` · ${d.division}` : ""}
                         </p>
                       </div>
@@ -358,10 +380,10 @@ export default function Destinations() {
                     </div>
 
                     {d.summary && (
-                      <p className="mt-2 text-xs text-ink-900/60 leading-relaxed line-clamp-3">{d.summary}</p>
+                      <p className="mt-2 text-sm text-ink-600 leading-relaxed line-clamp-3">{d.summary}</p>
                     )}
 
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-2xs text-ink-900/55">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-3 text-2xs text-ink-600">
                       <span className="flex items-center gap-1">
                         <Wallet className="w-3 h-3" /> ৳{d.avg_daily_cost?.toLocaleString()}/day
                       </span>
@@ -375,7 +397,7 @@ export default function Destinations() {
                       disabled={atLimit}
                       className={`w-full mt-3 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
                         isSelected
-                          ? "bg-teal text-white"
+                          ? "bg-teal text-paper-fixed"
                           : atLimit
                             ? "bg-sand/40 text-ink-900/30 cursor-not-allowed"
                             : "bg-paper border border-sand text-ink-900/70 hover:border-teal/40 hover:text-teal-dark"
@@ -398,20 +420,20 @@ export default function Destinations() {
           {selected.length > 0 && (
             <div className="fixed bottom-0 left-0 right-0 md:left-64 z-30 border-t border-sand bg-paper/95 backdrop-blur px-6 md:px-10 py-3 animate-fade-up">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs text-ink-900/60">
+                <span className="text-sm text-ink-600">
                   <span className="font-semibold text-ink-900">{selected.length}</span> of {MAX_COMPARE} selected
-                  <span className="hidden sm:inline text-ink-900/45"> · {selectedNames.join(", ")}</span>
+                  <span className="hidden sm:inline text-ink-500"> · {selectedNames.join(", ")}</span>
                 </span>
                 <button
                   onClick={() => setSelected([])}
-                  className="text-xs text-ink-900/45 hover:text-sunset-dark underline"
+                  className="text-sm text-ink-500 hover:text-sunset-dark underline"
                 >
                   {t("common.cancel", "Clear")}
                 </button>
                 <button
                   onClick={runComparison}
                   disabled={selected.length < 2 || comparing}
-                  className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-teal text-white disabled:bg-sand disabled:text-ink-900/35 hover:bg-teal-dark transition-colors"
+                  className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-teal text-paper-fixed disabled:bg-sand disabled:text-ink-500 hover:bg-teal-dark transition-colors"
                 >
                   {comparing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scale className="w-4 h-4" />}
                   {selected.length < 2

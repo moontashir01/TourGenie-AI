@@ -17,10 +17,10 @@ function ModeratePrompt({ target, busy, onCancel, onConfirm }) {
 
   return (
     <Overlay open onClose={onCancel} size="md" label="Moderate this" dismissable={!busy} className="p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">
+        <h3 className="font-display text-xl text-ink-900 mb-1">
           {removing ? "Remove this permanently?" : "Hide this from the feed?"}
         </h3>
-        <p className="text-sm text-ink-900/60 mb-4">
+        <p className="text-sm text-ink-600 mb-4">
           {removing
             ? "It is deleted for good. Hiding it is reversible; this is not."
             : "The author keeps it, but nobody else sees it. You can unhide it later."}
@@ -29,7 +29,7 @@ function ModeratePrompt({ target, busy, onCancel, onConfirm }) {
           {target.excerpt}
         </blockquote>
         <label className="block mb-4">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Reason (recorded in the activity log)</span>
+          <span className="text-xs font-medium text-ink-600 mb-1.5 block">Reason (recorded in the activity log)</span>
           <input
             type="text"
             autoFocus
@@ -88,7 +88,7 @@ export default function Reviews() {
             onClick={() => act(kind, row._id, "unhide")}
             disabled={busyId === row._id}
             title="Make visible again"
-            className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+            className="text-ink-500 hover:text-teal-dark disabled:opacity-30"
           >
             <Eye className="w-4 h-4" />
           </button>
@@ -97,7 +97,7 @@ export default function Reviews() {
             onClick={() => setPrompt({ kind, id: row._id, action: "hide", excerpt })}
             disabled={busyId === row._id}
             title="Hide from the feed"
-            className="text-ink-900/40 hover:text-gold disabled:opacity-30"
+            className="text-ink-500 hover:text-gold disabled:opacity-30"
           >
             <EyeOff className="w-4 h-4" />
           </button>
@@ -106,7 +106,7 @@ export default function Reviews() {
           onClick={() => setPrompt({ kind, id: row._id, action: "remove", excerpt })}
           disabled={busyId === row._id}
           title="Remove permanently"
-          className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+          className="text-ink-500 hover:text-sunset-dark disabled:opacity-30"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -117,7 +117,7 @@ export default function Reviews() {
   return (
     <div className="space-y-8">
       <section className="card p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-4">Community posts</h3>
+        <h3 className="font-display text-xl text-ink-900 mb-4">Community posts</h3>
         <ErrorBanner message={posts.error} onDismiss={() => posts.setError("")} />
         <AdminToolbar list={posts} placeholder="Search place or content…">
           <AdminSelect
@@ -134,7 +134,7 @@ export default function Reviews() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   <th className="pb-3 font-medium">Author</th>
                   <th className="pb-3 font-medium">Place</th>
                   <th className="pb-3 font-medium">Content</th>
@@ -146,7 +146,7 @@ export default function Reviews() {
                 {posts.rows.map((p) => (
                   <tr key={p._id} className={busyId === p._id ? "opacity-50" : ""}>
                     <td className="py-3 text-ink-900/70 text-xs">
-                      {p.user_id?.name || <span className="text-ink-900/35">deleted account</span>}
+                      {p.user_id?.name || <span className="text-ink-500">deleted account</span>}
                     </td>
                     <td className="py-3 text-ink-900/70">{p.place}</td>
                     <td className="py-3 text-ink-900/70 max-w-sm truncate" title={p.content}>
@@ -174,7 +174,7 @@ export default function Reviews() {
       </section>
 
       <section className="card p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-4">Attraction reviews</h3>
+        <h3 className="font-display text-xl text-ink-900 mb-4">Attraction reviews</h3>
         <ErrorBanner message={reviews.error} onDismiss={() => reviews.setError("")} />
         <AdminToolbar list={reviews} placeholder="Search review text…">
           <AdminSelect
@@ -191,7 +191,7 @@ export default function Reviews() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   <th className="pb-3 font-medium">Author</th>
                   <th className="pb-3 font-medium">Attraction</th>
                   <th className="pb-3 font-medium">Rating</th>
@@ -204,7 +204,7 @@ export default function Reviews() {
                 {reviews.rows.map((r) => (
                   <tr key={r._id} className={busyId === r._id ? "opacity-50" : ""}>
                     <td className="py-3 text-ink-900/70 text-xs">
-                      {r.user_id?.name || <span className="text-ink-900/35">deleted account</span>}
+                      {r.user_id?.name || <span className="text-ink-500">deleted account</span>}
                     </td>
                     <td className="py-3 text-ink-900/70">{r.attraction_id?.name || "—"}</td>
                     <td className="py-3">

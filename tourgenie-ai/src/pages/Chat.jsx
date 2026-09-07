@@ -41,7 +41,7 @@ export default function Chat() {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto card shadow-lift flex flex-col h-[calc(100vh-13rem)] overflow-hidden">
+      <div className="max-w-3xl mx-auto card shadow-soft flex flex-col h-[calc(100vh-13rem)] overflow-hidden">
         <ChatThread messages={messages} sending={sending} className="flex-1 p-6 space-y-4" />
 
         {error && (
@@ -57,7 +57,7 @@ export default function Chat() {
                 key={c.code}
                 onClick={() => send(c.label).catch(() => {})}
                 disabled={sending}
-                className="text-xs font-medium text-teal-dark bg-teal-light hover:bg-teal hover:text-white disabled:opacity-50 px-3 py-1.5 rounded-full transition-colors"
+                className="text-xs font-medium text-teal-dark bg-teal-light hover:bg-teal hover:text-paper-fixed disabled:opacity-50 px-3 py-1.5 rounded-full transition-colors"
               >
                 {c.label}
               </button>

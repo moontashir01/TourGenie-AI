@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Button from "../components/ui/Button";
-import useCountUp from "../hooks/useCountUp";
+import Badge from "../components/ui/Badge";
+import SectionHeader from "../components/ui/SectionHeader";
+import Stat from "../components/ui/Stat";
 import { Plus, X, Plane, AlertTriangle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import AppShell from "../components/AppShell";
@@ -95,6 +97,9 @@ export default function Budget() {
   }
 
   const symbol = summary?.symbol || "৳";
+  // One formatter, because five places were each doing symbol + toLocaleString
+  // and three of them rounded differently.
+  const money = (n) => `${symbol}${Math.round(n || 0).toLocaleString()}`;
   const categories = Object.entries(summary?.byCategory || {}).filter(([, amount]) => amount > 0);
   const total = categories.reduce((s, [, v]) => s + v, 0);
   // The server has more expense categories than the six named ones, and
@@ -132,12 +137,18 @@ export default function Budget() {
       )}
 
       <div className="grid sm:grid-cols-3 gap-5 mb-8">
-        <SummaryCard label="Total Budget" value={summary?.budget || 0} symbol={symbol} tone="ink" />
-        <SummaryCard label="Spent" value={summary?.spent || 0} symbol={symbol} tone="sunset" />
-        <SummaryCard
+        <Stat label="Total Budget" value={summary?.budget || 0} format={money} />
+        <Stat
+          label="Spent"
+          value={summary?.spent || 0}
+          format={money}
+          tone="sunset"
+          hint={`${money(summary?.logged_total || 0)} logged · ${money(summary?.estimated_total || 0)} estimated from the plan`}
+        />
+        <Stat
           label={overBudget ? "Over by" : "Remaining"}
           value={overBudget ? summary.overspend : summary?.remaining || 0}
-          symbol={symbol}
+          format={money}
           tone={overBudget ? "sunset" : "teal"}
         />
       </div>
@@ -154,25 +165,19 @@ export default function Budget() {
           />
         )}
       </div>
-      <p className="text-xs text-ink-900/50 mb-10">
-        {symbol}{(summary?.logged_total || 0).toLocaleString()} logged ·{" "}
-        {symbol}{(summary?.estimated_total || 0).toLocaleString()} estimated from the plan
-        {summary?.budget_includes_flights === false && summary?.flights_excluded > 0 && (
-          <>
-            {" · "}
-            <span className="inline-flex items-center gap-1">
-              <Plane className="w-3 h-3" /> {symbol}{summary.flights_excluded.toLocaleString()} airfare tracked outside
-              this budget
-            </span>
-          </>
-        )}
-      </p>
+      {summary?.budget_includes_flights === false && summary?.flights_excluded > 0 ? (
+        <p className="text-sm text-ink-500 mb-10 inline-flex items-center gap-1">
+          <Plane className="w-3 h-3" /> {money(summary.flights_excluded)} airfare tracked outside this budget
+        </p>
+      ) : (
+        <div className="mb-10" />
+      )}
 
       {summary?.planned_breakdown?.length > 0 && (
-        <div className="bg-surface border border-sand rounded-2xl p-6 mb-8">
+        <div className="card p-6 mb-8">
           <div className="flex items-baseline justify-between mb-4">
             <h3 className="font-display text-lg text-ink-900">Planned split</h3>
-            <p className="text-xs text-ink-900/50">
+            <p className="text-sm text-ink-500">
               What a {summary.budget_tier === "mid" ? "mid-range" : summary.budget_tier} trip like this typically costs —{" "}
               <span className="font-mono">{symbol}{summary.planned_total.toLocaleString()}</span>
             </p>
@@ -189,7 +194,7 @@ export default function Budget() {
               />
             ))}
           </div>
-          <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-ink-900/60">
+          <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-ink-600">
             {summary.planned_breakdown.map((line) => (
               <li key={line.category} className="inline-flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ background: line.color }} />
@@ -201,10 +206,10 @@ export default function Budget() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <div className="bg-surface border border-sand rounded-2xl p-6">
-          <h3 className="font-display text-lg text-ink-900 mb-6">Spending by category</h3>
+        <div className="card p-6">
+          <SectionHeader title="Spending by category" count={segments.length || undefined} />
           {segments.length === 0 ? (
-            <p className="text-sm text-ink-900/50">No expenses logged yet.</p>
+            <p className="text-sm text-ink-500">No expenses logged yet.</p>
           ) : (
             <div className="flex flex-col sm:flex-row items-center gap-8">
               <div className="relative w-44 h-44 shrink-0">
@@ -246,14 +251,14 @@ export default function Budget() {
                 {/* Sits inside the donut hole; pointer-events-none so it never
                     steals the hover from the arcs underneath. */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-3xs uppercase tracking-wide text-ink-900/40 font-semibold">
+                  <span className="text-3xs uppercase tracking-wide text-ink-500 font-semibold">
                     {active ? active.category : "Spent"}
                   </span>
                   <span className="font-mono text-lg font-bold text-ink-900">
                     {symbol}{(active ? active.amount : total).toLocaleString()}
                   </span>
                   {active && (
-                    <span className="text-3xs text-ink-900/45 font-mono">
+                    <span className="text-3xs text-ink-500 font-mono">
                       {Math.round((active.amount / total) * 100)}%
                     </span>
                   )}
@@ -281,17 +286,20 @@ export default function Budget() {
           )}
         </div>
 
-        <div className="bg-surface border border-sand rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-lg text-ink-900">Expense log</h3>
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-dark hover:text-teal"
-            >
-              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {showForm ? "Cancel" : "Add expense"}
-            </button>
-          </div>
+        <div className="card p-6">
+          <SectionHeader
+            title="Expense log"
+            count={expenses.length || undefined}
+            action={
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-dark hover:text-teal"
+              >
+                {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                {showForm ? "Cancel" : "Add expense"}
+              </button>
+            }
+          />
 
           {showForm && (
             <form onSubmit={handleAddExpense} className="space-y-3 mb-5 border-b border-sand pb-5">
@@ -313,21 +321,29 @@ export default function Budget() {
           )}
 
           {expenses.length === 0 ? (
-            <p className="text-sm text-ink-900/50">No expenses yet.</p>
+            <p className="text-sm text-ink-500">No expenses yet.</p>
           ) : (
             <div className="divide-y divide-sand">
               {expenses.map((e) => (
-                <div key={e._id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium text-ink-900">{e.description}</p>
-                    <p className="text-xs text-ink-900/50">
+                <div key={e._id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-ink-900 flex items-center gap-2">
+                      <span className="truncate">{e.description}</span>
+                      {e.is_estimated && (
+                        <Badge tone="outline" size="sm" className="shrink-0">Estimated</Badge>
+                      )}
+                    </p>
+                    <p className="text-sm text-ink-500">
                       {e.category} · {new Date(e.date).toLocaleDateString()}
-                      {e.is_estimated && " · estimated"}
                       {e.counts_toward_budget === false && " · outside budget"}
                     </p>
                   </div>
-                  <p className={`font-mono text-sm ${e.counts_toward_budget === false ? "text-ink-900/40" : "text-ink-900"}`}>
-                    {symbol}{e.amount.toLocaleString()}
+                  <p
+                    className={`font-mono text-sm tabular-nums shrink-0 ${
+                      e.is_estimated || e.counts_toward_budget === false ? "text-ink-500" : "text-ink-900"
+                    }`}
+                  >
+                    {money(e.amount)}
                   </p>
                 </div>
               ))}
@@ -339,19 +355,4 @@ export default function Budget() {
   );
 }
 
-function SummaryCard({ label, value, symbol, tone }) {
-  const toneClass = { ink: "text-ink-900", sunset: "text-sunset-dark", teal: "text-teal-dark" }[tone];
-  // These three move whenever an expense is logged, and a figure that slides
-  // to its new value shows *that* it moved — which is the whole question a
-  // budget page is asked. tabular-nums stops the digits jittering on the way.
-  const shown = useCountUp(value);
-  return (
-    <div className="bg-surface border border-sand rounded-2xl p-6">
-      <p className="text-xs font-medium text-ink-900/50 mb-2">{label}</p>
-      <p className={`font-mono text-2xl font-semibold tabular-nums ${toneClass}`}>
-        {symbol}
-        {Math.round(shown).toLocaleString()}
-      </p>
-    </div>
-  );
-}
+

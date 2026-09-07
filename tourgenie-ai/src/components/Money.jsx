@@ -13,11 +13,15 @@ export default function Money({ bdt, local, className = "", localClassName = "",
   const converted = convert(bdt, local);
 
   const Wrapper = block ? "div" : "span";
+  // tabular-nums here rather than at each call site: money is nearly always
+  // in a column — a budget table, an expense list — and proportional digits
+  // make those columns ragged, which is the clearest tell that nobody looked
+  // at the page.
   return (
-    <Wrapper className={className}>
+    <Wrapper className={`tabular-nums ${className}`}>
       {formatBdt(bdt)}
       {converted && (
-        <span className={`ml-1.5 text-ink-900/55 ${localClassName}`} title={`Indicative rate — 1 ${converted.code} ≈ ৳${(bdt / converted.value || 0).toFixed(2)}`}>
+        <span className={`ml-1.5 text-ink-600 ${localClassName}`} title={`Indicative rate — 1 ${converted.code} ≈ ৳${(bdt / converted.value || 0).toFixed(2)}`}>
           ≈ {converted.formatted}
         </span>
       )}

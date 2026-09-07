@@ -20,7 +20,7 @@ export function ChartTooltip({ active, payload, label, formatter, labelFormatter
               className="w-2 h-2 rounded-full shrink-0"
               style={{ background: entry.color || entry.payload?.fill }}
             />
-            <span className="text-ink-900/60">{entry.name}</span>
+            <span className="text-ink-600">{entry.name}</span>
             <span className="font-mono text-ink-900 ml-auto pl-3">
               {formatter ? formatter(entry.value, entry.name, entry) : entry.value?.toLocaleString()}
             </span>
@@ -34,7 +34,7 @@ export function ChartTooltip({ active, payload, label, formatter, labelFormatter
 /** Legend row shared by the donuts and the stacked bars. */
 export function ChartLegend({ items, className = "" }) {
   return (
-    <ul className={`flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-ink-900/60 ${className}`}>
+    <ul className={`flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-ink-600 ${className}`}>
       {items.map((item) => (
         <li key={item.label} className="inline-flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: item.color }} />

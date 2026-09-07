@@ -3,6 +3,7 @@ import { Loader2, Save, Check, Plus, Trash2, Search, Languages, Bell, SlidersHor
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
 import { ErrorBanner } from "../../components/admin/ListShell";
+import Button from "../../components/ui/Button";
 
 // Phase 5 — the three collections that are configuration rather than
 // catalogue, and had no screen at all: the limits the app enforces, the copy
@@ -25,7 +26,7 @@ export default function Settings() {
       {/* Said once, up front: all three of these collections are replaced
           wholesale by `npm run seed`, so an edit here is lost on the next
           reseed unless it is also made in the seed data. */}
-      <p className="text-xs text-ink-900/50 bg-paper border border-sand rounded-lg px-4 py-2.5">
+      <p className="text-xs text-ink-500 bg-paper border border-sand rounded-lg px-4 py-2.5">
         Changes take effect immediately. They are overwritten the next time the database is reseeded — anything
         permanent belongs in the seed data as well.
       </p>
@@ -121,15 +122,15 @@ function AppSettings() {
       <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       {!canEdit && (
-        <p className="text-sm text-ink-900/60 bg-paper border border-sand rounded-lg px-4 py-3">
+        <p className="text-sm text-ink-600 bg-paper border border-sand rounded-lg px-4 py-3">
           These change how the app behaves for everyone, so only an owner can edit them.
         </p>
       )}
 
       {groups.map((group) => (
         <section key={group.group} className="card p-6">
-          <h3 className="font-display text-lg text-ink-900 mb-1 capitalize">{group.group}</h3>
-          <p className="text-sm text-ink-900/55 mb-5">{GROUP_BLURB[group.group] || ""}</p>
+          <h3 className="font-display text-xl text-ink-900 mb-1 capitalize">{group.group}</h3>
+          <p className="text-sm text-ink-600 mb-5">{GROUP_BLURB[group.group] || ""}</p>
 
           <div className="space-y-5">
             {group.rows.map((setting) => {
@@ -138,20 +139,20 @@ function AppSettings() {
                 <div key={setting.key} className="border-b border-sand/70 last:border-0 pb-5 last:pb-0">
                   <div className="flex flex-wrap items-baseline gap-2 mb-1">
                     <span className="text-sm font-medium text-ink-900">{setting.label || setting.key}</span>
-                    <code className="text-2xs text-ink-900/40 font-mono">{setting.key}</code>
+                    <code className="text-2xs text-ink-500 font-mono">{setting.key}</code>
                     {!setting.is_editable && (
-                      <span className="text-3xs uppercase tracking-wide font-semibold bg-sand text-ink-900/55 px-2 py-0.5 rounded-full">
+                      <span className="text-3xs uppercase tracking-wide font-semibold bg-sand text-ink-600 px-2 py-0.5 rounded-full">
                         fixed
                       </span>
                     )}
                     {!setting.is_public && (
-                      <span className="text-3xs uppercase tracking-wide font-semibold bg-sand text-ink-900/55 px-2 py-0.5 rounded-full">
+                      <span className="text-3xs uppercase tracking-wide font-semibold bg-sand text-ink-600 px-2 py-0.5 rounded-full">
                         server only
                       </span>
                     )}
                   </div>
                   {setting.description && (
-                    <p className="text-xs text-ink-900/50 mb-2.5">{setting.description}</p>
+                    <p className="text-xs text-ink-500 mb-2.5">{setting.description}</p>
                   )}
 
                   <div className="flex flex-wrap items-start gap-2">
@@ -162,15 +163,15 @@ function AppSettings() {
                       onChange={(v) => setDrafts((prev) => ({ ...prev, [setting.key]: v }))}
                     />
                     {dirty && (
-                      <button
+                      <Button
                         type="button"
                         onClick={() => save(setting)}
-                        disabled={saving === setting.key}
-                        className="btn-primary text-xs py-2"
+                        loading={saving === setting.key}
+                        icon={Save}
+                        size="sm"
                       >
-                        {saving === setting.key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         Save
-                      </button>
+                      </Button>
                     )}
                     {saved === setting.key && (
                       <span className="inline-flex items-center gap-1 text-xs text-teal-dark py-2">
@@ -320,14 +321,14 @@ function NotificationTemplates() {
 
       <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-1">
-          <h3 className="font-display text-lg text-ink-900">Notification rules</h3>
+          <h3 className="font-display text-xl text-ink-900">Notification rules</h3>
           {canWrite && (
-            <button type="button" onClick={() => setEditing({ ...BLANK_TEMPLATE })} className="btn-primary">
-              <Plus className="w-4 h-4" /> New rule
-            </button>
+            <Button type="button" onClick={() => setEditing({ ...BLANK_TEMPLATE })} icon={Plus}>
+              New rule
+            </Button>
           )}
         </div>
-        <p className="text-sm text-ink-900/55 mb-5">
+        <p className="text-sm text-ink-600 mb-5">
           The engine reads these on every sweep, so an edit changes the next notification anyone receives.
           <span className="block mt-1">
             <strong className="font-semibold text-ink-900/70">Fired</strong> counts the last 30 days over all
@@ -340,7 +341,7 @@ function NotificationTemplates() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">Code</th>
                 <th className="pb-3 font-medium">Fires on</th>
                 <th className="pb-3 font-medium">Title</th>
@@ -358,7 +359,7 @@ function NotificationTemplates() {
               {templates.map((template) => (
                 <tr key={template._id}>
                   <td className="py-3 font-mono text-xs text-ink-900/70">{template.code}</td>
-                  <td className="py-3 text-ink-900/60 text-xs">
+                  <td className="py-3 text-ink-600 text-xs">
                     {template.trigger?.event}
                     {template.trigger?.offset_hours ? ` · ${template.trigger.offset_hours}h` : ""}
                     {template.trigger?.threshold != null ? ` · ${template.trigger.threshold}` : ""}
@@ -366,7 +367,7 @@ function NotificationTemplates() {
                   <td className="py-3 text-ink-900/70 max-w-xs truncate" title={template.title_template}>
                     {template.title_template}
                   </td>
-                  <td className="py-3 text-ink-900/60 capitalize">{template.severity}</td>
+                  <td className="py-3 text-ink-600 capitalize">{template.severity}</td>
                   <td className="py-3 text-xs tabular-nums whitespace-nowrap">
                     {template.fired_total > 0 ? (
                       <span
@@ -378,10 +379,10 @@ function NotificationTemplates() {
                         }
                       >
                         {template.fired_last_30d}
-                        <span className="text-ink-900/35"> / {template.fired_total}</span>
+                        <span className="text-ink-500"> / {template.fired_total}</span>
                       </span>
                     ) : (
-                      <span className="text-ink-900/35">never</span>
+                      <span className="text-ink-500">never</span>
                     )}
                   </td>
                   <td className="py-3">
@@ -408,7 +409,7 @@ function NotificationTemplates() {
                         type="button"
                         onClick={() => setEditing(template)}
                         disabled={!canWrite}
-                        className="text-xs font-semibold text-ink-900/60 hover:text-teal-dark disabled:opacity-30"
+                        className="text-xs font-semibold text-ink-600 hover:text-teal-dark disabled:opacity-30"
                       >
                         Edit
                       </button>
@@ -417,7 +418,7 @@ function NotificationTemplates() {
                         onClick={() => remove(template)}
                         disabled={!canDelete}
                         title={canDelete ? "Remove" : "Owner only"}
-                        className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+                        className="text-ink-500 hover:text-sunset-dark disabled:opacity-30"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -532,12 +533,12 @@ function NotificationTemplates() {
           </div>
 
           <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="btn-primary">
+            <Button type="submit" loading={saving}>
               {saving ? "Saving…" : editing._id ? "Save changes" : "Create rule"}
-            </button>
-            <button type="button" onClick={() => setEditing(null)} className="btn-secondary">
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setEditing(null)}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -642,8 +643,8 @@ function Translations() {
       )}
 
       <div className="card p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">UI strings</h3>
-        <p className="text-sm text-ink-900/55 mb-5">
+        <h3 className="font-display text-xl text-ink-900 mb-1">UI strings</h3>
+        <p className="text-sm text-ink-600 mb-5">
           English is the source. A key left blank falls back to the English copy rather than rendering a bare key
           name, so a partial translation is safe to save.
         </p>
@@ -661,7 +662,7 @@ function Translations() {
               }`}
             >
               {l.flag} {l.native_label}
-              <span className={`ml-1.5 text-xs ${lang === l.lang ? "text-paper/60" : "text-ink-900/40"}`}>
+              <span className={`ml-1.5 text-xs ${lang === l.lang ? "text-paper/60" : "text-ink-500"}`}>
                 {l.completeness_pct}%
               </span>
             </button>
@@ -688,7 +689,7 @@ function Translations() {
             />
             Untranslated only
           </label>
-          <span className="text-xs text-ink-900/45 ml-auto tabular-nums">
+          <span className="text-xs text-ink-500 ml-auto tabular-nums">
             {filtered.length} of {entries.length}
             {current && ` · ${current.completeness_pct}% complete`}
           </span>
@@ -699,11 +700,10 @@ function Translations() {
             <span className="text-sm text-ink-900/70">
               {dirtyCount} unsaved change{dirtyCount === 1 ? "" : "s"}
             </span>
-            <button type="button" onClick={saveAll} disabled={saving || !canWrite} className="btn-primary text-xs py-2 ml-auto">
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <Button type="button" onClick={saveAll} loading={saving} disabled={!canWrite} icon={Save} size="sm" className="ml-auto">
               Save
-            </button>
-            <button type="button" onClick={() => setDrafts({})} className="text-xs text-ink-900/45 hover:text-ink-900">
+            </Button>
+            <button type="button" onClick={() => setDrafts({})} className="text-xs text-ink-500 hover:text-ink-900">
               Discard
             </button>
           </div>
@@ -716,7 +716,7 @@ function Translations() {
             {filtered.map((entry) => (
               <div key={entry.key} className="grid sm:grid-cols-2 gap-2 items-start border-b border-sand/60 pb-3">
                 <div className="min-w-0">
-                  <code className="text-2xs font-mono text-ink-900/45 block truncate">{entry.key}</code>
+                  <code className="text-2xs font-mono text-ink-500 block truncate">{entry.key}</code>
                   <p className="text-sm text-ink-900/70">{entry.english || <span className="text-ink-900/30">—</span>}</p>
                 </div>
                 <input
@@ -731,14 +731,14 @@ function Translations() {
               </div>
             ))}
             {filtered.length === 0 && (
-              <p className="text-sm text-ink-900/50 text-center py-8">No strings match that.</p>
+              <p className="text-sm text-ink-500 text-center py-8">No strings match that.</p>
             )}
           </div>
         )}
 
         {orphans.length > 0 && (
           <div className="mt-5 pt-4 border-t border-sand">
-            <p className="text-xs text-ink-900/50 mb-2">
+            <p className="text-xs text-ink-500 mb-2">
               {orphans.length} key{orphans.length === 1 ? "" : "s"} this language has that English doesn't. Usually a
               typo in a key name — nothing ever asks for them, so they are invisible in the app.
             </p>
@@ -746,7 +746,7 @@ function Translations() {
               {orphans.map((key) => (
                 <span
                   key={key}
-                  className="inline-flex items-center gap-1 text-2xs font-mono bg-paper border border-sand rounded-full pl-2.5 pr-1.5 py-1 text-ink-900/60"
+                  className="inline-flex items-center gap-1 text-2xs font-mono bg-paper border border-sand rounded-full pl-2.5 pr-1.5 py-1 text-ink-600"
                 >
                   {key}
                   <button
@@ -773,16 +773,16 @@ function Translations() {
 function Field({ label, hint, wide, children }) {
   return (
     <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
-      <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">{label}</span>
+      <span className="text-xs font-medium text-ink-600 mb-1.5 block">{label}</span>
       {children}
-      {hint && <span className="text-2xs text-ink-900/40 mt-1 block font-mono">{hint}</span>}
+      {hint && <span className="text-2xs text-ink-500 mt-1 block font-mono">{hint}</span>}
     </label>
   );
 }
 
 function Loading({ label }) {
   return (
-    <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+    <div className="flex items-center gap-2 text-ink-500 text-sm py-12 justify-center">
       <Loader2 className="w-4 h-4 animate-spin" /> {label}
     </div>
   );

@@ -9,6 +9,7 @@ import { PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, transportApi, bookingApi, notificationApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useLanguage } from "../context/LanguageContext";
+import SectionHeader from "../components/ui/SectionHeader";
 
 // FR-08 — Mock Ticket Booking (wireframe §3.9).
 //
@@ -179,7 +180,7 @@ export default function Booking() {
   if (!currentTripId) {
     return (
       <AppShell title={t("booking.title", "Ticket Booking")}>
-        <div className="max-w-md p-6 bg-surface border border-sand rounded-2xl shadow-soft">
+        <div className="max-w-md p-6 card shadow-soft">
           <p className="text-sm text-ink-900/70">Open a trip first — bookings are made against a trip.</p>
           <Link to="/dashboard" className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-teal-dark hover:underline">
             Go to my trips <ArrowRight className="w-4 h-4" />
@@ -221,22 +222,22 @@ export default function Booking() {
               <p className="text-sm text-ink-900/70 mt-1">{confirmation.message}</p>
               <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3 text-sm">
                 <span>
-                  <span className="text-ink-900/50">{t("booking.reference", "Booking reference")}: </span>
+                  <span className="text-ink-500">{t("booking.reference", "Booking reference")}: </span>
                   <span className="font-mono font-bold text-ink-900">{confirmation.booking.reference}</span>
                 </span>
                 <span>
-                  <span className="text-ink-900/50">{t("booking.seat", "Seat")}: </span>
+                  <span className="text-ink-500">{t("booking.seat", "Seat")}: </span>
                   <span className="font-mono text-ink-900">{confirmation.booking.seats.join(", ")}</span>
                 </span>
                 <span>
-                  <span className="text-ink-900/50">{t("common.total", "Total")}: </span>
+                  <span className="text-ink-500">{t("common.total", "Total")}: </span>
                   <span className="font-semibold text-ink-900">৳{confirmation.booking.total_fare.toLocaleString()}</span>
                 </span>
               </div>
             </div>
             <button
               onClick={() => setConfirmation(null)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-ink-900/30 hover:text-ink-900/60 shrink-0"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-ink-900/30 hover:text-ink-600 shrink-0"
               aria-label="Dismiss"
             >
               <X className="w-4 h-4" />
@@ -251,9 +252,9 @@ export default function Booking() {
         <div className="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
           {/* Available departures */}
           <section>
-            <h2 className="font-display text-lg text-ink-900 mb-3">Available departures</h2>
+            <SectionHeader title="Available departures" count={options.length || undefined} />
             {options.length === 0 ? (
-              <p className="text-sm text-ink-900/55 p-4 bg-surface border border-sand rounded-xl">
+              <p className="text-sm text-ink-600 p-4 bg-surface border border-sand rounded-xl">
                 No transport is recorded between {trip?.origin} and {trip?.destination} yet. An admin can add
                 services from the Transport console.
               </p>
@@ -280,10 +281,10 @@ export default function Booking() {
                           <div className="flex flex-wrap items-baseline gap-x-2">
                             <span className="font-semibold text-ink-900">{o.operator}</span>
                             {o.service_class && (
-                              <span className="text-2xs text-ink-900/50">{o.service_class}</span>
+                              <span className="text-2xs text-ink-500">{o.service_class}</span>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-ink-900/65">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-sm text-ink-600">
                             <span className="font-mono">
                               {o.depart_time} → {o.arrive_time}
                               {o.arrives_next_day && <span className="text-sunset-dark"> +1</span>}
@@ -298,12 +299,12 @@ export default function Booking() {
                             </span>
                           </div>
                           {o.boarding_point && (
-                            <p className="text-2xs text-ink-900/45 mt-1">From {o.boarding_point}</p>
+                            <p className="text-2xs text-ink-500 mt-1">From {o.boarding_point}</p>
                           )}
                         </div>
                         <div className="text-right shrink-0">
                           <p className="font-display text-lg text-ink-900">৳{o.fare.toLocaleString()}</p>
-                          <p className="text-3xs text-ink-900/45">per passenger</p>
+                          <p className="text-3xs text-ink-500">per passenger</p>
                         </div>
                       </div>
                     </button>
@@ -314,21 +315,21 @@ export default function Booking() {
 
             {/* Seat map for the selected departure */}
             {selected && (
-              <div className="mt-5 p-4 bg-surface border border-sand rounded-2xl">
+              <div className="mt-5 p-4 card">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h3 className="font-display text-base text-ink-900">Choose seats</h3>
-                  <span className="text-xs text-ink-900/50">
+                  <span className="text-sm text-ink-500">
                     {chosenSeats.length}/{passengers.length} picked
                     {chosenSeats.length === 0 && " · auto-assign if left blank"}
                   </span>
                 </div>
 
                 {seatsLoading ? (
-                  <p className="flex items-center gap-2 text-xs text-ink-900/50">
+                  <p className="flex items-center gap-2 text-sm text-ink-500">
                     <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading seat map…
                   </p>
                 ) : rows.length === 0 ? (
-                  <p className="text-xs text-ink-900/50">No seat map available for this service.</p>
+                  <p className="text-sm text-ink-500">No seat map available for this service.</p>
                 ) : (
                   <>
                     <div className="flex flex-col gap-1.5 max-h-72 overflow-y-auto pr-1">
@@ -347,8 +348,8 @@ export default function Booking() {
                                     seat.taken
                                       ? "bg-sand/60 text-ink-900/25 cursor-not-allowed line-through"
                                       : chosenSeats.includes(seat.label)
-                                        ? "bg-teal text-white font-bold"
-                                        : "bg-paper border border-sand text-ink-900/60 hover:border-teal/50"
+                                        ? "bg-teal text-paper-fixed font-bold"
+                                        : "bg-paper border border-sand text-ink-600 hover:border-teal/50"
                                   }`}
                                 >
                                   {seat.label}
@@ -360,7 +361,7 @@ export default function Booking() {
                         );
                       })}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-3 text-3xs text-ink-900/45">
+                    <div className="flex flex-wrap items-center gap-3 mt-3 text-3xs text-ink-500">
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-paper border border-sand" /> Free</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-teal" /> Yours</span>
                       <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-sand/60" /> Taken</span>
@@ -374,7 +375,7 @@ export default function Booking() {
             {/* Existing bookings */}
             {bookings.length > 0 && (
               <section className="mt-6">
-                <h2 className="font-display text-lg text-ink-900 mb-3">Your bookings for this trip</h2>
+                <SectionHeader title="Your bookings for this trip" count={bookings.length} />
                 <div className="space-y-2">
                   {bookings.map((b) => (
                     <div
@@ -391,20 +392,20 @@ export default function Booking() {
                             <span
                               className={`text-3xs px-2 py-0.5 rounded-full font-semibold ${
                                 b.status === "cancelled"
-                                  ? "bg-sand text-ink-900/50"
+                                  ? "bg-sand text-ink-500"
                                   : "bg-teal-light text-teal-dark"
                               }`}
                             >
                               {b.status}
                             </span>
                           </div>
-                          <p className="text-xs text-ink-900/65 mt-1">
+                          <p className="text-sm text-ink-600 mt-1">
                             {b.journey?.operator || b.transport_id?.operator} ·{" "}
                             {b.journey?.from_city || b.transport_id?.from_city} →{" "}
                             {b.journey?.to_city || b.transport_id?.to_city} ·{" "}
                             {b.journey?.depart_time || b.transport_id?.depart_time}
                           </p>
-                          <p className="text-2xs text-ink-900/45 mt-0.5">
+                          <p className="text-2xs text-ink-500 mt-0.5">
                             {b.passengers.length} passenger{b.passengers.length > 1 ? "s" : ""} · seats{" "}
                             {b.seats.join(", ")} · ৳{b.total_fare.toLocaleString()}
                           </p>
@@ -412,7 +413,7 @@ export default function Booking() {
                         {b.status !== "cancelled" && (
                           <button
                             onClick={() => cancel(b._id)}
-                            className="text-xs text-ink-900/45 hover:text-sunset-dark underline shrink-0"
+                            className="text-sm text-ink-500 hover:text-sunset-dark underline shrink-0"
                           >
                             Cancel
                           </button>
@@ -426,7 +427,7 @@ export default function Booking() {
           </section>
 
           {/* Passenger panel */}
-          <aside className="p-4 bg-surface border border-sand rounded-2xl shadow-soft lg:sticky lg:top-6">
+          <aside className="p-4 card shadow-soft lg:sticky lg:top-6">
             <h2 className="flex items-center gap-2 font-display text-base text-ink-900 mb-3">
               <Users className="w-4 h-4 text-teal-dark" />
               {t("booking.passenger_details", "Passenger details")}
@@ -436,7 +437,7 @@ export default function Booking() {
               {passengers.map((p, i) => (
                 <div key={i} className="p-3 bg-paper border border-sand rounded-xl">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-2xs font-semibold uppercase tracking-wide text-ink-900/40">
+                    <span className="text-2xs font-semibold uppercase tracking-wide text-ink-500">
                       Passenger {i + 1}
                     </span>
                     {chosenSeats[i] && (
@@ -476,7 +477,7 @@ export default function Booking() {
 
             <button
               onClick={() => setPassengers((prev) => [...prev, { name: "", age: "", gender: "" }])}
-              className="w-full mt-2 py-1.5 text-xs text-ink-900/50 hover:text-teal-dark"
+              className="w-full mt-2 py-1.5 text-xs text-ink-500 hover:text-teal-dark"
             >
               + Add another passenger
             </button>
@@ -484,7 +485,7 @@ export default function Booking() {
             {/* Fare summary */}
             {selected && (
               <div className="mt-4 pt-4 border-t border-sand space-y-1.5 text-sm">
-                <div className="flex justify-between text-ink-900/65">
+                <div className="flex justify-between text-ink-600">
                   <span>
                     {t("booking.fare", "Fare")} × {passengers.length}
                   </span>
@@ -500,17 +501,17 @@ export default function Booking() {
             <button
               onClick={confirm}
               disabled={!canConfirm}
-              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-sunset text-white hover:bg-sunset-dark disabled:bg-sand disabled:text-ink-fixed/35 transition-colors"
+              className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-sunset text-paper-fixed hover:bg-sunset-dark disabled:bg-sand disabled:text-ink-fixed/35 transition-colors"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               {t("booking.confirm", "Confirm Booking (Demo)")}
             </button>
 
             {!selected && (
-              <p className="mt-2 text-2xs text-ink-900/45 text-center">Pick a departure first.</p>
+              <p className="mt-2 text-2xs text-ink-500 text-center">Pick a departure first.</p>
             )}
             {selected && !namesFilled && (
-              <p className="mt-2 text-2xs text-ink-900/45 text-center">Every passenger needs a name.</p>
+              <p className="mt-2 text-2xs text-ink-500 text-center">Every passenger needs a name.</p>
             )}
             {selected && namesFilled && !seatsOk && (
               <p className="mt-2 text-2xs text-sunset-dark text-center">

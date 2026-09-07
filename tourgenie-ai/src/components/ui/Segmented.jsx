@@ -71,7 +71,7 @@ export default function Segmented({ options = [], value, onChange, size = "md", 
             }}
             onClick={() => onChange?.(option.value)}
             className={`relative z-10 inline-flex items-center gap-1.5 rounded-full font-semibold whitespace-nowrap transition-colors duration-fast ${pad} ${
-              selected ? "text-ink-900" : "text-ink-900/50 hover:text-ink-900/75"
+              selected ? "text-ink-900" : "text-ink-500 hover:text-ink-900/75"
             }`}
           >
             {Icon && <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden />}

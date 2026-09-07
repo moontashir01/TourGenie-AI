@@ -70,8 +70,8 @@ export default function UserDetail({ userId, onClose }) {
                   <span className="flex-1 min-w-0 truncate text-ink-900">
                     {t.origin} → {t.destination}
                   </span>
-                  <span className="text-xs text-ink-900/50 capitalize shrink-0">{t.status}</span>
-                  <span className="text-xs font-mono text-ink-900/50 shrink-0">{money(t.budget)}</span>
+                  <span className="text-xs text-ink-500 capitalize shrink-0">{t.status}</span>
+                  <span className="text-xs font-mono text-ink-500 shrink-0">{money(t.budget)}</span>
                 </li>
               ))}
             </ul>
@@ -112,16 +112,16 @@ export default function UserDetail({ userId, onClose }) {
             <ul className="space-y-1.5">
               {data.documents.map((d) => (
                 <li key={d._id} className="flex items-center gap-3 text-sm">
-                  <FileText className="w-3.5 h-3.5 text-ink-900/35 shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-ink-500 shrink-0" />
                   <span className="capitalize text-ink-900/80">{d.title || d.type}</span>
-                  <span className="text-xs text-ink-900/40 capitalize">{d.type}</span>
+                  <span className="text-xs text-ink-500 capitalize">{d.type}</span>
                   {d.expiry_date && (
-                    <span className="text-xs text-ink-900/45 ml-auto">expires {date(d.expiry_date)}</span>
+                    <span className="text-xs text-ink-500 ml-auto">expires {date(d.expiry_date)}</span>
                   )}
                 </li>
               ))}
             </ul>
-            <p className="text-2xs text-ink-900/35 mt-2">
+            <p className="text-2xs text-ink-500 mt-2">
               File links are never shown here — only whether a document exists and when it lapses.
             </p>
           </DrawerSection>
@@ -132,9 +132,9 @@ export default function UserDetail({ userId, onClose }) {
                 <li key={p._id} className="text-sm bg-surface border border-sand rounded-xl px-3 py-2.5">
                   <div className="flex items-center gap-2 mb-1">
                     <MessageSquare className="w-3.5 h-3.5 text-teal-dark" />
-                    <span className="text-xs text-ink-900/60">{p.place}</span>
+                    <span className="text-xs text-ink-600">{p.place}</span>
                     {p.is_hidden && <span className="text-2xs text-sunset-dark font-semibold">hidden</span>}
-                    <span className="text-xs text-ink-900/40 ml-auto">{p.likes || 0} likes</span>
+                    <span className="text-xs text-ink-500 ml-auto">{p.likes || 0} likes</span>
                   </div>
                   <p className="text-ink-900/75 text-xs line-clamp-2">{p.content}</p>
                 </li>
@@ -149,7 +149,7 @@ export default function UserDetail({ userId, onClose }) {
                   <div className="flex items-center gap-2 mb-1">
                     <Star className="w-3.5 h-3.5 text-gold fill-current" />
                     <span className="text-xs text-ink-900/70">{r.rating}</span>
-                    <span className="text-xs text-ink-900/50">{r.attraction_id?.name || "—"}</span>
+                    <span className="text-xs text-ink-500">{r.attraction_id?.name || "—"}</span>
                     {r.is_hidden && <span className="text-2xs text-sunset-dark font-semibold ml-auto">hidden</span>}
                   </div>
                   <p className="text-ink-900/75 text-xs line-clamp-2">{r.comment}</p>
@@ -166,8 +166,8 @@ export default function UserDetail({ userId, onClose }) {
                 <li key={a._id} className="flex items-start gap-2 text-xs">
                   <ScrollText className="w-3.5 h-3.5 text-ink-900/30 shrink-0 mt-0.5" />
                   <span className="font-mono text-ink-900/70">{a.action}</span>
-                  <span className="text-ink-900/45">by {a.actor_email}</span>
-                  <span className="text-ink-900/35 ml-auto shrink-0">{date(a.created_at)}</span>
+                  <span className="text-ink-500">by {a.actor_email}</span>
+                  <span className="text-ink-500 ml-auto shrink-0">{date(a.created_at)}</span>
                 </li>
               ))}
             </ul>
@@ -182,7 +182,7 @@ function Stat({ label, value }) {
   return (
     <div className="bg-surface border border-sand rounded-xl px-3 py-2.5">
       <p className="font-mono text-lg font-semibold text-ink-900">{value}</p>
-      <p className="text-2xs text-ink-900/50">{label}</p>
+      <p className="text-2xs text-ink-500">{label}</p>
     </div>
   );
 }

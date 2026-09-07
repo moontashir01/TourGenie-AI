@@ -207,7 +207,7 @@ export default function CommandPalette() {
       initialFocus={inputRef}
     >
         <div className="flex items-center gap-3 px-4 border-b border-sand">
-          <Search className="w-4 h-4 text-ink-900/35 shrink-0" />
+          <Search className="w-4 h-4 text-ink-500 shrink-0" />
           <input
             ref={inputRef}
             value={query}
@@ -219,14 +219,14 @@ export default function CommandPalette() {
             placeholder="Search pages, trips and actions…"
             className="flex-1 bg-transparent py-3.5 text-sm text-ink-900 placeholder:text-ink-900/30 focus:outline-none"
           />
-          <kbd className="hidden sm:block text-3xs font-mono text-ink-900/35 border border-sand rounded px-1.5 py-0.5">
+          <kbd className="hidden sm:block text-3xs font-mono text-ink-500 border border-sand rounded px-1.5 py-0.5">
             esc
           </kbd>
         </div>
 
         <div ref={listRef} className="max-h-80 overflow-y-auto py-2">
           {results.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-ink-900/45">
+            <p className="px-4 py-8 text-center text-sm text-ink-500">
               Nothing matches “{query}”.
             </p>
           ) : (
@@ -250,14 +250,14 @@ export default function CommandPalette() {
                     }`}
                   >
                     <cmd.icon
-                      className={`w-4 h-4 shrink-0 ${activeRow ? "text-teal-dark" : "text-ink-900/35"}`}
+                      className={`w-4 h-4 shrink-0 ${activeRow ? "text-teal-dark" : "text-ink-500"}`}
                       strokeWidth={1.75}
                     />
                     <span className="min-w-0 flex-1">
                       <span className={`block text-sm truncate ${activeRow ? "text-teal-dark font-semibold" : "text-ink-900"}`}>
                         {cmd.label}
                       </span>
-                      {cmd.hint && <span className="block text-2xs text-ink-900/45 truncate">{cmd.hint}</span>}
+                      {cmd.hint && <span className="block text-2xs text-ink-500 truncate">{cmd.hint}</span>}
                     </span>
                     {activeRow && <CornerDownLeft className="w-3.5 h-3.5 text-teal-dark shrink-0" />}
                   </button>
@@ -267,7 +267,7 @@ export default function CommandPalette() {
           )}
         </div>
 
-        <footer className="flex items-center gap-4 px-4 py-2 border-t border-sand bg-paper/60 text-3xs text-ink-900/40">
+        <footer className="flex items-center gap-4 px-4 py-2 border-t border-sand bg-paper/60 text-3xs text-ink-500">
           <span className="inline-flex items-center gap-1"><kbd className="font-mono">↑↓</kbd> navigate</span>
           <span className="inline-flex items-center gap-1"><kbd className="font-mono">↵</kbd> open</span>
           <span className="ml-auto inline-flex items-center gap-1">

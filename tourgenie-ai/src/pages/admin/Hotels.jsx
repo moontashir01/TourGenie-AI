@@ -94,7 +94,7 @@ export default function Hotels() {
       <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-ink-900">Hotels ({hotels.length})</h3>
+        <h3 className="font-display text-xl text-ink-900">Hotels ({hotels.length})</h3>
         {!editing && (
           <button onClick={openNew} className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-dark hover:text-teal">
             <Plus className="w-4 h-4" /> Add hotel
@@ -103,10 +103,10 @@ export default function Hotels() {
       </div>
 
       {editing !== null && (
-        <form onSubmit={handleSubmit} className="bg-surface border border-sand rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-display text-base text-ink-900">{editing._id ? "Edit hotel" : "New hotel"}</h4>
-            <button type="button" onClick={() => setEditing(null)} className="text-ink-900/40 hover:text-ink-900">
+            <button type="button" onClick={() => setEditing(null)} className="text-ink-500 hover:text-ink-900">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -129,13 +129,13 @@ export default function Hotels() {
         </form>
       )}
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         <AdminToolbar list={list} placeholder="Search hotel name, city or area…" />
         <ListState list={list} empty="No hotels match that. Add one, or run the seed script." />
         {hotels.length > 0 && (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">Name</th>
                 <th className="pb-3 font-medium">City</th>
                 <th className="pb-3 font-medium">Rating</th>
@@ -155,9 +155,9 @@ export default function Hotels() {
                     </span>
                   </td>
                   <td className="py-3 font-mono text-ink-900/70">৳{h.price_per_night.toLocaleString()}</td>
-                  <td className="py-3 text-ink-900/60 max-w-[220px] truncate">{(h.facilities || []).join(", ") || "—"}</td>
+                  <td className="py-3 text-ink-600 max-w-[220px] truncate">{(h.facilities || []).join(", ") || "—"}</td>
                   <td className="py-3">
-                    <div className="flex justify-end gap-3 text-ink-900/40">
+                    <div className="flex justify-end gap-3 text-ink-500">
                       <button onClick={() => openEdit(h)} className="hover:text-teal-dark"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => handleDelete(h)} className="hover:text-sunset-dark"><Trash2 className="w-4 h-4" /></button>
                     </div>

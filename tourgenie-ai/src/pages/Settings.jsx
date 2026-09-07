@@ -9,6 +9,8 @@ import { authApi, destinationsApi, referenceApi, setToken } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
+import Button from "../components/ui/Button";
+import DataRow from "../components/ui/DataRow";
 
 // The interest chips the Plan Trip form offers. Saved interests pre-fill that
 // form, so the two lists have to agree — a chip that isn't there can never be
@@ -51,7 +53,7 @@ function Section({ icon: Icon, title, description, children }) {
         </span>
         <div>
           <h2 className="font-display text-lg text-ink-900 leading-snug">{title}</h2>
-          <p className="text-xs text-ink-900/55 mt-0.5">{description}</p>
+          <p className="text-sm text-ink-600 mt-0.5">{description}</p>
         </div>
       </div>
       {children}
@@ -62,8 +64,8 @@ function Section({ icon: Icon, title, description, children }) {
 function Field({ label, icon: Icon, children }) {
   return (
     <label className="block">
-      <span className="text-xs font-medium text-ink-900/60 mb-1.5 flex items-center gap-1.5">
-        {Icon && <Icon className="w-3.5 h-3.5 text-ink-900/35" />}
+      <span className="text-sm font-medium text-ink-600 mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-ink-500" />}
         {label}
       </span>
       {children}
@@ -228,7 +230,7 @@ export default function Settings() {
   if (!user || !profile || !prefs || !notify) {
     return (
       <AppShell title="Account settings" subtitle="Your profile, travel preferences and password.">
-        <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+        <div className="flex items-center gap-2 text-ink-500 text-sm py-12 justify-center">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading your account…
         </div>
       </AppShell>
@@ -259,7 +261,7 @@ export default function Settings() {
                 </Field>
                 <Field label="Email" icon={Mail}>
                   <input type="email" value={user.email} disabled className="input opacity-60 cursor-not-allowed" />
-                  <span className="text-2xs text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-500 mt-1 block">
                     Your email is your login — it can't be changed here.
                   </span>
                 </Field>
@@ -282,7 +284,7 @@ export default function Settings() {
                     placeholder="Dhaka"
                     className="input"
                   />
-                  <span className="text-2xs text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-500 mt-1 block">
                     Pre-fills the "travelling from" box when you plan a trip.
                   </span>
                 </Field>
@@ -320,14 +322,14 @@ export default function Settings() {
                       </option>
                     ))}
                   </select>
-                  <span className="text-2xs text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-500 mt-1 block">
                     Saved to your account, so it follows you to another device.
                   </span>
                 </Field>
               </div>
-              <button type="submit" disabled={profileState.saving} className="btn-primary">
+              <Button type="submit" loading={profileState.saving}>
                 {profileState.saving ? "Saving…" : "Save profile"}
-              </button>
+              </Button>
             </form>
           </Section>
 
@@ -352,14 +354,14 @@ export default function Settings() {
                       </option>
                     ))}
                   </select>
-                  <span className="text-2xs text-ink-900/40 mt-1 block">
+                  <span className="text-2xs text-ink-500 mt-1 block">
                     The currency your budget is entered in. Costs are still stored and totalled in BDT.
                   </span>
                 </Field>
               </div>
 
               <div>
-                <span className="text-xs font-medium text-ink-900/60 mb-2 block">Travel style</span>
+                <span className="text-sm font-medium text-ink-600 mb-2 block">Travel style</span>
                 <div className="grid sm:grid-cols-3 gap-2">
                   {TIERS.map((tier) => {
                     const active = prefs.default_budget_tier === tier.value;
@@ -378,7 +380,7 @@ export default function Settings() {
                         <span className={`block text-sm font-semibold ${active ? "text-teal-dark" : "text-ink-900"}`}>
                           {tier.label}
                         </span>
-                        <span className="block text-2xs text-ink-900/50 leading-snug mt-0.5">{tier.hint}</span>
+                        <span className="block text-2xs text-ink-500 leading-snug mt-0.5">{tier.hint}</span>
                       </button>
                     );
                   })}
@@ -386,8 +388,8 @@ export default function Settings() {
               </div>
 
               <div>
-                <span className="text-xs font-medium text-ink-900/60 mb-2 block">
-                  Interests <span className="text-ink-900/35">— the AI plans around these</span>
+                <span className="text-sm font-medium text-ink-600 mb-2 block">
+                  Interests <span className="text-ink-500">— the AI plans around these</span>
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {INTERESTS.map((interest) => {
@@ -411,9 +413,9 @@ export default function Settings() {
                 </div>
               </div>
 
-              <button type="submit" disabled={prefsState.saving} className="btn-primary">
+              <Button type="submit" loading={prefsState.saving}>
                 {prefsState.saving ? "Saving…" : "Save preferences"}
-              </button>
+              </Button>
             </form>
           </Section>
 
@@ -436,19 +438,19 @@ export default function Settings() {
                     }`}
                   >
                     <Icon
-                      className={`w-4 h-4 mb-1.5 ${active ? "text-teal-dark" : "text-ink-900/40"}`}
+                      className={`w-4 h-4 mb-1.5 ${active ? "text-teal-dark" : "text-ink-500"}`}
                       strokeWidth={1.75}
                     />
                     <span className={`block text-sm font-semibold ${active ? "text-teal-dark" : "text-ink-900"}`}>
                       {label}
                     </span>
-                    <span className="block text-2xs text-ink-900/50 leading-snug mt-0.5">{hint}</span>
+                    <span className="block text-2xs text-ink-500 leading-snug mt-0.5">{hint}</span>
                   </button>
                 );
               })}
             </div>
             {theme === "system" && (
-              <p className="text-2xs text-ink-900/45 mt-3">
+              <p className="text-2xs text-ink-500 mt-3">
                 Your device is currently asking for {resolved} mode.
               </p>
             )}
@@ -465,7 +467,7 @@ export default function Settings() {
                 <div key={key} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-ink-900">{label}</p>
-                    <p className="text-xs text-ink-900/50 leading-snug mt-0.5">{hint}</p>
+                    <p className="text-sm text-ink-500 leading-snug mt-0.5">{hint}</p>
                   </div>
                   <button
                     type="button"
@@ -529,12 +531,12 @@ export default function Settings() {
                   />
                 </Field>
               </div>
-              <p className="text-2xs text-ink-900/40">
+              <p className="text-2xs text-ink-500">
                 At least 6 characters. Changing it cancels any reset code you've been emailed.
               </p>
-              <button type="submit" disabled={passwordState.saving} className="btn-primary">
+              <Button type="submit" loading={passwordState.saving}>
                 {passwordState.saving ? "Changing…" : "Change password"}
-              </button>
+              </Button>
             </form>
           </Section>
         </div>
@@ -542,24 +544,14 @@ export default function Settings() {
         <aside className="card p-6 lg:sticky lg:top-6">
           <h2 className="font-display text-lg text-ink-900 mb-4">Account</h2>
           <dl className="space-y-3.5 text-sm">
-            <div>
-              <dt className="text-xs text-ink-900/45">Email</dt>
-              <dd className="text-ink-900 break-all">{user.email}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-ink-900/45">Role</dt>
-              <dd className="text-ink-900 capitalize">{user.role}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-ink-900/45">Member since</dt>
-              <dd className="text-ink-900">{memberSince}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-ink-900/45">Last login</dt>
-              <dd className="text-ink-900">
-                {user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "This session"}
-              </dd>
-            </div>
+            <DataRow stacked label="Email" value={user.email} />
+            <DataRow stacked label="Role" value={user.role} className="capitalize" />
+            <DataRow stacked label="Member since" value={memberSince} />
+            <DataRow
+              stacked
+              label="Last login"
+              value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : "This session"}
+            />
           </dl>
 
           <div

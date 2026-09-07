@@ -24,6 +24,9 @@ import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton
 import { tripsApi, itineraryApi, weatherApi, nearbyApi, notificationApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useChat } from "../context/ChatContext";
+import PageHeroPanel from "../components/ui/PageHeroPanel";
+import DataRow from "../components/ui/DataRow";
+import Badge from "../components/ui/Badge";
 
 // FR-13 — "what's around me" for one itinerary day. Anchored on the day's
 // first catalogued attraction, falling back to the city center.
@@ -70,7 +73,7 @@ function NearbySection({ dayItems, cityCoordinates, city }) {
 
   return (
     <div className="mt-5 pt-4 border-t border-sand">
-      <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/40 mb-2 flex items-center gap-1.5">
+      <p className="text-xs font-semibold tracking-wide uppercase text-ink-500 mb-2 flex items-center gap-1.5">
         <Compass className="w-3.5 h-3.5" /> Nearby{city ? ` in ${city}` : ""}
       </p>
       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -79,7 +82,7 @@ function NearbySection({ dayItems, cityCoordinates, city }) {
             key={cat}
             onClick={() => pick(cat)}
             className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-              category === cat ? "bg-teal text-white border-teal" : "border-sand text-ink-900/60 hover:border-teal/40"
+              category === cat ? "bg-teal text-paper-fixed border-teal" : "border-sand text-ink-600 hover:border-teal/40"
             }`}
           >
             {label}
@@ -87,13 +90,13 @@ function NearbySection({ dayItems, cityCoordinates, city }) {
         ))}
       </div>
       {loading && (
-        <p className="text-xs text-ink-900/40 flex items-center gap-1.5">
+        <p className="text-sm text-ink-500 flex items-center gap-1.5">
           <Loader2 className="w-3 h-3 animate-spin" /> Searching nearby…
         </p>
       )}
-      {error && <p className="text-xs text-sunset-dark">{error}</p>}
+      {error && <p className="text-sm text-sunset-dark">{error}</p>}
       {!loading && category && results.length === 0 && !error && (
-        <p className="text-xs text-ink-900/40">Nothing catalogued in this category around here yet.</p>
+        <p className="text-sm text-ink-500">Nothing catalogued in this category around here yet.</p>
       )}
       {!loading && results.length > 0 && (
         <ul className="grid sm:grid-cols-2 gap-2">
@@ -107,12 +110,12 @@ function NearbySection({ dayItems, cityCoordinates, city }) {
                   </span>
                 )}
               </div>
-              <p className="text-ink-900/50 mt-0.5">
+              <p className="text-ink-500 mt-0.5">
                 {[s.subcategory, s.area].filter(Boolean).join(" · ") || s.category}
                 {s.is_24h && <span className="text-teal-dark font-semibold"> · 24h</span>}
               </p>
               {s.phone && (
-                <p className="text-ink-900/50 mt-0.5 inline-flex items-center gap-1">
+                <p className="text-ink-500 mt-0.5 inline-flex items-center gap-1">
                   <Phone className="w-3 h-3" /> {s.phone}
                 </p>
               )}
@@ -215,6 +218,13 @@ function DayDropZone({ day, children }) {
       {children}
     </div>
   );
+}
+
+function dayDate(startISO, day) {
+  if (!startISO) return "";
+  const d = new Date(startISO);
+  d.setUTCDate(d.getUTCDate() + (day - 1));
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 function isInternationalTrip(trip) {
@@ -502,6 +512,7 @@ export default function Itinerary() {
   return (
     <AppShell
       title={trip ? `${trip.destination} Itinerary` : "Itinerary"}
+      titleId={trip ? `trip-title-${trip._id}` : undefined}
       subtitle={trip ? `${new Date(trip.start_date).toLocaleDateString()} – ${new Date(trip.end_date).toLocaleDateString()} · ${trip.travelers} travelers` : ""}
     >
       {error && (
@@ -529,8 +540,8 @@ export default function Itinerary() {
 
           {!generating && items.length === 0 && !showForm && (
             <div className="bg-surface border border-dashed border-sand rounded-2xl p-10 text-center">
-              <p className="text-ink-900/60 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
-              <p className="text-ink-900/50 mb-5 text-xs">
+              <p className="text-ink-600 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
+              <p className="text-ink-500 mb-5 text-sm">
                 {trip?.must_visit_attraction_ids?.length > 0 ? (
                   <span className="text-teal-dark font-medium">{trip.must_visit_attraction_ids.length} must-see attraction{trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} locked in</span>
                 ) : (
@@ -538,9 +549,9 @@ export default function Itinerary() {
                 )}
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
-                <button onClick={handleGenerateAI} className="btn-primary">
-                  <Sparkles className="w-4 h-4" /> Generate Itinerary with AI
-                </button>
+                <Button onClick={handleGenerateAI} icon={Sparkles}>
+                  Generate Itinerary with AI
+                </Button>
                 <button
                   onClick={() => setShowForm(true)}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal px-2"
@@ -552,7 +563,7 @@ export default function Itinerary() {
           )}
 
           {!generating && days.length > 0 && (
-            <div className="flex items-center justify-between gap-3 text-xs text-ink-900/45 px-1">
+            <div className="flex items-center justify-between gap-3 text-xs text-ink-500 px-1">
               <span className="inline-flex items-center gap-1.5">
                 <GripVertical className="w-3.5 h-3.5" />
                 Drag an activity to reorder it, or onto another day's header to move it there.
@@ -591,32 +602,37 @@ export default function Itinerary() {
             const dayCost = dayItems.reduce((s, i) => (isBookedFlightLeg(i) ? s : s + (i.est_cost || 0)), 0);
             return (
               <DayDropZone key={day} day={day}>
-              <div className={`card overflow-hidden transition-shadow mb-4 ${open ? "shadow-lift" : ""}`}>
+              <div className={`card transition-shadow mb-4 ${open ? "shadow-soft" : ""}`}>
                 <button
                   onClick={() => setOpenDay(open ? null : day)}
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-paper/60 transition-colors"
+                  className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-t-2xl hover:bg-paper/60 transition-colors ${
+                    open ? "sticky top-14 md:top-0 z-20 bg-surface/95 backdrop-blur border-b border-sand" : ""
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <span
                       className={`w-9 h-9 rounded-xl flex items-center justify-center font-display text-sm shrink-0 transition-colors ${
-                        open ? "bg-teal text-white" : "bg-teal-light text-teal-dark"
+                        open ? "bg-teal text-paper-fixed" : "bg-teal-light text-teal-dark"
                       }`}
                     >
                       {day}
                     </span>
-                    <p className="font-display text-lg text-ink-900">Day {day}</p>
+                    <span className="min-w-0 text-left">
+                      <span className="block font-display text-xl text-ink-900 leading-tight">Day {day}</span>
+                      <span className="block text-2xs text-ink-500">{dayDate(trip?.start_date, day)}</span>
+                    </span>
                     {dayCities.length > 0 && (
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-teal-light/40 text-teal-dark">
+                      <Badge tone="teal" size="lg" className="hidden sm:inline-flex max-w-[12rem] truncate">
                         {dayCities.join(" → ")}
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     <WeatherBadge forecast={weatherByDay[day]?.forecast} />
                     {dayCost > 0 && (
-                      <span className="hidden sm:inline text-xs font-mono text-ink-900/50">৳{dayCost.toLocaleString()}</span>
+                      <span className="hidden sm:inline text-xs font-mono tabular-nums text-ink-500">৳{dayCost.toLocaleString()}</span>
                     )}
-                    <ChevronDown className={`w-4 h-4 text-ink-900/40 transition-transform duration-base ${open ? "rotate-180" : ""}`} />
+                    <ChevronDown className={`w-4 h-4 text-ink-500 transition-transform duration-base ${open ? "rotate-180" : ""}`} />
                   </div>
                 </button>
                 {/* Mounted only while open — the body carries a Leaflet map,
@@ -663,7 +679,7 @@ export default function Itinerary() {
                           >
                             <GripVertical className="w-3.5 h-3.5" />
                           </button>
-                          <div className="w-14 shrink-0 text-xs font-mono text-teal-dark pt-0.5">{item.time}</div>
+                          <div className="w-14 shrink-0 text-xs font-mono tabular-nums text-teal-dark pt-0.5">{item.time}</div>
                           <div className="flex-1 border-l-2 border-teal-light pl-4 pb-1 relative">
                             <span
                               className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full ring-2 ring-surface"
@@ -675,7 +691,7 @@ export default function Itinerary() {
                             />
                             <p className="text-sm font-semibold text-ink-900">{item.activity}</p>
                             {item.location && (
-                              <p className="text-xs text-ink-900/50 flex items-center gap-1 mt-0.5">
+                              <p className="text-sm text-ink-500 flex items-center gap-1 mt-0.5">
                                 <MapPin className="w-3 h-3" /> {item.location}
                               </p>
                             )}
@@ -720,7 +736,7 @@ export default function Itinerary() {
                               </div>
                             )}
                           </div>
-                          <div className="text-xs font-mono text-ink-900/60 pt-0.5 shrink-0">
+                          <div className="text-xs font-mono text-ink-600 pt-0.5 shrink-0">
                             {isBookedFlightLeg(item) ? (
                               <span className="text-teal-dark font-sans font-medium">In flight fare</span>
                             ) : item.est_cost > 0 ? (
@@ -768,7 +784,7 @@ export default function Itinerary() {
             <div className="flex flex-wrap items-center gap-4">
               <Link
                 to="/itinerary/print"
-                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-teal-dark"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-500 hover:text-teal-dark"
               >
                 <Printer className="w-4 h-4" /> Print / save as PDF
               </Link>
@@ -786,7 +802,7 @@ export default function Itinerary() {
               </button>
               <button
                 onClick={handleGenerateAI}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-sunset-dark"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-500 hover:text-sunset-dark"
               >
                 <Sparkles className="w-4 h-4" /> Regenerate with AI (replaces current plan)
               </button>
@@ -794,34 +810,34 @@ export default function Itinerary() {
           )}
 
           {showForm && (
-            <form onSubmit={handleAddItem} className="bg-surface border border-sand rounded-2xl p-6 space-y-4">
+            <form onSubmit={handleAddItem} className="card p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-display text-base text-ink-900">Add activity</h4>
-                <button type="button" onClick={() => setShowForm(false)} className="text-ink-900/40 hover:text-ink-900">
+                <button type="button" onClick={() => setShowForm(false)} className="text-ink-500 hover:text-ink-900">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Day</span>
+                  <span className="text-sm font-medium text-ink-600 mb-1.5 block">Day</span>
                   <input name="day" type="number" min="1" defaultValue="1" required className="input" />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Time</span>
+                  <span className="text-sm font-medium text-ink-600 mb-1.5 block">Time</span>
                   <input name="time" type="time" required className="input" />
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Activity</span>
+                <span className="text-sm font-medium text-ink-600 mb-1.5 block">Activity</span>
                 <input name="activity" type="text" placeholder="e.g. Sunset walk on the beach" required className="input" />
               </label>
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Location</span>
+                  <span className="text-sm font-medium text-ink-600 mb-1.5 block">Location</span>
                   <input name="location" type="text" placeholder="e.g. Laboni Point" className="input" />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Estimated cost (BDT)</span>
+                  <span className="text-sm font-medium text-ink-600 mb-1.5 block">Estimated cost (BDT)</span>
                   <input name="est_cost" type="number" min="0" defaultValue="0" className="input" />
                 </label>
               </div>
@@ -833,36 +849,37 @@ export default function Itinerary() {
         </div>
 
         <aside className="space-y-5">
-          <div className="theme-ink bg-ink-900 bg-ink-glow rounded-2xl p-6 shadow-lift">
+          <PageHeroPanel className="p-6">
             <p className="text-xs font-semibold tracking-wide uppercase text-sunset mb-4">Trip snapshot</p>
             <dl className="space-y-3 text-sm">
-              <div className="flex justify-between"><dt className="text-paper/50">Route</dt><dd className="text-paper">{trip?.origin} → {trip?.destination}</dd></div>
-              <div className="flex justify-between"><dt className="text-paper/50">Travelers</dt><dd className="text-paper">{trip?.travelers}</dd></div>
-              <div className="flex justify-between"><dt className="text-paper/50">Activities</dt><dd className="text-paper">৳{itineraryCost.toLocaleString()}</dd></div>
+              <DataRow tone="inverse" label="Route" value={`${trip?.origin || ""} → ${trip?.destination || ""}`} />
+              <DataRow tone="inverse" label="Travelers" value={trip?.travelers} numeric />
+              <DataRow tone="inverse" label="Activities" value={`৳${itineraryCost.toLocaleString()}`} numeric />
               {flightCost > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-paper/50">
-                    Flight{trip?.selected_flight?.tripType === "round_trip" ? " (both ways)" : ""}
-                  </dt>
-                  <dd className="text-paper">৳{flightCost.toLocaleString()}</dd>
-                </div>
+                <DataRow
+                  tone="inverse"
+                  numeric
+                  label={`Flight${trip?.selected_flight?.tripType === "round_trip" ? " (both ways)" : ""}`}
+                  value={`৳${flightCost.toLocaleString()}`}
+                />
               )}
               {hotelCost > 0 && (
-                <div className="flex justify-between"><dt className="text-paper/50">Hotel</dt><dd className="text-paper">৳{hotelCost.toLocaleString()}</dd></div>
+                <DataRow tone="inverse" label="Hotel" value={`৳${hotelCost.toLocaleString()}`} numeric />
               )}
-              <div className="flex justify-between border-t border-ink-700 pt-3">
-                <dt className="text-paper/50">Trip cost so far</dt>
-                <dd className="text-sunset font-mono font-semibold"><Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-paper/50" /></dd>
-              </div>
+              <DataRow tone="inverse" label="Trip cost so far" className="border-t border-ink-700 pt-3">
+                <span className="text-sunset font-mono font-semibold">
+                  <Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-paper/50" />
+                </span>
+              </DataRow>
             </dl>
-          </div>
+          </PageHeroPanel>
 
           <div className="card p-6">
             <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
               <Wallet className="w-3.5 h-3.5" /> Budget snapshot
             </p>
             <p className={`text-2xl font-display mb-1 ${totalCost > (trip?.budget || 0) ? "text-sunset-dark" : "text-ink-900"}`}><Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-base" /></p>
-            <p className="text-xs text-ink-900/50">
+            <p className="text-sm text-ink-500">
               of ৳{trip?.budget?.toLocaleString()} planned budget
               {trip?.budget > 0 && totalCost > trip.budget && (
                 <span className="text-sunset-dark font-medium"> — over by ৳{(totalCost - trip.budget).toLocaleString()}</span>
@@ -878,20 +895,19 @@ export default function Itinerary() {
             </div>
           </div>
 
-          <Link to="/attractions" className="btn-secondary w-full py-3">
-            <Landmark className="w-4 h-4" />
+          <Button as={Link} to="/attractions" variant="secondary" icon={Landmark} fullWidth className="py-3">
             {trip?.must_visit_attraction_ids?.length > 0
               ? `${trip.must_visit_attraction_ids.length} Must-See${trip.must_visit_attraction_ids.length !== 1 ? "s" : ""} Picked`
               : "Pick Must-See Attractions"}
-          </Link>
+          </Button>
 
-          <Link to="/hotels" className="btn-secondary w-full py-3">
-            <Building2 className="w-4 h-4" /> Browse Hotels
-          </Link>
+          <Button as={Link} to="/hotels" variant="secondary" icon={Building2} fullWidth className="py-3">
+            Browse Hotels
+          </Button>
 
-          <Link to="/chat" className="btn-primary w-full py-3">
-            <MessageCircleMore className="w-4 h-4" /> Ask AI to Adjust
-          </Link>
+          <Button as={Link} to="/chat" icon={MessageCircleMore} fullWidth className="py-3">
+            Ask AI to Adjust
+          </Button>
         </aside>
       </div>
     </AppShell>

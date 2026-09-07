@@ -90,16 +90,16 @@ export default function GlobalSearch({ onPickUser, onPickTrip }) {
       </label>
 
       {open && results && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-surface border border-sand rounded-2xl shadow-lift overflow-hidden animate-pop-in max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 card shadow-lift overflow-hidden animate-pop-in max-h-96 overflow-y-auto">
           {total === 0 ? (
-            <p className="px-4 py-4 text-sm text-ink-900/50">Nothing found for “{term}”.</p>
+            <p className="px-4 py-4 text-sm text-ink-500">Nothing found for “{term}”.</p>
           ) : (
             GROUPS.map(({ key, label, icon: Icon }) => {
               const rows = results[key] || [];
               if (rows.length === 0) return null;
               return (
                 <div key={key} className="border-b border-sand last:border-0">
-                  <p className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wide text-ink-900/40">
+                  <p className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wide text-ink-500">
                     {label}
                   </p>
                   {rows.map((row) => (
@@ -115,10 +115,10 @@ export default function GlobalSearch({ onPickUser, onPickTrip }) {
                       }
                       className="w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-paper transition-colors"
                     >
-                      <Icon className="w-3.5 h-3.5 text-ink-900/35 shrink-0" />
+                      <Icon className="w-3.5 h-3.5 text-ink-500 shrink-0" />
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm text-ink-900 truncate">{primary(key, row)}</span>
-                        <span className="block text-xs text-ink-900/45 truncate">{secondary(key, row)}</span>
+                        <span className="block text-xs text-ink-500 truncate">{secondary(key, row)}</span>
                       </span>
                     </button>
                   ))}

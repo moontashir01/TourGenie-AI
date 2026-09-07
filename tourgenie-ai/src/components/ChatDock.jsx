@@ -51,7 +51,7 @@ export default function ChatDock() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Open AI assistant"
-        className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-sunset to-sunset-dark text-white shadow-lift hover:shadow-glow hover:scale-105 active:scale-95 transition flex items-center justify-center print:hidden"
+        className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-gradient-to-br from-sunset to-sunset-dark text-paper-fixed shadow-lift hover:shadow-glow hover:scale-105 active:scale-95 transition flex items-center justify-center print:hidden"
       >
         <Sparkles className="w-5 h-5" />
         {unseen && (
@@ -74,11 +74,11 @@ export default function ChatDock() {
         <div className="card shadow-lift flex flex-col overflow-hidden h-[70vh] sm:h-[min(34rem,calc(100vh-6rem))] rounded-b-none sm:rounded-b-2xl animate-sheet-in sm:animate-scale-in">
           <header className="flex items-center gap-2 px-4 py-3 border-b border-sand bg-surface/80 backdrop-blur">
             <span className="w-7 h-7 rounded-full bg-gradient-to-br from-sunset to-sunset-dark flex items-center justify-center shrink-0">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
+              <Sparkles className="w-3.5 h-3.5 text-paper-fixed" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="font-display text-sm text-ink-900 leading-tight">AI Travel Assistant</p>
-              <p className="text-2xs text-ink-900/45 truncate">
+              <p className="text-2xs text-ink-500 truncate">
                 {currentTripId ? "Editing your open trip" : "General travel questions"}
               </p>
             </div>
@@ -86,14 +86,14 @@ export default function ChatDock() {
               to="/chat"
               onClick={() => setOpen(false)}
               title="Open full screen"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-teal-dark hover:bg-teal-light/50 transition-colors"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-500 hover:text-teal-dark hover:bg-teal-light/50 transition-colors"
             >
               <Maximize2 className="w-4 h-4" />
             </Link>
             <button
               onClick={() => setOpen(false)}
               aria-label="Close assistant"
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-ink-900 hover:bg-paper transition-colors"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-paper transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -127,7 +127,7 @@ export default function ChatDock() {
                   key={c.code}
                   onClick={() => send(c.label).catch(() => {})}
                   disabled={sending}
-                  className="text-2xs font-medium whitespace-nowrap text-teal-dark bg-teal-light hover:bg-teal hover:text-white disabled:opacity-50 px-2.5 py-1.5 rounded-full transition-colors"
+                  className="text-2xs font-medium whitespace-nowrap text-teal-dark bg-teal-light hover:bg-teal hover:text-paper-fixed disabled:opacity-50 px-2.5 py-1.5 rounded-full transition-colors"
                 >
                   {c.label}
                 </button>

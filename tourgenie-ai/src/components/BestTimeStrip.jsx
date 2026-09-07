@@ -69,7 +69,7 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
   }
   if (months.length === 0) {
     return (
-      <p className="text-xs text-ink-900/40 py-3">
+      <p className="text-xs text-ink-500 py-3">
         No climate data recorded for this destination yet.
       </p>
     );
@@ -106,7 +106,7 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
               />
               <span
                 className={`text-3xs leading-none font-mono ${
-                  isNow ? "text-ink-900 font-bold" : "text-ink-900/40"
+                  isNow ? "text-ink-900 font-bold" : "text-ink-500"
                 }`}
               >
                 {MONTHS[m.month - 1]}
@@ -117,9 +117,9 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
       </div>
 
       {summary && (
-        <p className="mt-2.5 text-xs text-ink-900/70">
+        <p className="mt-2.5 text-sm text-ink-900/70">
           <span className="font-semibold text-teal-dark">Best: {summary.best_months_label}</span>
-          {summary.peak_season && <span className="text-ink-900/45"> · peak {summary.peak_season}</span>}
+          {summary.peak_season && <span className="text-ink-500"> · peak {summary.peak_season}</span>}
         </p>
       )}
 
@@ -131,7 +131,7 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
               {BAND_STYLE[band(detail)].label}
             </span>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-900/70">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-900/70">
             <span className="flex items-center gap-1">
               <Thermometer className="w-3 h-3 text-sunset-dark" />
               {detail.temp_min_c}–{detail.temp_max_c} °C
@@ -146,13 +146,13 @@ export default function BestTimeStrip({ months: monthsProp, summary: summaryProp
             </span>
           </div>
           {detail.travel_advice && (
-            <p className="mt-2 text-xs text-ink-900/60 leading-relaxed">{detail.travel_advice}</p>
+            <p className="mt-2 text-sm text-ink-600 leading-relaxed">{detail.travel_advice}</p>
           )}
         </div>
       )}
 
       {!compact && !detail && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-3xs text-ink-900/45">
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-3xs text-ink-500">
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-teal" /> Ideal</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-gold" /> Mixed</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-sunset" /> Avoid</span>

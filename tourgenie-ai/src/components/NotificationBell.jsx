@@ -190,16 +190,16 @@ export default function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={toggle}
-        className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-900/60 hover:bg-surface hover:text-ink-900 hover:shadow-soft transition"
+        className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-ink-600 hover:bg-surface hover:text-ink-900 hover:shadow-soft transition"
         aria-label={t("notification.title", "Notifications")}
       >
         <Bell
-          className={`w-4 h-4 text-ink-900/40 origin-top ${ringing ? "animate-shake" : ""}`}
+          className={`w-4 h-4 text-ink-500 origin-top ${ringing ? "animate-shake" : ""}`}
           strokeWidth={1.75}
         />
         {t("notification.title", "Notifications")}
         {unread > 0 && (
-          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-sunset text-white text-3xs font-bold flex items-center justify-center animate-pop-in">
+          <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-sunset text-paper-fixed text-3xs font-bold flex items-center justify-center animate-pop-in">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -216,7 +216,7 @@ export default function NotificationBell() {
                 <button
                   onClick={markAll}
                   title={t("notification.mark_all_read", "Mark all as read")}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-2xs text-ink-900/55 hover:text-teal-dark hover:bg-teal-light transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-2xs text-ink-600 hover:text-teal-dark hover:bg-teal-light transition-colors"
                 >
                   <Check className="w-3 h-3" /> {t("notification.mark_all_read", "Mark all as read")}
                 </button>
@@ -225,14 +225,14 @@ export default function NotificationBell() {
                 <button
                   onClick={clearRead}
                   title={t("notification.clear_read", "Clear the ones you've read")}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-2xs text-ink-900/55 hover:text-sunset-dark hover:bg-sunset-light transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-2xs text-ink-600 hover:text-sunset-dark hover:bg-sunset-light transition-colors"
                 >
                   <Trash2 className="w-3 h-3" /> {t("notification.clear_read", "Clear read")}
                 </button>
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="w-6 h-6 rounded-lg flex items-center justify-center text-ink-900/30 hover:text-ink-900/60 transition-colors"
+                className="w-6 h-6 rounded-lg flex items-center justify-center text-ink-900/30 hover:text-ink-600 transition-colors"
                 aria-label={t("common.close", "Close")}
               >
                 <X className="w-3.5 h-3.5" />
@@ -250,7 +250,7 @@ export default function NotificationBell() {
                     key={value}
                     onClick={() => setFilter(value)}
                     className={`shrink-0 px-2.5 py-1 rounded-full text-2xs font-semibold transition-colors ${
-                      active ? "bg-teal-light text-teal-dark" : "text-ink-900/50 hover:text-ink-900/80 hover:bg-sand/40"
+                      active ? "bg-teal-light text-teal-dark" : "text-ink-500 hover:text-ink-900/80 hover:bg-sand/40"
                     }`}
                   >
                     {value === ALL ? t("common.all", "All") : TYPE_LABELS[value] || value}
@@ -263,13 +263,13 @@ export default function NotificationBell() {
 
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
-              <p className="flex items-center gap-2 px-4 py-6 text-xs text-ink-900/50">
+              <p className="flex items-center gap-2 px-4 py-6 text-xs text-ink-500">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("common.loading", "Loading…")}
               </p>
             ) : visible.length === 0 ? (
               <div className="px-4 py-8 text-center animate-fade-in">
                 <BellOff className="w-6 h-6 mx-auto text-ink-900/20 mb-2" />
-                <p className="text-xs text-ink-900/45">
+                <p className="text-sm text-ink-500">
                   {filter === ALL
                     ? t("notification.empty", "You're all caught up.")
                     : t("notification.empty_filtered", "Nothing here under this filter.")}
@@ -295,13 +295,13 @@ export default function NotificationBell() {
                           <div className="flex items-start gap-1.5">
                             {/* pr-5 keeps the title clear of the dismiss
                                 button that appears over this corner. */}
-                            <p className="text-xs font-semibold text-ink-900 leading-snug flex-1 pr-5">{n.title}</p>
+                            <p className="text-sm font-semibold text-ink-900 leading-snug flex-1 pr-5">{n.title}</p>
                             {!n.is_read && <span className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1 ${tone.dot}`} />}
                           </div>
-                          <p className="text-2xs text-ink-900/60 leading-relaxed mt-0.5 line-clamp-3">
+                          <p className="text-2xs text-ink-600 leading-relaxed mt-0.5 line-clamp-3">
                             {n.message}
                           </p>
-                          <p className="text-3xs text-ink-900/35 mt-1">{timeAgo(n.created_at)}</p>
+                          <p className="text-3xs text-ink-500 mt-1">{timeAgo(n.created_at)}</p>
                         </div>
                       </button>
                       {/* A sibling of the row button, not a child of it —

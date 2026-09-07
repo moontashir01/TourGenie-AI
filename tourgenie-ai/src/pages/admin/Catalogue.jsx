@@ -434,13 +434,13 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
 
   return (
     <Overlay open onClose={onCancel} size="md" label={`Delete ${label}`} dismissable={!busy} className="p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">Delete {label}?</h3>
-        <p className="text-sm text-ink-900/60 mb-4">
+        <h3 className="font-display text-xl text-ink-900 mb-1">Delete {label}?</h3>
+        <p className="text-sm text-ink-600 mb-4">
           It is hidden from the app and can be restored from the Deleted filter.
         </p>
 
         {loading ? (
-          <p className="flex items-center gap-2 text-sm text-ink-900/50 mb-4">
+          <p className="flex items-center gap-2 text-sm text-ink-500 mb-4">
             <Loader2 className="w-4 h-4 animate-spin" /> Checking what references it…
           </p>
         ) : (
@@ -462,7 +462,7 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
         )}
 
         <label className="block mb-4">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Reason (recorded in the activity log)</span>
+          <span className="text-xs font-medium text-ink-600 mb-1.5 block">Reason (recorded in the activity log)</span>
           <input
             type="text"
             autoFocus
@@ -475,7 +475,7 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
 
         {blocking.length === 0 && (
           <label className="block mb-4">
-            <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+            <span className="text-xs font-medium text-ink-600 mb-1.5 block">
               To delete permanently, type <span className="font-mono text-ink-900">{label}</span>
             </span>
             <input
@@ -487,16 +487,16 @@ function DeletePrompt({ resource, row, label, busy, onCancel, onConfirm }) {
               placeholder={label}
               className="input font-mono"
             />
-            <span className="text-2xs text-ink-900/40 mt-1 block">
+            <span className="text-2xs text-ink-500 mt-1 block">
               Leave it empty to delete reversibly instead.
             </span>
           </label>
         )}
 
         <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={onCancel} className="btn-secondary">
+          <Button type="button" variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
           <button
             type="button"
             disabled={busy || !reason.trim() || blocking.length > 0 || phrase.trim() !== label}
@@ -642,9 +642,9 @@ export default function Catalogue() {
           </button>
         ))}
         {canWrite && (
-          <button onClick={openNew} className="btn-primary ml-auto">
-            <Plus className="w-4 h-4" /> New {config.label.replace(/s$/, "").toLowerCase()}
-          </button>
+          <Button onClick={openNew} icon={Plus} className="ml-auto">
+            New {config.label.replace(/s$/, "").toLowerCase()}
+          </Button>
         )}
       </div>
 
@@ -654,7 +654,7 @@ export default function Catalogue() {
             <h4 className="font-display text-base text-ink-900">
               {editing._id ? `Edit ${config.label.replace(/s$/, "").toLowerCase()}` : `New ${config.label.replace(/s$/, "").toLowerCase()}`}
             </h4>
-            <button type="button" onClick={() => setEditing(null)} className="text-ink-900/40 hover:text-ink-900">
+            <button type="button" onClick={() => setEditing(null)} className="text-ink-500 hover:text-ink-900">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -662,7 +662,7 @@ export default function Catalogue() {
           <div className="grid sm:grid-cols-2 gap-4">
             {config.fields.map((f) => (
               <label key={f.name} className={`block ${f.wide ? "sm:col-span-2" : ""}`}>
-                <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+                <span className="text-xs font-medium text-ink-600 mb-1.5 block">
                   {f.label}
                   {f.required && <span className="text-sunset-dark"> *</span>}
                 </span>
@@ -711,14 +711,14 @@ export default function Catalogue() {
                     className="input"
                   />
                 )}
-                {f.hint && <span className="text-2xs text-ink-900/40 mt-1 block">{f.hint}</span>}
+                {f.hint && <span className="text-2xs text-ink-500 mt-1 block">{f.hint}</span>}
               </label>
             ))}
           </div>
 
-          <button type="submit" disabled={saving} className="btn-primary">
+          <Button type="submit" loading={saving}>
             {saving ? "Saving…" : editing._id ? "Save changes" : `Create ${config.label.replace(/s$/, "").toLowerCase()}`}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -746,7 +746,7 @@ export default function Catalogue() {
 
         {canWrite && selected.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 bg-paper border border-sand rounded-xl px-3 py-2.5 mb-4">
-            <span className="text-xs text-ink-900/60">{selected.length} selected</span>
+            <span className="text-xs text-ink-600">{selected.length} selected</span>
             {["activate", "deactivate", "delete", "restore"].map((action) => (
               <button
                 key={action}
@@ -761,7 +761,7 @@ export default function Catalogue() {
             <button
               type="button"
               onClick={() => setSelected([])}
-              className="text-xs text-ink-900/45 hover:text-ink-900 ml-auto"
+              className="text-xs text-ink-500 hover:text-ink-900 ml-auto"
             >
               Clear
             </button>
@@ -774,7 +774,7 @@ export default function Catalogue() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   {canWrite && (
                     <th className="pb-3 w-8">
                       <input
@@ -832,13 +832,13 @@ export default function Catalogue() {
                             ? "bg-sunset-light text-sunset-dark"
                             : row.is_active
                               ? "bg-teal-light text-teal-dark"
-                              : "bg-sand text-ink-900/60"
+                              : "bg-sand text-ink-600"
                         }`}
                       >
                         {row.deleted_at ? "Deleted" : row.is_active ? "Live" : "Inactive"}
                       </span>
                       {row.source_kind === "admin" && (
-                        <span className="block text-3xs text-ink-900/35 mt-0.5">added here</span>
+                        <span className="block text-3xs text-ink-500 mt-0.5">added here</span>
                       )}
                     </td>
                     <td className="py-3">
@@ -848,7 +848,7 @@ export default function Catalogue() {
                             onClick={() => restoreRow(row)}
                             disabled={!canWrite || busyId === row._id}
                             title="Restore"
-                            className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+                            className="text-ink-500 hover:text-teal-dark disabled:opacity-30"
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>
@@ -858,7 +858,7 @@ export default function Catalogue() {
                               onClick={() => openEdit(row)}
                               disabled={!canWrite}
                               title="Edit"
-                              className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+                              className="text-ink-500 hover:text-teal-dark disabled:opacity-30"
                             >
                               <Pencil className="w-4 h-4" />
                             </button>
@@ -866,7 +866,7 @@ export default function Catalogue() {
                               onClick={() => setDeleting(row)}
                               disabled={!canWrite || busyId === row._id}
                               title="Delete"
-                              className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+                              className="text-ink-500 hover:text-sunset-dark disabled:opacity-30"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -943,22 +943,24 @@ function RateCachePanel({ canWrite }) {
         <Database className="w-4 h-4 text-teal-dark" />
         <div className="flex-1 min-w-0">
           <h4 className="font-display text-base text-ink-900">Hotel rate cache</h4>
-          <p className="text-xs text-ink-900/55">
+          <p className="text-xs text-ink-600">
             {stats.total.toLocaleString()} cached lookup{stats.total === 1 ? "" : "s"}
             {stats.empty_markers > 0 && `, ${stats.empty_markers} recording an empty search`}
             {stats.newest && ` · newest ${new Date(stats.newest).toLocaleDateString()}`}
           </p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={clear}
-          disabled={!canWrite || busy || stats.total === 0}
-          className="btn-secondary text-xs"
+          loading={busy}
+          disabled={!canWrite || stats.total === 0}
         >
           {busy ? "Clearing…" : "Clear cache"}
-        </button>
+        </Button>
       </div>
-      <p className="text-2xs text-ink-900/40 mt-2">
+      <p className="text-2xs text-ink-500 mt-2">
         Clearing makes the next hotel search call the provider again. Prices reappear as travellers browse.
       </p>
     </div>

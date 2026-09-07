@@ -52,7 +52,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
     return (
       <button
         onClick={preview}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900/50 hover:text-teal-dark"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-ink-500 hover:text-teal-dark"
       >
         <CloudRain className="w-4 h-4" /> What if it rains?
       </button>
@@ -62,7 +62,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
   const hasSwaps = plan?.swaps?.length > 0;
 
   return (
-    <div className="w-full p-4 bg-surface border border-sand rounded-2xl">
+    <div className="w-full p-4 card">
       <div className="flex items-start gap-3">
         <span className="w-8 h-8 rounded-lg bg-teal-light flex items-center justify-center shrink-0">
           <CloudRain className="w-4 h-4 text-teal-dark" strokeWidth={1.75} />
@@ -70,7 +70,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-base text-ink-900">Rainy day plan</h3>
           {loading ? (
-            <p className="flex items-center gap-2 mt-1 text-xs text-ink-900/50">
+            <p className="flex items-center gap-2 mt-1 text-sm text-ink-500">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking the forecast…
             </p>
           ) : (
@@ -79,14 +79,14 @@ export default function RainyDayPlan({ tripId, onApplied }) {
         </div>
         <button
           onClick={() => setOpen(false)}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-ink-900/30 hover:text-ink-900/60 shrink-0"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-ink-900/30 hover:text-ink-600 shrink-0"
           aria-label="Close"
         >
           <ChevronDown className="w-4 h-4" />
         </button>
       </div>
 
-      {error && <p className="mt-3 text-xs text-sunset-dark">{error}</p>}
+      {error && <p className="mt-3 text-sm text-sunset-dark">{error}</p>}
 
       {plan?.rainy_days?.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
@@ -113,15 +113,15 @@ export default function RainyDayPlan({ tripId, onApplied }) {
               <li key={s.item_id} className="flex items-start gap-2.5 p-2.5 bg-paper border border-sand rounded-xl">
                 <Icon className="w-3.5 h-3.5 text-teal-dark shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1 text-xs">
-                  <p className="text-ink-900/45 font-mono text-3xs">
+                  <p className="text-ink-500 font-mono text-3xs">
                     Day {s.day} · {s.time}
                   </p>
                   <p className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                    <span className="text-ink-900/55 line-through">{s.from.activity}</span>
+                    <span className="text-ink-600 line-through">{s.from.activity}</span>
                     <ArrowRight className="w-3 h-3 text-ink-900/30 shrink-0" />
                     <span className="font-semibold text-ink-900">{s.to.activity}</span>
                   </p>
-                  <p className="text-3xs text-ink-900/40 mt-0.5">{meta.label}</p>
+                  <p className="text-3xs text-ink-500 mt-0.5">{meta.label}</p>
                 </div>
               </li>
             );
@@ -132,8 +132,8 @@ export default function RainyDayPlan({ tripId, onApplied }) {
       {plan?.unmatched?.length > 0 && (
         <ul className="mt-2 space-y-1">
           {plan.unmatched.map((u) => (
-            <li key={u.item_id} className="text-2xs text-ink-900/45 leading-relaxed">
-              · Day {u.day} {u.time} — <span className="text-ink-900/60">{u.activity}</span>: {u.reason}
+            <li key={u.item_id} className="text-2xs text-ink-500 leading-relaxed">
+              · Day {u.day} {u.time} — <span className="text-ink-600">{u.activity}</span>: {u.reason}
             </li>
           ))}
         </ul>
@@ -143,7 +143,7 @@ export default function RainyDayPlan({ tripId, onApplied }) {
         <button
           onClick={apply}
           disabled={applying}
-          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-teal text-white hover:bg-teal-dark disabled:opacity-60 transition-colors"
+          className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-teal text-paper-fixed hover:bg-teal-dark disabled:opacity-60 transition-colors"
         >
           {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           Apply these changes
@@ -151,13 +151,13 @@ export default function RainyDayPlan({ tripId, onApplied }) {
       )}
 
       {plan?.applied && (
-        <p className="flex items-center gap-1.5 mt-4 text-xs font-semibold text-teal-dark">
+        <p className="flex items-center gap-1.5 mt-4 text-sm font-semibold text-teal-dark">
           <Check className="w-3.5 h-3.5" /> Applied — your itinerary has been updated.
         </p>
       )}
 
       {plan && !hasSwaps && plan.rainy_days.length === 0 && (
-        <p className="flex items-center gap-1.5 mt-3 text-xs text-ink-900/50">
+        <p className="flex items-center gap-1.5 mt-3 text-sm text-ink-500">
           <Sun className="w-3.5 h-3.5 text-gold" /> Nothing to change.
         </p>
       )}

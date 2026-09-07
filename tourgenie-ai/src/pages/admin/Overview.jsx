@@ -74,7 +74,7 @@ export default function Overview({ onNavigate }) {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+      <div className="flex items-center gap-2 text-ink-500 text-sm py-12 justify-center">
         <Loader2 className="w-4 h-4 animate-spin" /> Loading the dashboard…
       </div>
     );
@@ -102,7 +102,7 @@ export default function Overview({ onNavigate }) {
 
       {/* — now — */}
       <section>
-        <h3 className="font-display text-lg text-ink-900 mb-4">Now</h3>
+        <h3 className="font-display text-xl text-ink-900 mb-4">Now</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {tiles.map((tile) => (
             <button
@@ -110,9 +110,9 @@ export default function Overview({ onNavigate }) {
               type="button"
               onClick={() => go(tile)}
               disabled={!onNavigate}
-              className="group text-left bg-surface border border-sand rounded-2xl p-5 transition-colors hover:border-teal/60 disabled:hover:border-sand"
+              className="group text-left card card-hover p-5 disabled:pointer-events-none"
             >
-              <p className="text-xs font-medium text-ink-900/50 mb-2 flex items-center gap-1.5">
+              <p className="text-xs font-medium text-ink-500 mb-2 flex items-center gap-1.5">
                 {tile.label}
                 {onNavigate && (
                   <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -125,9 +125,9 @@ export default function Overview({ onNavigate }) {
       </section>
 
       {/* — trend — */}
-      <section className="bg-surface border border-sand rounded-2xl p-6">
+      <section className="card p-6">
         <div className="flex flex-wrap items-center gap-3 mb-5">
-          <h3 className="font-display text-lg text-ink-900 mr-auto">Trend</h3>
+          <h3 className="font-display text-xl text-ink-900 mr-auto">Trend</h3>
           <select
             value={metric}
             onChange={(e) => setMetric(e.target.value)}
@@ -148,7 +148,7 @@ export default function Overview({ onNavigate }) {
                 className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
                   period === i
                     ? "bg-ink-900 border-ink-900 text-paper"
-                    : "bg-surface border-sand text-ink-900/60 hover:border-teal/50"
+                    : "bg-surface border-sand text-ink-600 hover:border-teal/50"
                 }`}
               >
                 {p.label}
@@ -158,7 +158,7 @@ export default function Overview({ onNavigate }) {
         </div>
 
         {points.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No snapshots for that period yet.</p>
+          <p className="text-sm text-ink-500">No snapshots for that period yet.</p>
         ) : (
           <>
             <div className="flex items-end gap-[3px] h-40">
@@ -178,14 +178,14 @@ export default function Overview({ onNavigate }) {
                 );
               })}
             </div>
-            <div className="flex justify-between text-xs text-ink-900/45 mt-2">
+            <div className="flex justify-between text-xs text-ink-500 mt-2">
               <span>{points[0]?.key}</span>
               <span className="tabular-nums">peak {peak.toLocaleString()}</span>
               <span>{points.at(-1)?.key} (partial)</span>
             </div>
             {/* A chart that doesn't admit its own staleness is worse than no
                 chart: the last point is still being written to. */}
-            <p className="text-2xs text-ink-900/40 mt-2">
+            <p className="text-2xs text-ink-500 mt-2">
               From the daily roll-up
               {trend?.points?.at(-1)?.computed_at &&
                 ` · last computed ${new Date(trend.points.at(-1).computed_at).toLocaleString()}`}
@@ -196,7 +196,7 @@ export default function Overview({ onNavigate }) {
 
       {/* — attention — */}
       <section>
-        <h3 className="font-display text-lg text-ink-900 mb-4">Needs attention</h3>
+        <h3 className="font-display text-xl text-ink-900 mb-4">Needs attention</h3>
 
         {outstanding.length === 0 ? (
           <div className="flex items-center gap-2.5 bg-teal-light/40 border border-teal/30 rounded-2xl px-5 py-4 text-sm text-teal-dark">
@@ -211,14 +211,14 @@ export default function Overview({ onNavigate }) {
                   type="button"
                   onClick={() => go(row)}
                   disabled={!row.tab || !onNavigate}
-                  className="w-full text-left flex items-center gap-4 bg-surface border border-sand rounded-2xl px-5 py-4 transition-colors enabled:hover:border-sunset/50 disabled:cursor-default"
+                  className="w-full text-left flex items-center gap-4 card card-hover px-5 py-4 disabled:pointer-events-none"
                 >
                   <span className="font-mono text-xl font-semibold text-sunset-dark tabular-nums w-12 shrink-0">
                     {row.count.toLocaleString()}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-ink-900">{row.label}</span>
-                    <span className="block text-xs text-ink-900/50">{row.detail}</span>
+                    <span className="block text-xs text-ink-500">{row.detail}</span>
                   </span>
                   {row.tab && onNavigate && <ArrowRight className="w-4 h-4 text-ink-900/30 shrink-0" />}
                 </button>
@@ -228,22 +228,22 @@ export default function Overview({ onNavigate }) {
         )}
 
         {clear.length > 0 && outstanding.length > 0 && (
-          <p className="text-2xs text-ink-900/40 mt-3">
+          <p className="text-2xs text-ink-500 mt-3">
             Clear: {clear.map((row) => row.label.toLowerCase()).join(", ")}.
           </p>
         )}
       </section>
 
       {/* — the latest activity, for context rather than action — */}
-      <section className="bg-surface border border-sand rounded-2xl p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-5">Latest trips</h3>
+      <section className="card p-6">
+        <h3 className="font-display text-xl text-ink-900 mb-5">Latest trips</h3>
         {recentTrips.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No trips yet.</p>
+          <p className="text-sm text-ink-500">No trips yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   <th className="pb-3 font-medium">Traveller</th>
                   <th className="pb-3 font-medium">Route</th>
                   <th className="pb-3 font-medium">Status</th>
@@ -254,7 +254,7 @@ export default function Overview({ onNavigate }) {
                 {recentTrips.map((t) => (
                   <tr key={t._id}>
                     <td className="py-3 font-medium text-ink-900">
-                      {t.user_id?.name || <span className="text-ink-900/35">no longer exists</span>}
+                      {t.user_id?.name || <span className="text-ink-500">no longer exists</span>}
                     </td>
                     <td className="py-3 text-ink-900/70">
                       {t.origin} → {t.destination}
@@ -267,7 +267,7 @@ export default function Overview({ onNavigate }) {
             </table>
           </div>
         )}
-        <p className="text-2xs text-ink-900/40 mt-4">
+        <p className="text-2xs text-ink-500 mt-4">
           {analytics?.totalTrips?.toLocaleString()} trips in total — the Trips tab has all of them.
         </p>
       </section>

@@ -31,7 +31,7 @@ export const listDestinations = asyncHandler(async (req, res) => {
 
   const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 200);
   const destinations = await Destination.find(filter)
-    .select("slug name aliases country country_code division type summary lat_lng timezone currency pricing_currency languages tags best_months avg_daily_cost recommended_days popularity nearest_airport")
+    .select("slug name aliases country country_code division type summary lat_lng timezone currency pricing_currency languages tags best_months avg_daily_cost recommended_days popularity nearest_airport hero_image")
     .sort({ country: 1, popularity: -1, name: 1 })
     .limit(limit)
     .lean();

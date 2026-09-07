@@ -73,7 +73,7 @@ export default function Transport() {
       <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-ink-900">Transport options ({options.length})</h3>
+        <h3 className="font-display text-xl text-ink-900">Transport options ({options.length})</h3>
         {!editing && (
           <button onClick={openNew} className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-dark hover:text-teal">
             <Plus className="w-4 h-4" /> Add option
@@ -82,10 +82,10 @@ export default function Transport() {
       </div>
 
       {editing !== null && (
-        <form onSubmit={handleSubmit} className="bg-surface border border-sand rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-display text-base text-ink-900">{editing._id ? "Edit transport option" : "New transport option"}</h4>
-            <button type="button" onClick={() => setEditing(null)} className="text-ink-900/40 hover:text-ink-900">
+            <button type="button" onClick={() => setEditing(null)} className="text-ink-500 hover:text-ink-900">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -108,13 +108,13 @@ export default function Transport() {
         </form>
       )}
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         <AdminToolbar list={list} placeholder="Search operator, from or to city…" />
         <ListState list={list} empty="No schedules match that." />
         {options.length > 0 && (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">Operator</th>
                 <th className="pb-3 font-medium">Mode</th>
                 <th className="pb-3 font-medium">Route</th>
@@ -132,7 +132,7 @@ export default function Transport() {
                   <td className="py-3 text-ink-900/70">{o.depart_time}</td>
                   <td className="py-3 font-mono text-ink-900/70">৳{o.fare.toLocaleString()}</td>
                   <td className="py-3">
-                    <div className="flex justify-end gap-3 text-ink-900/40">
+                    <div className="flex justify-end gap-3 text-ink-500">
                       <button onClick={() => openEdit(o)} className="hover:text-teal-dark"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => handleDelete(o)} className="hover:text-sunset-dark"><Trash2 className="w-4 h-4" /></button>
                     </div>

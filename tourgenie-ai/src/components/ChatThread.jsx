@@ -25,7 +25,7 @@ export function RichText({ text }) {
           }
           if (part.startsWith("_") && part.endsWith("_")) {
             return (
-              <em key={j} className="text-ink-900/65 not-italic text-xs">
+              <em key={j} className="text-ink-600 not-italic text-sm">
                 {part.slice(1, -1)}
               </em>
             );
@@ -63,7 +63,7 @@ function AppliedChanges({ changes }) {
 function Avatar() {
   return (
     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sunset to-sunset-dark flex items-center justify-center shrink-0 shadow-soft">
-      <Sparkles className="w-3.5 h-3.5 text-white" />
+      <Sparkles className="w-3.5 h-3.5 text-paper-fixed" />
     </div>
   );
 }
@@ -101,7 +101,7 @@ export default function ChatThread({ messages, sending, className = "" }) {
       {sending && (
         <div className="flex items-end gap-2 justify-start animate-fade-in">
           <Avatar />
-          <div className="bg-surface border border-sand rounded-2xl rounded-bl-sm px-4 py-3 shadow-soft flex items-center gap-1.5">
+          <div className="card rounded-bl-sm px-4 py-3 shadow-soft flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce" />
             <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce [animation-delay:0.15s]" />
             <span className="w-1.5 h-1.5 rounded-full bg-teal animate-dot-bounce [animation-delay:0.3s]" />

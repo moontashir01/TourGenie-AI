@@ -56,11 +56,14 @@ export default function Landing() {
               order — badge, headline, promise, the thing you type into — and
               letting it arrive in that order is the difference between a page
               appearing and a page introducing itself. */}
+          {/* scroll-fade on the wrapper, not on the staggered block itself:
+              two animations on one element and the last one declared wins. */}
+          <div className="scroll-fade">
           <div className="max-w-2xl stagger">
             <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-sunset bg-sunset/10 border border-sunset/20 px-3 py-1.5 rounded-full">
               <Sparkles className="w-3.5 h-3.5" /> Powered by Claude
             </span>
-            <h1 className="font-display text-5xl md:text-6xl leading-[1.05] text-paper mt-6">
+            <h1 className="font-display text-display-lg text-paper mt-6">
               From leaving home to
               <br />
               coming back — <span className="text-sunset italic">planned</span>.
@@ -71,7 +74,7 @@ export default function Landing() {
               instead of six tabs.
             </p>
 
-            <form className="mt-10 bg-ink-800/90 backdrop-blur border border-ink-700 rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-xl shadow-lift focus-within:border-teal/50 transition-colors">
+            <form className="mt-10 bg-ink-800/90 backdrop-blur border border-ink-700 rounded-2xl p-2 flex flex-col sm:flex-row gap-2 max-w-xl focus-within:border-teal/50 transition-colors">
               <div className="flex items-center gap-2 flex-1 px-3">
                 <Search className="w-4 h-4 text-paper/40 shrink-0" />
                 <input
@@ -88,7 +91,7 @@ export default function Landing() {
               </Link>
             </form>
 
-            <div className="mt-6 flex items-center gap-2 text-paper/50 text-xs">
+            <div className="mt-6 flex items-center gap-2 text-paper/50 text-sm">
               <RouteLine className="w-24 h-4" color="#EF8354" />
               Dhaka → Cox&apos;s Bazar → Himchari → back home
             </div>
@@ -102,11 +105,12 @@ export default function Landing() {
                 ["5", "languages"],
               ].map(([n, label]) => (
                 <div key={label} className="flex items-baseline gap-2">
-                  <span className="font-display text-2xl text-paper">{n}</span>
+                  <span className="font-display text-3xl text-paper tabular-nums">{n}</span>
                   <span className="text-xs text-paper/50 uppercase tracking-wide">{label}</span>
                 </div>
               ))}
             </div>
+          </div>
           </div>
         </div>
 
@@ -126,12 +130,12 @@ export default function Landing() {
         </Reveal>
         <Reveal stagger className="grid sm:grid-cols-2 gap-6">
           {features.map((f) => (
-            <div key={f.title} className="group card card-hover p-6">
+            <div key={f.title} className="group card p-6">
               <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-light to-teal/25 flex items-center justify-center mb-4 transition-transform duration-base group-hover:scale-110 group-hover:-rotate-3">
                 <f.icon className="w-5 h-5 text-teal-dark" strokeWidth={1.75} />
               </div>
               <h3 className="font-display text-lg text-ink-900 mb-1.5">{f.title}</h3>
-              <p className="text-sm text-ink-900/60 leading-relaxed">{f.desc}</p>
+              <p className="text-sm text-ink-600 leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </Reveal>
@@ -156,7 +160,7 @@ export default function Landing() {
                   {s.n}
                 </div>
                 <h3 className="font-semibold text-ink-900 mb-1.5">{s.title}</h3>
-                <p className="text-sm text-ink-900/60 leading-relaxed">{s.desc}</p>
+                <p className="text-sm text-ink-600 leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </Reveal>
@@ -170,7 +174,7 @@ export default function Landing() {
           <h2 className="font-display text-3xl text-ink-900 mb-4">
             Real trips, reviewed by real travelers.
           </h2>
-          <p className="text-ink-900/60 leading-relaxed mb-6">
+          <p className="text-ink-600 leading-relaxed mb-6">
             Every attraction and hotel carries ratings and notes from
             travelers who've actually been — read before you go, then post
             your own once you're back.
@@ -190,8 +194,8 @@ export default function Landing() {
               genuinely better than the plan I made myself last year."
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal to-teal-dark text-white flex items-center justify-center text-xs font-bold">FR</div>
-              <p className="text-sm font-semibold text-ink-900">Farhana R. <span className="font-normal text-ink-900/50">— Cox's Bazar</span></p>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal to-teal-dark text-paper-fixed flex items-center justify-center text-xs font-bold">FR</div>
+              <p className="text-sm font-semibold text-ink-900">Farhana R. <span className="font-normal text-ink-500">— Cox's Bazar</span></p>
             </div>
           </div>
         </Reveal>

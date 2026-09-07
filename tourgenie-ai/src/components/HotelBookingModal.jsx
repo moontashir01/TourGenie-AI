@@ -3,6 +3,7 @@ import Overlay from "./ui/Overlay";
 import { X, BedDouble, Users, CalendarRange, Loader2, Check, CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { hotelBookingApi, notificationApi } from "../lib/api";
 import Money from "./Money";
+import Button from "./ui/Button";
 
 // FR-08 for accommodation. Demonstration only — the disclaimer appears
 // before you book and again on the confirmation, because a reservation
@@ -95,13 +96,13 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
         <header className="sticky top-0 z-10 flex items-start justify-between gap-3 px-5 py-4 bg-paper/95 backdrop-blur border-b border-sand">
           <div className="min-w-0">
             <h2 className="font-display text-lg text-ink-900 truncate">{hotel.name}</h2>
-            <p className="text-xs text-ink-900/60 truncate">
+            <p className="text-sm text-ink-600 truncate">
               {hotel.area ? `${hotel.area}, ` : ""}{hotel.city}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-ink-900 hover:bg-surface"
+            className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
@@ -120,20 +121,20 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
-                <dt className="text-ink-900/60">Reference</dt>
+                <dt className="text-ink-600">Reference</dt>
                 <dd className="font-mono font-bold text-ink-900">{confirmation.booking.reference}</dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-ink-900/60">Room</dt>
+                <dt className="text-ink-600">Room</dt>
                 <dd className="text-ink-900 text-right">
                   {confirmation.booking.rooms} × {confirmation.booking.room_type}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-ink-900/60">Stay</dt>
+                <dt className="text-ink-600">Stay</dt>
                 <dd className="text-ink-900 text-right">
                   {String(confirmation.booking.check_in).slice(0, 10)} → {String(confirmation.booking.check_out).slice(0, 10)}
-                  <span className="text-ink-900/50"> · {confirmation.booking.nights} nights</span>
+                  <span className="text-ink-500"> · {confirmation.booking.nights} nights</span>
                 </dd>
               </div>
               <div className="flex justify-between gap-3 pt-2 border-t border-sand">
@@ -144,7 +145,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
               </div>
             </dl>
 
-            <p className="mt-3 text-2xs text-ink-900/55 leading-relaxed">
+            <p className="mt-3 text-2xs text-ink-600 leading-relaxed">
               Check-in from {confirmation.booking.property.checkin_time}, check-out by{" "}
               {confirmation.booking.property.checkout_time}.
               {confirmation.booking.property.cancellation_policy
@@ -152,15 +153,15 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                 : ""}
             </p>
 
-            <button onClick={onClose} className="btn-primary w-full mt-5">
+            <Button onClick={onClose} fullWidth className="mt-5">
               Done
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="p-5 space-y-4">
             <div className="flex items-start gap-2.5 p-3 bg-gold/10 border border-gold/40 rounded-xl">
               <Info className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-              <p className="text-xs text-ink-900/75 leading-relaxed">
+              <p className="text-sm text-ink-900/75 leading-relaxed">
                 Demonstration reservation — no payment is taken and nothing is reserved with the property.
               </p>
             </div>
@@ -168,22 +169,22 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
             {error && (
               <div className="flex items-start gap-2.5 p-3 bg-sunset-light border border-sunset/30 rounded-xl">
                 <TriangleAlert className="w-4 h-4 text-sunset-dark shrink-0 mt-0.5" />
-                <p className="text-xs text-ink-900/80">{error}</p>
+                <p className="text-sm text-ink-900/80">{error}</p>
               </div>
             )}
 
             {/* Dates */}
             <div>
-              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5">
                 <CalendarRange className="w-3 h-3" /> Stay
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="block text-2xs text-ink-900/55 mb-1">Check in</span>
+                  <span className="block text-2xs text-ink-600 mb-1">Check in</span>
                   <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} className="input" />
                 </label>
                 <label className="block">
-                  <span className="block text-2xs text-ink-900/55 mb-1">Check out</span>
+                  <span className="block text-2xs text-ink-600 mb-1">Check out</span>
                   <input type="date" value={checkOut} min={checkIn} onChange={(e) => setCheckOut(e.target.value)} className="input" />
                 </label>
               </div>
@@ -192,15 +193,15 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
             {/* Rooms */}
             <div>
-              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5">
                 <BedDouble className="w-3 h-3" /> Room
               </p>
               {loading ? (
-                <p className="flex items-center gap-2 text-xs text-ink-900/55 py-2">
+                <p className="flex items-center gap-2 text-xs text-ink-600 py-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Checking availability…
                 </p>
               ) : !availability?.rooms.length ? (
-                <p className="text-xs text-ink-900/55">No rooms listed for this property.</p>
+                <p className="text-sm text-ink-600">No rooms listed for this property.</p>
               ) : (
                 <div className="space-y-1.5">
                   {availability.rooms.map((r) => {
@@ -212,7 +213,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                         disabled={soldOut}
                         className={`w-full p-3 rounded-xl border text-left transition ${
                           soldOut
-                            ? "bg-sand/30 border-sand text-ink-900/35 cursor-not-allowed"
+                            ? "bg-sand/30 border-sand text-ink-500 cursor-not-allowed"
                             : r.name === roomType
                               ? "bg-surface border-teal ring-1 ring-teal/20"
                               : "bg-surface/70 border-sand hover:border-teal/40"
@@ -224,7 +225,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                             <Money bdt={r.price_per_night} local={localCurrency} localClassName="text-xs" />
                           </span>
                         </div>
-                        <p className="text-2xs text-ink-900/55 mt-0.5">
+                        <p className="text-2xs text-ink-600 mt-0.5">
                           Sleeps {r.capacity}
                           {r.beds ? ` · ${r.beds}` : ""}
                           {r.breakfast_included ? " · breakfast included" : ""}
@@ -255,9 +256,9 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
 
             {/* Guests */}
             <div>
-              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5">
                 <Users className="w-3 h-3" /> Guests
-                {room && <span className="font-normal normal-case tracking-normal text-ink-900/40">· sleeps {capacity}</span>}
+                {room && <span className="font-normal normal-case tracking-normal text-ink-500">· sleeps {capacity}</span>}
               </p>
               <div className="space-y-1.5">
                 {guests.map((g, i) => (
@@ -275,7 +276,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
               <div className="flex items-center justify-between mt-1.5">
                 <button
                   onClick={() => setGuests((p) => [...p, { name: "" }])}
-                  className="text-xs text-ink-900/50 hover:text-teal-dark"
+                  className="text-sm text-ink-500 hover:text-teal-dark"
                 >
                   + Add guest
                 </button>
@@ -288,7 +289,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
             </div>
 
             <label className="block">
-              <span className="block text-2xs font-semibold uppercase tracking-wide text-ink-900/45 mb-1.5">
+              <span className="block text-2xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5">
                 Special requests
               </span>
               <textarea
@@ -303,7 +304,7 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
             {/* Total */}
             {room && nights >= 1 && (
               <div className="p-3 bg-surface border border-sand rounded-xl space-y-1 text-sm">
-                <div className="flex justify-between text-ink-900/65">
+                <div className="flex justify-between text-ink-600">
                   <span>
                     ৳{room.price_per_night.toLocaleString()} × {nights} night{nights > 1 ? "s" : ""} × {rooms} room{rooms > 1 ? "s" : ""}
                   </span>
@@ -315,10 +316,9 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
               </div>
             )}
 
-            <button onClick={book} disabled={!canBook} className="btn-primary w-full">
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            <Button onClick={book} disabled={!canBook} loading={submitting} icon={Check} fullWidth>
               Confirm Reservation (Demo)
-            </button>
+            </Button>
           </div>
         )}
     </Overlay>

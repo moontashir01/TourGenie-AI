@@ -113,7 +113,7 @@ export default function Admin() {
             <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
             <GlobalSearch onPickUser={setSearchedUserId} onPickTrip={setSearchedTripId} />
           </div>
-          <p className="text-sm text-ink-900/60 mt-1">
+          <p className="text-sm text-ink-600 mt-1">
             {activeTab === "overview" && "What is true now, how it has moved, and what needs somebody today."}
             {activeTab === "users" && "Manage traveler and admin accounts."}
             {activeTab === "catalogue" && "Destinations, countries, flights and airports — deleting is reversible."}

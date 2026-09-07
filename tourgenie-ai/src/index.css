@@ -20,12 +20,24 @@
   --tg-ink-900: 11 31 46; /* primary text, and the dark brand surface */
   --tg-ink-800: 18 50 68;
   --tg-ink-700: 26 67 88;
+  /* Secondary and tertiary text used to be text-ink-900 at five different
+     opacities (/35 /40 /45 /50 /55 /60 /65), which meant two roles were being
+     expressed by seven values and none of them was a colour: over
+     bg-paper-texture an opacity picks up whichever radial wash it lands on,
+     so the same "muted" label reads warm on one side of a page and cool on
+     the other. These are opaque, and both clear 4.5:1 on paper — 6.2 and 4.6
+     — because the sizes they land on are 10-12px, where the old /35 was not
+     legible text at all. */
+  --tg-ink-600: 74 92 104; /* secondary text */
+  --tg-ink-500: 96 112 122; /* tertiary and meta */
   --tg-teal-dark: 20 101 96; /* accent text on a light ground */
   --tg-teal-light: 220 239 236;
   --tg-sunset-dark: 217 107 59;
   --tg-sunset-light: 252 227 211;
   --tg-sheen: rgba(255, 255, 255, 0.65); /* the skeleton's sweep */
   --tg-scrollbar: 228 217 196;
+  --tg-focus: 11 31 46; /* the focus ring — see :focus-visible below */
+  --tg-focus-offset: 2px;
   color-scheme: light;
 }
 
@@ -36,6 +48,11 @@
   --tg-ink-900: 242 239 231; /* warm off-white, not a clinical #fff */
   --tg-ink-800: 216 211 200;
   --tg-ink-700: 169 180 188;
+  /* Picked to land on the same contrast ratios against the dark paper (6.6
+     and 4.9) rather than to look like inverted versions of the light pair —
+     an equal-lightness flip reads far weaker on a dark ground. */
+  --tg-ink-600: 148 160 169;
+  --tg-ink-500: 124 137 147;
   /* The two accent texts have to lighten too — at their light-mode values
      they'd be unreadable on a dark card. */
   --tg-teal-dark: 111 211 198;
@@ -44,7 +61,41 @@
   --tg-sunset-light: 58 35 24;
   --tg-sheen: rgba(255, 255, 255, 0.06);
   --tg-scrollbar: 45 66 80;
+  --tg-focus: 242 239 231;
   color-scheme: dark;
+}
+
+/* Declared after .dark so it wins in both themes. Everything else in
+   .theme-ink takes the light values because the surface under it is dark; the
+   ring has to invert for exactly the same reason, and a wider offset keeps it
+   clear of the ink panel's own border. */
+.theme-ink {
+  --tg-focus: 247 242 231;
+  --tg-focus-offset: 3px;
+}
+
+/* ── Higher contrast ──────────────────────────────────────────────────
+   Some people run their OS at increased contrast because the default is not
+   readable for them, not because they prefer it. The two muted text steps and
+   the border are what fail first, so those are what move. */
+@media (prefers-contrast: more) {
+  :root,
+  .theme-ink {
+    --tg-sand: 168 154 128;
+    --tg-ink-600: 38 54 66;
+    --tg-ink-500: 58 76 88;
+  }
+
+  .dark {
+    --tg-sand: 96 120 138;
+    --tg-ink-600: 214 220 226;
+    --tg-ink-500: 186 196 204;
+  }
+
+  /* An outline that is hard to see is the same as no outline. */
+  :focus-visible {
+    outline-width: 3px;
+  }
 }
 
 /* ── Motion ───────────────────────────────────────────────────────────
@@ -103,9 +154,24 @@
   ::selection {
     @apply bg-sunset/30;
   }
+
+  /* A one-word orphan on the last line is the most common reason a good
+     headline looks bad, and the display sizes above make it far more likely.
+     `balance` rewraps the whole heading to even the lines out; paragraphs get
+     `pretty`, which only repairs the last line — balancing long prose is
+     expensive enough that browsers cap it by line count anyway. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
   :focus-visible {
-    outline: 2px solid #ef8354;
-    outline-offset: 2px;
+    outline: 2px solid rgb(var(--tg-focus));
+    outline-offset: var(--tg-focus-offset, 2px);
   }
 
   /* Slim scrollbar in the app palette (WebKit + Firefox). */
@@ -129,23 +195,37 @@
   }
 }
 
+/* ── Radius ───────────────────────────────────────────────────────────
+   Radius decreases as you nest inward. It used to be picked per element,
+   which is how a chip inside a card inside a panel ended up running
+   8px → 16px → 12px going outward — the eye reads that as sloppiness even
+   when it can't name what's wrong.
+
+     rounded-3xl   page-level panel, hero, modal, drawer, sheet
+     rounded-2xl   card, form field group
+     rounded-xl    control — input, square icon button, nav link
+     rounded-lg    inside a control — chip, avatar, icon box
+     rounded-full  pill — primary/secondary buttons, badges
+
+   The matching type ladder, since the two are picked together:
+
+     font-display text-display-lg   landing hero only
+     font-display text-display-sm   AppShell page title
+     font-display text-xl           SectionHeader
+     font-display text-base         card and row headings
+     text-sm                        body — prose, descriptions, values
+     text-2xs                       meta — timestamps, units, counts
+
+   text-xs is not a body size. It's the exception now, not the default. */
 @layer components {
   .input {
-    @apply w-full text-sm bg-paper border border-sand rounded-lg px-3 py-2.5 text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/15 transition;
+    @apply w-full text-sm bg-paper border border-sand rounded-xl px-3 py-2.5 text-ink-900 placeholder:text-ink-900/30 focus:outline-none focus:border-teal focus:ring-2 focus:ring-teal/15 transition;
   }
   .card {
-    @apply bg-surface border border-sand rounded-2xl shadow-soft;
+    @apply bg-surface border border-sand rounded-2xl;
   }
   .card-hover {
-    @apply transition duration-base hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5;
-  }
-  /* text-ink-fixed, not text-ink-900: the sunset fill is the same orange in
-     both themes, so its label has to stay dark ink in both. */
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 bg-sunset hover:bg-sunset-dark text-ink-fixed font-semibold text-sm px-5 py-2.5 rounded-full transition shadow-sm hover:shadow-glow disabled:opacity-60 disabled:shadow-none active:scale-[0.98];
-  }
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 bg-surface border border-sand hover:border-teal text-ink-900 font-semibold text-sm px-5 py-2.5 rounded-full transition hover:shadow-soft active:scale-[0.98];
+    @apply transition duration-base hover:shadow-lift hover:-translate-y-0.5;
   }
   /* Loading placeholder with a light sweep. Size it with w-/h- utilities. */
   .skeleton {
@@ -158,6 +238,13 @@
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, var(--tg-sheen), transparent);
     animation: skeleton-sweep 1.5s infinite;
+  }
+}
+
+@keyframes scroll-fade {
+  to {
+    opacity: 0;
+    transform: translateY(-2rem);
   }
 }
 
@@ -261,6 +348,18 @@
     animation-delay: calc(var(--tg-stagger-step) * 11);
   }
 
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .scroll-fade {
+        animation: scroll-fade linear both;
+        animation-timeline: view();
+        /* Only over the exit: the hero is already on screen at load, and
+           animating its entrance would fight the stagger that introduces it. */
+        animation-range: exit 0% exit 85%;
+      }
+    }
+  }
+
   /* Pairs with animate-check-draw: the dash pattern the keyframe walks.
      24 is the length of a tick drawn in a 24-unit lucide viewBox. */
   .check-path {
@@ -311,6 +410,8 @@
     --tg-ink-900: 0 0 0;
     --tg-ink-800: 34 34 34;
     --tg-ink-700: 68 68 68;
+    --tg-ink-600: 85 85 85;
+    --tg-ink-500: 102 102 102;
     --tg-teal-dark: 20 101 96;
     --tg-teal-light: 220 239 236;
     --tg-sunset-dark: 217 107 59;
@@ -352,5 +453,26 @@
   /* Links print as text; the URL after them is clutter on a schedule. */
   a[href]::after {
     content: "" !important;
+  }
+
+  /* The display sizes are clamps against the viewport, which a print sheet
+     doesn't have — left alone they resolve to their minimum and the printed
+     itinerary loses the hierarchy the screen version has. Fixed points
+     instead, and points rather than pixels because that is what a printer
+     actually works in. */
+  .text-display-lg {
+    font-size: 30pt !important;
+  }
+  .text-display-md {
+    font-size: 24pt !important;
+  }
+  .text-display-sm {
+    font-size: 18pt !important;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
   }
 }

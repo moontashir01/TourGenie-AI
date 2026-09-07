@@ -21,7 +21,7 @@ export const PROVIDERS = [
   { key: "stayapi", label: "StayAPI", env: "STAYAPI_KEY", purpose: "Live hotel rates (FR-07)" },
   { key: "openweather", label: "OpenWeather", env: "OPENWEATHER_API_KEY", purpose: "Forecasts — seeded forecasts are used instead" },
   { key: "openrouteservice", label: "OpenRouteService", env: "OPENROUTESERVICE_API_KEY", purpose: "Routing — seeded routes are used instead" },
-  { key: "cloudinary", label: "Cloudinary", env: "CLOUDINARY_API_KEY", purpose: "Image hosting — not wired up" },
+  { key: "cloudinary", label: "Cloudinary", env: "CLOUDINARY_API_KEY", purpose: "Place photography — run `npm run images:upload`; cards fall back to a gradient without it" },
   { key: "mail", label: "Outgoing email", env: "MAIL_PASS", purpose: "Password reset codes (FR-02)" },
 ];
 

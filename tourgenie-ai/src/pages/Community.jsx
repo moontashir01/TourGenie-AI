@@ -124,7 +124,7 @@ function CommunityBody() {
     <div className="grid lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-5">
         {user ? (
-          <form onSubmit={handlePost} className="bg-surface border border-sand rounded-2xl p-5">
+          <form onSubmit={handlePost} className="card p-5">
             <select value={place} onChange={(e) => setPlace(e.target.value)} className="input mb-2 w-auto">
               {groups.map((group) => (
                 <optgroup key={group.country_code || group.country} label={group.country}>
@@ -148,7 +148,7 @@ function CommunityBody() {
             </div>
           </form>
         ) : (
-          <div className="bg-surface border border-sand rounded-2xl p-5 text-sm text-ink-900/60">
+          <div className="card p-5 text-sm text-ink-600">
             <Link to="/login" className="text-teal-dark font-semibold hover:text-teal">Log in</Link> to share a tip or review.
           </div>
         )}
@@ -159,34 +159,34 @@ function CommunityBody() {
           <div className="flex items-start gap-2 bg-gold/10 border border-gold/30 text-ink-900/75 text-sm rounded-lg px-4 py-3">
             <Clock className="w-4 h-4 mt-0.5 shrink-0 text-gold" />
             <span className="flex-1">{heldNotice}</span>
-            <button type="button" onClick={() => setHeldNotice("")} className="text-xs font-semibold underline">
+            <button type="button" onClick={() => setHeldNotice("")} className="text-sm font-semibold underline">
               Got it
             </button>
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-ink-900/50 text-sm py-8 justify-center">
+          <div className="flex items-center gap-2 text-ink-500 text-sm py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading posts…
           </div>
         ) : posts.length === 0 ? (
-          <p className="text-sm text-ink-900/50 text-center py-8">No posts yet for {filter === ALL ? "any place" : filter}.</p>
+          <p className="text-sm text-ink-500 text-center py-8">No posts yet for {filter === ALL ? "any place" : filter}.</p>
         ) : (
           posts.map((p) => (
-            <div key={p._id} className="bg-surface border border-sand rounded-2xl p-5">
+            <div key={p._id} className="card p-5">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-full bg-teal-light text-teal-dark flex items-center justify-center text-xs font-semibold shrink-0">
                   {(p.user_id?.name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-ink-900">{p.user_id?.name || "Traveler"}</p>
-                  <p className="text-xs text-ink-900/50 flex items-center gap-1">
+                  <p className="text-sm text-ink-500 flex items-center gap-1">
                     <MapPin className="w-3 h-3" /> {p.place} · {new Date(p.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
               {p.held_for_review && (
-                <p className="inline-flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide bg-gold/15 text-ink-900/65 px-2 py-1 rounded-full mb-2">
+                <p className="inline-flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wide bg-gold/15 text-ink-600 px-2 py-1 rounded-full mb-2">
                   <Clock className="w-3 h-3" /> Waiting for a moderator — only you can see this
                 </p>
               )}
@@ -202,14 +202,14 @@ function CommunityBody() {
                   className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-full border transition-colors disabled:cursor-not-allowed ${
                     p.liked
                       ? "border-sunset/40 bg-sunset/10 text-sunset-dark"
-                      : "border-sand text-ink-900/55 hover:border-sunset/40 hover:text-sunset-dark"
+                      : "border-sand text-ink-600 hover:border-sunset/40 hover:text-sunset-dark"
                   } ${!user ? "opacity-60" : ""}`}
                 >
                   <Heart className={`w-3.5 h-3.5 ${p.liked ? "fill-current" : ""}`} strokeWidth={1.75} />
                   {p.likes > 0 ? p.likes : "Like"}
                 </button>
                 {!user && (
-                  <Link to="/login" className="text-xs text-teal-dark hover:text-teal">
+                  <Link to="/login" className="text-sm text-teal-dark hover:text-teal">
                     Log in to like
                   </Link>
                 )}
@@ -221,7 +221,7 @@ function CommunityBody() {
                     type="button"
                     onClick={() => setReporting(p)}
                     disabled={reported.has(p._id)}
-                    className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-ink-900/40 hover:text-sunset-dark disabled:hover:text-ink-900/40 disabled:cursor-default"
+                    className="ml-auto inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-sunset-dark disabled:hover:text-ink-500 disabled:cursor-default"
                   >
                     <Flag className="w-3.5 h-3.5" />
                     {reported.has(p._id) ? "Reported" : "Report"}
@@ -234,8 +234,8 @@ function CommunityBody() {
       </div>
 
       <aside className="space-y-5">
-        <div className="bg-surface border border-sand rounded-2xl p-5">
-          <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/50 mb-3">Filter by place</p>
+        <div className="card p-5">
+          <p className="text-xs font-semibold tracking-wide uppercase text-ink-500 mb-3">Filter by place</p>
           {/* Grouped by country and scrolling: 25 names in one alphabetical
               run hid the fact that this is two countries, with Chiang Mai
               filed between Chattogram and Cox's Bazar. */}
@@ -251,7 +251,7 @@ function CommunityBody() {
 
             {groups.map((group) => (
               <div key={group.country_code || group.country} className="mt-3 first:mt-2">
-                <p className="text-2xs font-semibold uppercase tracking-wide text-ink-900/40 px-3 mb-1">
+                <p className="text-2xs font-semibold uppercase tracking-wide text-ink-500 px-3 mb-1">
                   {group.country}
                 </p>
                 <div className="flex flex-col gap-0.5">
@@ -319,7 +319,7 @@ function ReportDialog({ post, onClose, onDone }) {
     <Overlay open onClose={onClose} variant="adaptive" size="md" label="Report this post" dismissable={!sending}>
       <form onSubmit={submit} className="p-6">
         <h3 className="font-display text-lg text-ink-900 mb-1">Report this post</h3>
-        <p className="text-sm text-ink-900/60 mb-4">
+        <p className="text-sm text-ink-600 mb-4">
           A moderator reads every report. Nothing happens to the post until one of them decides.
         </p>
         <blockquote className="text-xs text-ink-900/70 bg-paper border border-sand rounded-lg px-3 py-2.5 mb-4 max-h-24 overflow-y-auto">
@@ -331,7 +331,7 @@ function ReportDialog({ post, onClose, onDone }) {
         )}
 
         <label className="block mb-3">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">What's wrong with it?</span>
+          <span className="text-sm font-medium text-ink-600 mb-1.5 block">What's wrong with it?</span>
           <select value={reason} onChange={(e) => setReason(e.target.value)} className="input">
             {REPORT_REASONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -342,7 +342,7 @@ function ReportDialog({ post, onClose, onDone }) {
         </label>
 
         <label className="block mb-5">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Anything to add? (optional)</span>
+          <span className="text-sm font-medium text-ink-600 mb-1.5 block">Anything to add? (optional)</span>
           <textarea
             rows={3}
             value={details}
@@ -385,7 +385,7 @@ export default function Community() {
       <Navbar />
       <div className="max-w-6xl mx-auto px-6 py-16">
         <h1 className="font-display text-3xl text-ink-900 mb-2">Reviews & Community</h1>
-        <p className="text-ink-900/60 mb-10">Real notes from travelers who've already been there.</p>
+        <p className="text-ink-600 mb-10">Real notes from travelers who've already been there.</p>
         <CommunityBody />
       </div>
       <Footer />

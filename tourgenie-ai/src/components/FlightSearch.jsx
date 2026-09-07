@@ -92,7 +92,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
   const sourceInfo = SOURCES[meta?.source] || null;
 
   return (
-    <div className="bg-surface border border-sand rounded-2xl p-6 space-y-5">
+    <div className="card p-6 space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Plane className="w-5 h-5 text-teal" strokeWidth={1.75} />
@@ -111,7 +111,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
         {searched && !loading && (
           <button
             onClick={doSearch}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-900/50 hover:text-teal-dark"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-teal-dark"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh fares
           </button>
@@ -119,7 +119,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
       </div>
 
       {/* Route + date summary */}
-      <div className="flex flex-wrap items-center gap-2 text-sm text-ink-900/60 bg-paper rounded-xl px-4 py-3">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-ink-600 bg-paper rounded-xl px-4 py-3">
         <span className="font-semibold text-ink-900">{trip.origin}</span>
         <ArrowRight className="w-4 h-4 text-teal" />
         <span className="font-semibold text-ink-900">{trip.destination}</span>
@@ -149,7 +149,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
           <FlaskConical className="w-4 h-4 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">These are demo flights, not real ones.</p>
-            <p className="mt-1 text-xs opacity-90">
+            <p className="mt-1 text-sm opacity-90">
               Add <code className="bg-sunset/10 px-1 rounded">TRAVELPAYOUTS_API_KEY</code> to the server's{" "}
               <code className="bg-sunset/10 px-1 rounded">.env</code> — a free token takes a minute at{" "}
               <a href="https://www.travelpayouts.com" target="_blank" rel="noreferrer" className="underline font-semibold">
@@ -183,7 +183,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center gap-3 text-ink-900/50 text-sm py-8 justify-center">
+        <div className="flex items-center gap-3 text-ink-500 text-sm py-8 justify-center">
           <Loader2 className="w-5 h-5 animate-spin text-teal" />
           Searching {trip.travelers > 1 ? `${trip.travelers} seats` : "flights"} across airlines…
         </div>
@@ -191,7 +191,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
 
       {/* Results */}
       {!loading && searched && flights.length === 0 && !error && (
-        <p className="text-sm text-ink-900/50 py-6 text-center">
+        <p className="text-sm text-ink-500 py-6 text-center">
           No flights found for this route and date. Try adjusting the travel date.
         </p>
       )}
@@ -208,7 +208,7 @@ export default function FlightSearch({ trip, onFlightSelected }) {
               onSelect={handleSelect}
             />
           ))}
-          {sourceInfo && <p className="text-xs text-ink-900/40 text-center pt-2">{sourceInfo.note}</p>}
+          {sourceInfo && <p className="text-sm text-ink-500 text-center pt-2">{sourceInfo.note}</p>}
         </div>
       )}
 
@@ -246,7 +246,7 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
   const cabinColor =
     flight.cabin === "BUSINESS" ? "bg-sunset-light text-sunset-dark" :
     flight.cabin === "FIRST" ? "bg-ink-900 text-paper" :
-    "bg-sand text-ink-900/60";
+    "bg-sand text-ink-600";
   const formatMoney = (amount) => new Intl.NumberFormat("en", {
     style: "currency",
     currency: flight.currency || "BDT",
@@ -261,11 +261,11 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
         {/* Left: airline + flight number */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-teal/10 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-teal-dark">{flight.airlineCode}</span>
+            <span className="text-sm font-bold text-teal-dark">{flight.airlineCode}</span>
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-sm text-ink-900 truncate">{flight.airline}</p>
-            <p className="text-xs text-ink-900/50">
+            <p className="text-sm text-ink-500">
               {flight.flightNumber}
               {flight.isLowcost && <span className="ml-1.5 text-teal-dark">low-cost</span>}
             </p>
@@ -276,18 +276,18 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
         <div className="flex items-center gap-4 flex-1 justify-center flex-wrap gap-y-1">
           <div className="text-center">
             <p className="font-mono text-lg font-semibold text-ink-900">{fmtTime(depTime)}</p>
-            <p className={`text-xs ${offDate ? "text-sunset-dark font-medium" : "text-ink-900/50"}`}>
+            <p className={`text-sm ${offDate ? "text-sunset-dark font-medium" : "text-ink-500"}`}>
               {flight.origin} · {fmtDate(depTime)}
             </p>
           </div>
           <div className="flex flex-col items-center gap-1 px-2">
-            <p className="text-xs text-ink-900/50">{flight.duration || "—"}</p>
+            <p className="text-sm text-ink-500">{flight.duration || "—"}</p>
             <div className="flex items-center gap-1">
               <div className="w-8 h-px bg-sand" />
               <ChevronsRight className="w-3.5 h-3.5 text-sand" />
             </div>
             <span className={`text-3xs font-semibold px-2 py-0.5 rounded-full ${
-              flight.stops === 0 ? "bg-teal-light text-teal-dark" : "bg-sand text-ink-900/60"
+              flight.stops === 0 ? "bg-teal-light text-teal-dark" : "bg-sand text-ink-600"
             }`}>
               {stopLabel}
             </span>
@@ -295,9 +295,9 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
           <div className="text-center">
             <p className="font-mono text-lg font-semibold text-ink-900">
               {fmtTime(arrTime)}
-              {isDifferentDay && <sup className="text-xs text-sunset ml-0.5">+1</sup>}
+              {isDifferentDay && <sup className="text-sm text-sunset ml-0.5">+1</sup>}
             </p>
-            <p className="text-xs text-ink-900/50">{flight.destination} · {fmtDate(arrTime)}</p>
+            <p className="text-sm text-ink-500">{flight.destination} · {fmtDate(arrTime)}</p>
           </div>
         </div>
 
@@ -307,7 +307,7 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
             {formatMoney(totalPrice)}
           </p>
           {perPerson && (
-            <p className="text-xs text-ink-900/50">{formatMoney(perPerson)} / person</p>
+            <p className="text-sm text-ink-500">{formatMoney(perPerson)} / person</p>
           )}
           {flight.tripType === "round_trip" && (
             <p className="text-3xs text-teal-dark font-semibold">
@@ -325,7 +325,7 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
               </span>
             )}
             {flight.priceStatus === "cached" && (
-              <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-sand text-ink-900/60">
+              <span className="text-3xs font-semibold px-2 py-0.5 rounded-full bg-sand text-ink-600">
                 last seen fare
               </span>
             )}
@@ -345,7 +345,7 @@ function FlightCard({ flight, travelers, tripDate, onSelect, isSelected }) {
               onClick={() => onSelect(flight)}
               className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${
                 isSelected
-                  ? "bg-teal text-white shadow-sm"
+                  ? "bg-teal text-paper-fixed shadow-sm"
                   : "bg-paper text-ink-900/70 border border-sand hover:border-teal hover:text-teal"
               }`}
             >

@@ -5,6 +5,8 @@ import AppShell from "../components/AppShell";
 import { destinationsApi, referenceApi, tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useAuth } from "../context/AuthContext";
+import Button from "../components/ui/Button";
+import PageHeroPanel from "../components/ui/PageHeroPanel";
 
 const interests = ["Beaches", "Hills & nature", "History", "Food", "Nightlife", "Shopping", "Adventure", "Family-friendly"];
 
@@ -528,7 +530,7 @@ export default function PlanTrip() {
   return (
     <AppShell title="Plan a new trip" subtitle="Fill in the basics — the AI does the rest.">
       <div className="grid lg:grid-cols-3 gap-8">
-        <form className="lg:col-span-2 card shadow-lift p-6 md:p-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="lg:col-span-2 card shadow-soft p-6 md:p-8 space-y-8" onSubmit={handleSubmit}>
           {error && (
             <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-3 py-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -549,6 +551,7 @@ export default function PlanTrip() {
             </div>
           )}
 
+          <Step n={1} total={3} title="Where and when" hint="Everything below is priced off these five answers.">
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Origin">
               {destinations.length ? (
@@ -572,7 +575,7 @@ export default function PlanTrip() {
                 select, and a <label> wrapping more than one control sends
                 every click on its text to the first button. */}
             <fieldset className="block min-w-0">
-              <legend className="text-xs font-medium text-ink-900/60 mb-1.5">Destination</legend>
+              <legend className="text-sm font-medium text-ink-600 mb-1.5">Destination</legend>
               <div className="space-y-2">
                 {multiCityCountries.length > 0 && (
                   <div className="flex gap-1.5 text-xs">
@@ -581,8 +584,8 @@ export default function PlanTrip() {
                       onClick={() => setDestinationMode("city")}
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors ${
                         destinationMode === "city"
-                          ? "bg-teal text-white border-teal"
-                          : "border-sand text-ink-900/60 hover:border-teal/40"
+                          ? "bg-teal text-paper-fixed border-teal"
+                          : "border-sand text-ink-600 hover:border-teal/40"
                       }`}
                     >
                       <MapPin className="w-3 h-3" /> One city
@@ -592,8 +595,8 @@ export default function PlanTrip() {
                       onClick={() => setDestinationMode("country")}
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors ${
                         destinationMode === "country"
-                          ? "bg-teal text-white border-teal"
-                          : "border-sand text-ink-900/60 hover:border-teal/40"
+                          ? "bg-teal text-paper-fixed border-teal"
+                          : "border-sand text-ink-600 hover:border-teal/40"
                       }`}
                     >
                       <Globe2 className="w-3 h-3" /> Whole country
@@ -638,14 +641,14 @@ export default function PlanTrip() {
                 )}
 
                 {sameOriginAndDestination && (
-                  <p className="text-xs text-sunset-dark">
+                  <p className="text-sm text-sunset-dark">
                     That's where you're starting from — pick somewhere else to travel to.
                   </p>
                 )}
 
                 {destinationMode === "country" && countryCities.length > 0 && (
                   <div className="pt-1">
-                    <p className="text-xs text-ink-900/50 mb-1.5">
+                    <p className="text-sm text-ink-500 mb-1.5">
                       Cities to visit — pick the ones you want (the plan will cover every pick), or leave empty and
                       the AI chooses:
                     </p>
@@ -660,8 +663,8 @@ export default function PlanTrip() {
                             title={c.recommended_days ? `Travelers typically spend ~${c.recommended_days} day${c.recommended_days > 1 ? "s" : ""} here` : undefined}
                             className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                               picked
-                                ? "bg-teal text-white border-teal"
-                                : "border-sand text-ink-900/60 hover:border-teal/40"
+                                ? "bg-teal text-paper-fixed border-teal"
+                                : "border-sand text-ink-600 hover:border-teal/40"
                             }`}
                           >
                             {c.name}
@@ -670,7 +673,7 @@ export default function PlanTrip() {
                       })}
                     </div>
                     {selectedCities.length > 0 && (
-                      <p className="text-xs text-teal-dark mt-1.5">
+                      <p className="text-sm text-teal-dark mt-1.5">
                         {tripDays > 0 ? (
                           <>
                             Your {tripDays} day{tripDays > 1 ? "s" : ""}: ≈{" "}
@@ -689,14 +692,14 @@ export default function PlanTrip() {
                       </p>
                     )}
                     {tripDays > 0 && selectedCities.length > tripDays && (
-                      <p className="text-xs text-sunset-dark mt-1">
+                      <p className="text-sm text-sunset-dark mt-1">
                         You picked more cities than days — add days or drop a city for a comfortable pace.
                       </p>
                     )}
                   </div>
                 )}
                 {destinationMode === "country" && countryCities.length === 0 && (
-                  <p className="text-xs text-ink-900/40">
+                  <p className="text-sm text-ink-500">
                     We'll pick which cities to visit and how to travel between them based on your trip length.
                   </p>
                 )}
@@ -725,13 +728,13 @@ export default function PlanTrip() {
                 onChange={(e) => setField("end_date", e.target.value)}
               />
               {tripDays > MAX_TRIP_DAYS && (
-                <p className="text-xs text-sunset-dark mt-1.5">
+                <p className="text-sm text-sunset-dark mt-1.5">
                   {tripDays} days — trips longer than {MAX_TRIP_DAYS} days can't be planned in one go. Shorten the
                   range or split it into two trips.
                 </p>
               )}
               {tripDays > 0 && tripDays <= MAX_TRIP_DAYS && (
-                <p className="text-xs text-ink-900/40 mt-1.5">
+                <p className="text-sm text-ink-500 mt-1.5">
                   {tripDays} day{tripDays > 1 ? "s" : ""}
                 </p>
               )}
@@ -748,7 +751,7 @@ export default function PlanTrip() {
                 onChange={(e) => setField("travelers", e.target.value)}
               />
               {Number(form.travelers) > MAX_TRAVELERS && (
-                <p className="text-xs text-sunset-dark mt-1.5">
+                <p className="text-sm text-sunset-dark mt-1.5">
                   Groups larger than {MAX_TRAVELERS} need to be planned as separate trips.
                 </p>
               )}
@@ -768,7 +771,9 @@ export default function PlanTrip() {
               </select>
             </Field>
           </div>
+          </Step>
 
+          <Step n={2} total={3} title="Budget" hint="Stored in taka; the live figure updates as you change the trip.">
           <BudgetSection
             form={form}
             setField={setField}
@@ -783,7 +788,9 @@ export default function PlanTrip() {
             verdictStyle={verdictStyle}
             travel={travel}
           />
+          </Step>
 
+          <Step n={3} total={3} title="How you travel" hint="Optional — these steer what the AI picks, they don't limit it.">
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Transport preference">
               <select
@@ -797,7 +804,7 @@ export default function PlanTrip() {
                 ))}
               </select>
               {crossesBorder && (
-                <p className="text-xs text-ink-900/40 mt-1.5">
+                <p className="text-sm text-ink-500 mt-1.5">
                   Crossing a border — buses, trains and launches don't run this route.
                 </p>
               )}
@@ -818,7 +825,7 @@ export default function PlanTrip() {
           </div>
 
           <div>
-            <span className="text-xs font-medium text-ink-900/60 mb-2 block">Interests</span>
+            <span className="text-sm font-medium text-ink-600 mb-2 block">Interests</span>
             <div className="flex flex-wrap gap-2">
               {interests.map((i) => (
                 <label key={i} className="cursor-pointer">
@@ -828,20 +835,23 @@ export default function PlanTrip() {
                     checked={selectedInterests.includes(i)}
                     onChange={() => toggleInterest(i)}
                   />
-                  <span className="text-sm px-3 py-1.5 rounded-full border border-sand text-ink-900/70 peer-checked:bg-teal peer-checked:text-white peer-checked:border-teal transition-colors inline-block">
+                  <span className="text-sm px-3 py-1.5 rounded-full border border-sand text-ink-900/70 peer-checked:bg-teal peer-checked:text-paper-fixed peer-checked:border-teal transition-colors inline-block">
                     {i}
                   </span>
                 </label>
               ))}
             </div>
           </div>
+          </Step>
 
-          <button type="submit" disabled={submitting} className="btn-primary w-full sm:w-auto px-6 py-3">
-            <Sparkles className="w-4 h-4" /> {submitting ? "Creating trip…" : "Create Trip"}
-          </button>
+          <div className="max-sm:sticky max-sm:bottom-0 max-sm:-mx-6 max-sm:px-6 max-sm:py-4 max-sm:bg-surface/95 max-sm:backdrop-blur max-sm:border-t max-sm:border-sand max-sm:rounded-b-2xl">
+            <Button type="submit" loading={submitting} icon={Sparkles} size="lg" className="w-full sm:w-auto">
+              {submitting ? "Creating trip…" : "Create Trip"}
+            </Button>
+          </div>
         </form>
 
-        <aside className="theme-ink bg-ink-900 bg-ink-glow rounded-2xl p-6 h-fit sticky top-24 shadow-lift">
+        <PageHeroPanel as="aside" className="p-6 h-fit sticky top-24">
           <Sparkles className="w-6 h-6 text-sunset mb-4" strokeWidth={1.5} />
           <h3 className="font-display text-lg text-paper mb-3">How the AI plans your trip</h3>
           <ol className="space-y-3 text-sm text-paper/60">
@@ -853,7 +863,7 @@ export default function PlanTrip() {
           <p className="text-xs text-paper/40 mt-4 border-t border-ink-700 pt-4">
             Creating a trip here saves it to your dashboard — you'll generate the actual itinerary with AI on the next screen.
           </p>
-        </aside>
+        </PageHeroPanel>
       </div>
     </AppShell>
   );
@@ -882,11 +892,11 @@ function BudgetSection({
   return (
     <div className="border border-sand rounded-xl p-5 space-y-4 bg-paper/40">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-ink-900/60 flex items-center gap-1.5">
+        <span className="text-sm font-medium text-ink-600 flex items-center gap-1.5">
           <Wallet className="w-3.5 h-3.5" /> Total budget
         </span>
         {estimating && (
-          <span className="text-xs text-ink-900/40 inline-flex items-center gap-1">
+          <span className="text-sm text-ink-500 inline-flex items-center gap-1">
             <Loader2 className="w-3 h-3 animate-spin" /> pricing…
           </span>
         )}
@@ -919,7 +929,7 @@ function BudgetSection({
       </div>
 
       {showBdt && (
-        <p className="text-xs text-ink-900/50">
+        <p className="text-sm text-ink-500">
           Stored as ৳{budgetBdt.toLocaleString()} — every cost in the app is normalised to BDT.
         </p>
       )}
@@ -933,7 +943,7 @@ function BudgetSection({
               onClick={() => setField("budget", String(preset.amount))}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 String(preset.amount) === String(form.budget)
-                  ? "bg-teal text-white border-teal"
+                  ? "bg-teal text-paper-fixed border-teal"
                   : "border-sand text-ink-900/70 hover:border-teal/40"
               }`}
             >
@@ -945,13 +955,22 @@ function BudgetSection({
 
       {estimate?.has_benchmark && (
         <div className="text-sm space-y-2">
-          <p className="text-ink-900/70">
-            A {estimate.days}-day {estimate.tier === "mid" ? "mid-range" : estimate.tier} trip for{" "}
-            {estimate.travelers} traveler{estimate.travelers > 1 ? "s" : ""} costs about{" "}
-            <span className="font-mono font-semibold text-ink-900">৳{estimate.estimated_total.toLocaleString()}</span>
-            {" "}— the bare minimum is ৳{estimate.minimum_total.toLocaleString()}.
-          </p>
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-900/50">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <div>
+              <p className="text-2xs font-semibold uppercase tracking-wide text-ink-500">
+                A trip like this usually costs
+              </p>
+              <p className="font-display text-display-sm text-ink-900 tabular-nums leading-none">
+                ৳{estimate.estimated_total.toLocaleString()}
+              </p>
+            </div>
+            <p className="text-sm text-ink-500">
+              {estimate.days}-day {estimate.tier === "mid" ? "mid-range" : estimate.tier} trip for{" "}
+              {estimate.travelers} traveler{estimate.travelers > 1 ? "s" : ""} · bare minimum{" "}
+              <span className="tabular-nums">৳{estimate.minimum_total.toLocaleString()}</span>
+            </p>
+          </div>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-500">
             {estimate.lines.map((line) => (
               <li key={line.category} className="inline-flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ background: line.color }} />
@@ -960,13 +979,13 @@ function BudgetSection({
             ))}
           </ul>
           {travel?.counted && travel.fare > 0 && (
-            <p className="text-xs text-ink-900/50">
+            <p className="text-sm text-ink-500">
               Includes the {travel.mode || "journey"} there and back
               {travel.operator ? ` (${travel.operator})` : ""} at ৳{travel.fare.toLocaleString()} per person each way.
             </p>
           )}
           {airfareMissing && (
-            <p className="text-xs text-gold flex items-start gap-1.5">
+            <p className="text-sm text-gold flex items-start gap-1.5">
               <Plane className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 <span className="font-semibold">Airfare is not in this figure.</span> You've said your budget covers
@@ -978,7 +997,7 @@ function BudgetSection({
         </div>
       )}
 
-      {estimateError && <p className="text-xs text-sunset-dark">{estimateError}</p>}
+      {estimateError && <p className="text-sm text-sunset-dark">{estimateError}</p>}
 
       {verdictStyle && budgetBdt > 0 && (
         <div className={`text-xs rounded-lg border px-3 py-2 ${verdictStyle.tone}`}>
@@ -1002,7 +1021,7 @@ function BudgetSection({
           <span className="inline-flex items-center gap-1.5 font-medium text-ink-900">
             <Plane className="w-3.5 h-3.5" /> This budget covers the flights in and out
           </span>
-          <span className="block text-xs text-ink-900/50">
+          <span className="block text-sm text-ink-500">
             Untick if you've already booked (or budgeted) the journey separately — it's still shown on the Budget
             page, it just stops counting against the estimate above.
           </span>
@@ -1012,10 +1031,34 @@ function BudgetSection({
   );
 }
 
+// The form is one column of eighteen controls, which is why it reads as a
+// tax return rather than the first nice thing that happens in the product.
+// The three groups were always there — where and when, what it costs, how you
+// like to travel — they just had no edge. The rail is the cheapest way to
+// show a long form has an end.
+function Step({ n, total, title, hint, children }) {
+  return (
+    <section className="relative pl-11">
+      <span
+        className="absolute left-0 top-0 w-8 h-8 rounded-full bg-teal-light text-teal-dark font-display text-sm flex items-center justify-center"
+        aria-hidden
+      >
+        {n}
+      </span>
+      {/* Stops short of the next disc rather than running under it, so the
+          rail reads as connected instead of struck through. */}
+      {n < total && <span className="absolute left-4 top-10 bottom-[-2rem] w-px bg-sand" aria-hidden />}
+      <h2 className="font-display text-xl text-ink-900 leading-tight">{title}</h2>
+      {hint && <p className="text-sm text-ink-500 mt-0.5">{hint}</p>}
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
 function Field({ label, children }) {
   return (
     <label className="block">
-      <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">{label}</span>
+      <span className="text-sm font-medium text-ink-600 mb-1.5 block">{label}</span>
       {children}
     </label>
   );

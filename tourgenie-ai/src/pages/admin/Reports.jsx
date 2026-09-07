@@ -97,7 +97,7 @@ export default function Reports() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+      <div className="flex items-center gap-2 text-ink-500 text-sm py-12 justify-center">
         <Loader2 className="w-4 h-4 animate-spin" /> Building reports…
       </div>
     );
@@ -122,9 +122,9 @@ export default function Reports() {
       )}
 
       <div>
-        <h3 className="font-display text-lg text-ink-900">Platform reports</h3>
+        <h3 className="font-display text-xl text-ink-900">Platform reports</h3>
         {analytics?.generated_at && (
-          <p className="text-xs text-ink-900/45 mt-0.5">
+          <p className="text-xs text-ink-500 mt-0.5">
             Counters computed {new Date(analytics.generated_at).toLocaleString()}
           </p>
         )}
@@ -138,11 +138,11 @@ export default function Reports() {
       </div>
 
       {/* — trends, from AnalyticsSnapshot — */}
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
             <h4 className="font-display text-base text-ink-900">Trend</h4>
-            <p className="text-xs text-ink-900/45 mt-0.5">
+            <p className="text-xs text-ink-500 mt-0.5">
               From the daily roll-up, not counted live.
               {points.at(-1)?.computed_at && (
                 <> Latest period computed {new Date(points.at(-1).computed_at).toLocaleString()}.</>
@@ -169,7 +169,7 @@ export default function Reports() {
                   type="button"
                   onClick={() => setPeriod(index)}
                   className={`text-xs font-semibold px-3 py-2 transition-colors ${
-                    period === index ? "bg-teal text-paper-fixed" : "text-ink-900/60 hover:bg-paper"
+                    period === index ? "bg-teal text-paper-fixed" : "text-ink-600 hover:bg-paper"
                   }`}
                 >
                   {p.label}
@@ -180,7 +180,7 @@ export default function Reports() {
         </div>
 
         {points.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No snapshots for that period yet.</p>
+          <p className="text-sm text-ink-500">No snapshots for that period yet.</p>
         ) : (
           <>
             <div className="flex items-end gap-[3px] h-44">
@@ -204,7 +204,7 @@ export default function Reports() {
                 );
               })}
             </div>
-            <div className="flex justify-between text-xs text-ink-900/45 mt-2">
+            <div className="flex justify-between text-xs text-ink-500 mt-2">
               <span>{points[0]?.key}</span>
               <span className="tabular-nums">peak {max.toLocaleString()}</span>
               <span>{points.at(-1)?.key} (partial)</span>
@@ -214,9 +214,9 @@ export default function Reports() {
       </div>
 
       {/* — exports — */}
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         <h4 className="font-display text-base text-ink-900 mb-1">Exports</h4>
-        <p className="text-sm text-ink-900/55 mb-4">
+        <p className="text-sm text-ink-600 mb-4">
           Streamed from the database as CSV. Each download is recorded in the activity log.
         </p>
 
@@ -251,7 +251,7 @@ export default function Reports() {
               )}
               <span className="min-w-0">
                 <span className="block text-sm font-medium text-ink-900 truncate">{report.label}</span>
-                <span className="block text-xs text-ink-900/45 font-mono truncate">{report.key}.csv</span>
+                <span className="block text-xs text-ink-500 font-mono truncate">{report.key}.csv</span>
               </span>
             </button>
           ))}
@@ -263,10 +263,10 @@ export default function Reports() {
         <BreakdownCard title="Users by role" rows={usersByRole} total={analytics?.totalUsers || 0} />
       </div>
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         <h4 className="font-display text-base text-ink-900 mb-5">Top destinations</h4>
         {topDestinations.length === 0 ? (
-          <p className="text-sm text-ink-900/50">No trips yet.</p>
+          <p className="text-sm text-ink-500">No trips yet.</p>
         ) : (
           <div className="space-y-3">
             {topDestinations.map((row) => {
@@ -277,7 +277,7 @@ export default function Reports() {
                   <div className="flex-1 bg-sand/60 rounded-full h-3 overflow-hidden">
                     <div className="bg-teal h-full rounded-full" style={{ width: `${(row.count / peak) * 100}%` }} />
                   </div>
-                  <span className="w-8 text-right font-mono text-xs text-ink-900/60">{row.count}</span>
+                  <span className="w-8 text-right font-mono text-xs text-ink-600">{row.count}</span>
                 </div>
               );
             })}
@@ -285,7 +285,7 @@ export default function Reports() {
         )}
       </div>
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         <h4 className="font-display text-base text-ink-900 mb-4">Moderation throughput</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-5">
           <MiniStat label="Open reports" value={moderation?.reports?.open ?? 0} />
@@ -306,7 +306,7 @@ export default function Reports() {
           <MiniStat label="Booking value" value={`৳${(analytics?.bookingValue || 0).toLocaleString()}`} />
         </div>
         {Object.keys(moderation?.by_reason || {}).length > 0 && (
-          <p className="text-xs text-ink-900/50 mt-5">
+          <p className="text-xs text-ink-500 mt-5">
             Reported for:{" "}
             {Object.entries(moderation.by_reason)
               .map(([reason, count]) => `${reason.replace("_", " ")} (${count})`)
@@ -334,8 +334,8 @@ export default function Reports() {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-surface border border-sand rounded-2xl p-5">
-      <p className="text-xs font-medium text-ink-900/50 mb-2">{label}</p>
+    <div className="card p-5">
+      <p className="text-xs font-medium text-ink-500 mb-2">{label}</p>
       <p className="font-mono text-2xl font-semibold text-ink-900">{value}</p>
     </div>
   );
@@ -345,25 +345,25 @@ function MiniStat({ label, value }) {
   return (
     <div>
       <p className="font-mono text-xl font-semibold text-ink-900">{value}</p>
-      <p className="text-xs text-ink-900/50 mt-0.5">{label}</p>
+      <p className="text-xs text-ink-500 mt-0.5">{label}</p>
     </div>
   );
 }
 
 function BreakdownCard({ title, rows, total }) {
   return (
-    <div className="bg-surface border border-sand rounded-2xl p-6">
+    <div className="card p-6">
       <h4 className="font-display text-base text-ink-900 mb-4">{title}</h4>
       {rows.length === 0 ? (
-        <p className="text-sm text-ink-900/50">No data yet.</p>
+        <p className="text-sm text-ink-500">No data yet.</p>
       ) : (
         <div className="space-y-2.5">
           {rows.map(([key, count]) => (
             <div key={key} className="flex items-center justify-between text-sm">
               <span className="capitalize text-ink-900/70">{key}</span>
-              <span className="font-mono text-ink-900/60">
+              <span className="font-mono text-ink-600">
                 {count}
-                <span className="text-ink-900/40"> · {total ? Math.round((count / total) * 100) : 0}%</span>
+                <span className="text-ink-500"> · {total ? Math.round((count / total) * 100) : 0}%</span>
               </span>
             </div>
           ))}

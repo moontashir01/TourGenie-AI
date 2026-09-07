@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- The link preview card, at the 1.91:1 the crawlers ask for.
+       Brand hexes rather than CSS variables — this is fetched on its own,
+       outside the document, and cannot see them.
+       Fonts are named with full fallback stacks for the same reason: the
+       Google Fonts link in index.html does not apply here. -->
+  <defs>
+    <radialGradient id="teal" cx="12%" cy="8%" r="55%">
+      <stop offset="0%" stop-color="#1C8C82" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#1C8C82" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sunset" cx="88%" cy="96%" r="55%">
+      <stop offset="0%" stop-color="#EF8354" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#EF8354" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="#0B1F2E"/>
+  <rect width="1200" height="630" fill="url(#teal)"/>
+  <rect width="1200" height="630" fill="url(#sunset)"/>
+
+  <!-- The compass mark, same geometry as the favicon. -->
+  <g transform="translate(88 80)">
+    <circle cx="26" cy="26" r="24" fill="none" stroke="#1C8C82" stroke-width="3"/>
+    <path d="M37 15 L30 30 L15 37 L22 22 Z" fill="#EF8354"/>
+    <circle cx="26" cy="26" r="3" fill="#F7F2E7"/>
+  </g>
+  <text x="152" y="115" font-family="Georgia, 'Times New Roman', serif" font-size="30" fill="#F7F2E7">
+    TourGenie <tspan fill="#EF8354">AI</tspan>
+  </text>
+
+  <text x="88" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="78" fill="#F7F2E7">
+    From leaving home
+  </text>
+  <text x="88" y="386" font-family="Georgia, 'Times New Roman', serif" font-size="78" fill="#F7F2E7">
+    to coming back — <tspan fill="#EF8354" font-style="italic">planned</tspan>.
+  </text>
+
+  <!-- The dotted route line, the app's own piece of art. -->
+  <g transform="translate(88 452)">
+    <circle cx="6" cy="12" r="6" fill="#EF8354"/>
+    <line x1="18" y1="12" x2="700" y2="12" stroke="#EF8354" stroke-width="3"
+          stroke-dasharray="1 12" stroke-linecap="round"/>
+    <path d="M700 12 L688 5 L688 19 Z" fill="#EF8354"/>
+  </g>
+
+  <text x="88" y="536" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" fill="#F7F2E7" fill-opacity="0.6">
+    Itinerary, route, hotels and budget in one place.
+  </text>
+</svg>

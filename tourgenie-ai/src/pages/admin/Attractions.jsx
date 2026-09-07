@@ -84,7 +84,7 @@ export default function Attractions() {
       {error && <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>}
 
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-ink-900">Attractions ({attractions.length})</h3>
+        <h3 className="font-display text-xl text-ink-900">Attractions ({attractions.length})</h3>
         {!editing && (
           <button
             onClick={openNew}
@@ -96,10 +96,10 @@ export default function Attractions() {
       </div>
 
       {editing !== null && (
-        <form onSubmit={handleSubmit} className="bg-surface border border-sand rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-display text-base text-ink-900">{editing._id ? "Edit attraction" : "New attraction"}</h4>
-            <button type="button" onClick={() => setEditing(null)} className="text-ink-900/40 hover:text-ink-900">
+            <button type="button" onClick={() => setEditing(null)} className="text-ink-500 hover:text-ink-900">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -118,15 +118,15 @@ export default function Attractions() {
         </form>
       )}
 
-      <div className="bg-surface border border-sand rounded-2xl p-6">
+      <div className="card p-6">
         {loading ? (
-          <div className="flex items-center gap-2 text-ink-900/50 text-sm py-8 justify-center">
+          <div className="flex items-center gap-2 text-ink-500 text-sm py-8 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading…
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">Name</th>
                 <th className="pb-3 font-medium">City</th>
                 <th className="pb-3 font-medium">Category</th>
@@ -142,7 +142,7 @@ export default function Attractions() {
                   <td className="py-3 text-ink-900/70">{a.category}</td>
                   <td className="py-3 font-mono text-ink-900/70">{a.entry_fee === 0 ? "Free" : `৳${a.entry_fee}`}</td>
                   <td className="py-3">
-                    <div className="flex justify-end gap-3 text-ink-900/40">
+                    <div className="flex justify-end gap-3 text-ink-500">
                       <button onClick={() => openEdit(a)} className="hover:text-teal-dark"><Pencil className="w-4 h-4" /></button>
                       <button onClick={() => handleDelete(a)} className="hover:text-sunset-dark"><Trash2 className="w-4 h-4" /></button>
                     </div>

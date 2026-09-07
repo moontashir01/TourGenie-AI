@@ -1,3 +1,8 @@
 node_modules/
 .env
 *.log
+
+# Source photographs for `npm run images:upload`. They are uploaded to
+# Cloudinary and referenced by URL from src/seed/data/placeImages.js, so the
+# originals do not belong in the repository.
+place-images/

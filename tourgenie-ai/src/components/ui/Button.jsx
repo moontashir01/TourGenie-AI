@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 // The app had two button classes (.btn-primary, .btn-secondary) used in 15
 // files, and 133 places that rebuilt a pill from scratch because they needed
 // a third variant, a smaller size, or a spinner. This is that third variant
-// and the other ten.
+// and the other ten; the two classes are gone, so this is the only pill.
 //
 // `loading` is the reason this is a component and not another CSS class: a
 // button that swaps its label for a spinner changes width mid-click, so the

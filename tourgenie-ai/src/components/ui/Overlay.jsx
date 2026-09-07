@@ -28,14 +28,14 @@ const VARIANTS = {
   // Centred dialog.
   modal: {
     position: "items-center justify-center p-4",
-    panel: "w-full card shadow-lift",
+    panel: "w-full bg-surface border border-sand rounded-3xl shadow-lift",
     enter: "animate-scale-in",
     exit: "animate-scale-out",
   },
   // Same motion, parked below the top edge — the command palette's shape.
   palette: {
     position: "items-start justify-center pt-[12vh] px-4",
-    panel: "w-full card shadow-lift overflow-hidden",
+    panel: "w-full bg-surface border border-sand rounded-3xl shadow-lift overflow-hidden",
     enter: "animate-scale-in",
     exit: "animate-scale-out",
   },
@@ -65,14 +65,14 @@ const VARIANTS = {
   adaptive: {
     position: "items-end sm:items-center justify-center p-0 sm:p-4",
     panel:
-      "w-full bg-paper rounded-t-2xl sm:rounded-2xl sm:border sm:border-sand shadow-lift max-h-[92vh] overflow-y-auto",
+      "w-full bg-paper rounded-t-3xl sm:rounded-3xl sm:border sm:border-sand shadow-lift max-h-[92vh] overflow-y-auto",
     enter: "animate-sheet-in sm:animate-scale-in",
     exit: "animate-sheet-out sm:animate-scale-out",
   },
   // The mobile form of both of the above.
   sheet: {
     position: "items-end",
-    panel: "w-full bg-paper border-t border-sand rounded-t-2xl shadow-lift max-h-[88vh] overflow-y-auto",
+    panel: "w-full bg-paper border-t border-sand rounded-t-3xl shadow-lift max-h-[88vh] overflow-y-auto",
     enter: "animate-sheet-in",
     exit: "animate-sheet-out",
   },
@@ -300,7 +300,7 @@ export function OverlayHeader({ title, subtitle, onClose, sticky = false, childr
     >
       <div className="min-w-0">
         <h2 className="font-display text-xl text-ink-900 truncate">{title}</h2>
-        {subtitle && <p className="text-sm text-ink-900/55 truncate">{subtitle}</p>}
+        {subtitle && <p className="text-sm text-ink-600 truncate">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {children}
@@ -309,7 +309,7 @@ export function OverlayHeader({ title, subtitle, onClose, sticky = false, childr
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-ink-900 hover:bg-sand/50 transition-colors duration-fast"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-sand/50 transition-colors duration-fast"
           >
             <X className="w-4 h-4" />
           </button>

@@ -179,7 +179,7 @@ export default function RouteMap() {
   if (!currentTripId) {
     return (
       <AppShell title={t("route.title", "Route & Map")}>
-        <div className="max-w-md p-6 bg-surface border border-sand rounded-2xl shadow-soft">
+        <div className="max-w-md p-6 card shadow-soft">
           <p className="text-sm text-ink-900/70">
             Pick a trip first — the map draws the journey for whichever trip you have open.
           </p>
@@ -254,7 +254,7 @@ export default function RouteMap() {
                   ))}
               </MapContainer>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-sm text-ink-900/40 px-6 text-center">
+              <div className="w-full h-full flex items-center justify-center text-sm text-ink-500 px-6 text-center">
                 No coordinates recorded for this leg, so there is nothing to draw yet.
               </div>
             )}
@@ -322,10 +322,10 @@ export default function RouteMap() {
                           <span className="text-sm font-semibold text-ink-900">
                             {label ? t(label.key, label.fallback) : v.variant}
                           </span>
-                          <span className="text-3xs uppercase tracking-wide text-ink-900/40">{v.mode}</span>
+                          <span className="text-3xs uppercase tracking-wide text-ink-500">{v.mode}</span>
                           {selected && <span className="ml-auto w-2 h-2 rounded-full bg-teal" />}
                         </div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-900/65">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink-600">
                           <span className="flex items-center gap-1">
                             <Navigation className="w-3 h-3" /> {v.distance_km} km
                           </span>
@@ -341,7 +341,7 @@ export default function RouteMap() {
                         {v.carbon_per_person_kg > 0 && (
                           <span
                             className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-3xs font-semibold ${
-                              CARBON_TONE[v.carbon_rating] || "bg-sand/50 text-ink-900/60"
+                              CARBON_TONE[v.carbon_rating] || "bg-sand/50 text-ink-600"
                             }`}
                           >
                             <Leaf className="w-3 h-3" />
@@ -349,7 +349,7 @@ export default function RouteMap() {
                           </span>
                         )}
                         {v.flight && (
-                          <p className="mt-1.5 text-2xs text-ink-900/50">
+                          <p className="mt-1.5 text-2xs text-ink-500">
                             {v.flight.airline} {v.flight.flight_number} · {v.flight.depart_time}–{v.flight.arrive_time}
                             {v.flight.stops > 0 && ` · ${v.flight.stops} stop`}
                           </p>
@@ -359,7 +359,7 @@ export default function RouteMap() {
                   })}
                 </div>
               ) : (
-                <p className="text-xs text-ink-900/50 p-3 bg-surface border border-sand rounded-xl">
+                <p className="text-xs text-ink-500 p-3 bg-surface border border-sand rounded-xl">
                   No route is recorded for this leg yet — the map shows a direct line between the two points instead.
                 </p>
               )}
@@ -377,7 +377,7 @@ export default function RouteMap() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-ink-900 leading-snug">{step.instruction}</p>
-                        <p className="text-2xs text-ink-900/45 mt-0.5 font-mono">
+                        <p className="text-2xs text-ink-500 mt-0.5 font-mono">
                           {step.distance_km} km · {formatDuration(step.duration_min)}
                           {step.road && ` · ${step.road}`}
                         </p>
@@ -388,7 +388,7 @@ export default function RouteMap() {
               </section>
             )}
             {leg?.reversed && (
-              <p className="text-2xs text-ink-900/45 -mt-3">
+              <p className="text-2xs text-ink-500 -mt-3">
                 This leg is the return direction of a recorded route, so step-by-step directions are not shown.
               </p>
             )}
@@ -398,7 +398,7 @@ export default function RouteMap() {
               <h2 className="font-display text-base text-ink-900 mb-1">
                 {t("route.nearby_services", "Nearby services")}
               </h2>
-              <p className="text-2xs text-ink-900/45 mb-2">
+              <p className="text-2xs text-ink-500 mb-2">
                 Around {leg?.to?.name || "your destination"}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -411,7 +411,7 @@ export default function RouteMap() {
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                         on
                           ? "bg-gold/20 border-gold/50 text-ink-900"
-                          : "bg-surface border-sand text-ink-900/60 hover:border-gold/40"
+                          : "bg-surface border-sand text-ink-600 hover:border-gold/40"
                       }`}
                     >
                       <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -422,13 +422,13 @@ export default function RouteMap() {
               </div>
 
               {servicesLoading && (
-                <p className="flex items-center gap-2 mt-3 text-xs text-ink-900/50">
+                <p className="flex items-center gap-2 mt-3 text-sm text-ink-500">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Searching…
                 </p>
               )}
 
               {!servicesLoading && activeCategory && services.length === 0 && (
-                <p className="mt-3 text-xs text-ink-900/50">
+                <p className="mt-3 text-sm text-ink-500">
                   Nothing recorded in this category within 15 km.
                 </p>
               )}
@@ -439,13 +439,13 @@ export default function RouteMap() {
                     <li key={s._id} className="flex items-start gap-2 p-2.5 bg-surface border border-sand rounded-lg">
                       <MapPin className="w-3.5 h-3.5 text-gold shrink-0 mt-0.5" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-ink-900 truncate">{s.name}</p>
-                        <p className="text-2xs text-ink-900/50">
+                        <p className="text-sm font-semibold text-ink-900 truncate">{s.name}</p>
+                        <p className="text-2xs text-ink-500">
                           {s.is_24h ? "Open 24 hours" : s.opening_hours || s.subcategory || s.category}
                         </p>
                       </div>
                       {s.distance_m != null && (
-                        <span className="text-2xs font-mono text-ink-900/45 shrink-0">
+                        <span className="text-2xs font-mono text-ink-500 shrink-0">
                           {(s.distance_m / 1000).toFixed(1)} km
                         </span>
                       )}

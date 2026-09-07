@@ -11,7 +11,7 @@ const ROLE_TONE = {
   owner: "bg-sunset-light text-sunset-dark",
   admin: "bg-teal-light text-teal-dark",
   moderator: "bg-gold/20 text-ink-800",
-  traveler: "bg-sand text-ink-900/60",
+  traveler: "bg-sand text-ink-600",
 };
 
 const ROLES = ["traveler", "moderator", "admin", "owner"];
@@ -153,7 +153,7 @@ export default function Users() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">Name</th>
                 <th className="pb-3 font-medium">Email</th>
                 <th className="pb-3 font-medium">Role</th>
@@ -176,7 +176,7 @@ export default function Users() {
                       >
                         {u.name}
                       </button>
-                      {self && <span className="text-2xs text-ink-900/40 ml-1.5">(you)</span>}
+                      {self && <span className="text-2xs text-ink-500 ml-1.5">(you)</span>}
                     </td>
                     <td className="py-3 text-ink-900/70">{u.email}</td>
                     <td className="py-3">
@@ -207,13 +207,13 @@ export default function Users() {
                             ? "bg-sunset-light text-sunset-dark"
                             : u.is_active
                               ? "bg-teal-light text-teal-dark"
-                              : "bg-sand text-ink-900/60"
+                              : "bg-sand text-ink-600"
                         }`}
                       >
                         {u.deleted_at ? "Deleted" : u.is_active ? "Active" : "Deactivated"}
                       </span>
                     </td>
-                    <td className="py-3 text-ink-900/50 text-xs">
+                    <td className="py-3 text-ink-500 text-xs">
                       {u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : "never"}
                     </td>
                     <td className="py-3">
@@ -224,7 +224,7 @@ export default function Users() {
                               onClick={() => restoreUser(u)}
                               disabled={!canManage || busyId === u._id}
                               title={canManage ? "Restore this account" : "Admins only"}
-                              className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+                              className="text-ink-500 hover:text-teal-dark disabled:opacity-30"
                             >
                               <RotateCcw className="w-4 h-4" />
                             </button>
@@ -232,7 +232,7 @@ export default function Users() {
                               onClick={() => openDelete(u)}
                               disabled={!isOwner || busyId === u._id || self}
                               title={isOwner ? "Remove the account and all its content for good" : "Owners only"}
-                              className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+                              className="text-ink-500 hover:text-sunset-dark disabled:opacity-30"
                             >
                               <Flame className="w-4 h-4" />
                             </button>
@@ -243,7 +243,7 @@ export default function Users() {
                               onClick={() => toggleActive(u)}
                               disabled={!canManage || busyId === u._id || self}
                               title={canManage ? (u.is_active ? "Deactivate" : "Reactivate") : "Admins only"}
-                              className="text-ink-900/40 hover:text-teal-dark disabled:opacity-30"
+                              className="text-ink-500 hover:text-teal-dark disabled:opacity-30"
                             >
                               {u.is_active ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                             </button>
@@ -255,7 +255,7 @@ export default function Users() {
                                   ? "Anonymise — keeps their trips and bookings, removes the person"
                                   : "Owners only"
                               }
-                              className="text-ink-900/40 hover:text-ink-900 disabled:opacity-30"
+                              className="text-ink-500 hover:text-ink-900 disabled:opacity-30"
                             >
                               <UserX className="w-4 h-4" />
                             </button>
@@ -263,7 +263,7 @@ export default function Users() {
                               onClick={() => setSoftTarget(u)}
                               disabled={!canManage || busyId === u._id || self}
                               title={canManage ? "Delete — reversible from the Deleted filter" : "Admins only"}
-                              className="text-ink-900/40 hover:text-sunset-dark disabled:opacity-30"
+                              className="text-ink-500 hover:text-sunset-dark disabled:opacity-30"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -297,7 +297,7 @@ export default function Users() {
           onCancel={() => setRoleTarget(null)}
           onConfirm={confirmRole}
         >
-          <div className="flex items-center gap-2 text-xs text-ink-900/60 bg-paper border border-sand rounded-lg px-3 py-2.5 mb-4">
+          <div className="flex items-center gap-2 text-xs text-ink-600 bg-paper border border-sand rounded-lg px-3 py-2.5 mb-4">
             <ShieldCheck className="w-4 h-4 text-teal-dark shrink-0" />
             <span className="capitalize">
               {roleTarget.user.role} → {roleTarget.role}
@@ -359,7 +359,7 @@ export default function Users() {
               <AlertTriangle className="w-3.5 h-3.5" /> Also deleted
             </p>
             {footprintLines.length === 0 ? (
-              <p className="text-xs text-ink-900/60">Nothing — this account has no content.</p>
+              <p className="text-xs text-ink-600">Nothing — this account has no content.</p>
             ) : (
               <ul className="text-xs text-ink-900/70 grid grid-cols-2 gap-x-4 gap-y-0.5">
                 {footprintLines.map(([label, count]) => (

@@ -4,6 +4,7 @@ import { Printer, ArrowLeft, Loader2, TriangleAlert, Compass } from "lucide-reac
 import { tripsApi, itineraryApi, bookingApi, hotelBookingApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useCurrency } from "../context/CurrencyContext";
+import Button from "../components/ui/Button";
 
 // A printable copy of the whole plan.
 //
@@ -23,7 +24,7 @@ function Row({ label, value }) {
   if (!value && value !== 0) return null;
   return (
     <div className="flex gap-3 py-1 border-b border-sand/70 last:border-0">
-      <dt className="w-32 shrink-0 text-xs uppercase tracking-wide text-ink-900/50">{label}</dt>
+      <dt className="w-32 shrink-0 text-xs uppercase tracking-wide text-ink-500">{label}</dt>
       <dd className="text-sm text-ink-900">{value}</dd>
     </div>
   );
@@ -122,22 +123,22 @@ export default function TripPrint() {
         >
           <ArrowLeft className="w-4 h-4" /> Back to itinerary
         </Link>
-        <button onClick={() => window.print()} className="btn-primary">
-          <Printer className="w-4 h-4" /> Print or save as PDF
-        </button>
-        <p className="text-xs text-ink-900/55 basis-full sm:basis-auto">
+        <Button onClick={() => window.print()} icon={Printer}>
+          Print or save as PDF
+        </Button>
+        <p className="text-sm text-ink-600 basis-full sm:basis-auto">
           Choose “Save as PDF” in the print dialog to keep a copy offline.
         </p>
       </div>
 
-      <article className="print-surface max-w-3xl mx-auto bg-surface border border-sand rounded-2xl shadow-soft p-8 print:border-0 print:rounded-none print:shadow-none print:p-0">
+      <article className="print-surface max-w-3xl mx-auto card shadow-soft p-8 print:border-0 print:rounded-none print:shadow-none print:p-0">
         {/* Masthead */}
         <header className="print-block flex items-start justify-between gap-4 pb-4 mb-5 border-b-2 border-ink-900">
           <div className="min-w-0">
             <h1 className="font-display text-2xl text-ink-900 leading-tight">
               {trip.origin} → {trip.destination}
             </h1>
-            <p className="text-sm text-ink-900/65 mt-0.5">
+            <p className="text-sm text-ink-600 mt-0.5">
               {formatDate(trip.start_date)} – {formatDate(trip.end_date)} · {trip.duration_days} days ·{" "}
               {trip.travelers} {trip.travelers === 1 ? "traveller" : "travellers"}
             </p>
@@ -165,7 +166,7 @@ export default function TripPrint() {
         {(transport.length > 0 || hotels.length > 0) && (
           <section className="print-block mb-6">
             <h2 className="font-display text-lg text-ink-900 mb-2">Reservations</h2>
-            <p className="text-2xs text-ink-900/55 mb-3">
+            <p className="text-2xs text-ink-600 mb-3">
               Demonstration records — no payment was taken and nothing is reserved with any operator or property.
             </p>
 
@@ -177,11 +178,11 @@ export default function TripPrint() {
                   </span>
                   <span className="font-mono text-xs">{b.reference}</span>
                 </div>
-                <p className="text-xs text-ink-900/70 mt-1">
+                <p className="text-sm text-ink-900/70 mt-1">
                   {b.journey?.from_city} → {b.journey?.to_city} · {b.journey?.depart_time}–{b.journey?.arrive_time}
                   {b.travel_date ? ` · ${formatDate(b.travel_date)}` : ""}
                 </p>
-                <p className="text-xs text-ink-900/60 mt-0.5">
+                <p className="text-sm text-ink-600 mt-0.5">
                   {b.passengers.length} passenger{b.passengers.length > 1 ? "s" : ""} · seats {b.seats.join(", ")} ·{" "}
                   {money(b.total_fare)}
                 </p>
@@ -194,14 +195,14 @@ export default function TripPrint() {
                   <span className="font-semibold text-sm text-ink-900">{b.property?.name}</span>
                   <span className="font-mono text-xs">{b.reference}</span>
                 </div>
-                <p className="text-xs text-ink-900/70 mt-1">
+                <p className="text-sm text-ink-900/70 mt-1">
                   {b.rooms} × {b.room_type} · {formatDate(b.check_in)} → {formatDate(b.check_out)} · {b.nights} nights
                 </p>
-                <p className="text-xs text-ink-900/60 mt-0.5">
+                <p className="text-sm text-ink-600 mt-0.5">
                   Check-in {b.property?.checkin_time}, check-out {b.property?.checkout_time} · {money(b.total_amount)}
                 </p>
-                {b.property?.address && <p className="text-xs text-ink-900/55 mt-0.5">{b.property.address}</p>}
-                {b.property?.phone && <p className="text-xs text-ink-900/55">{b.property.phone}</p>}
+                {b.property?.address && <p className="text-sm text-ink-600 mt-0.5">{b.property.address}</p>}
+                {b.property?.phone && <p className="text-sm text-ink-600">{b.property.phone}</p>}
               </div>
             ))}
           </section>
@@ -211,7 +212,7 @@ export default function TripPrint() {
         <section>
           <h2 className="font-display text-lg text-ink-900 mb-3">Day by day</h2>
           {days.length === 0 ? (
-            <p className="text-sm text-ink-900/55">No itinerary has been generated for this trip yet.</p>
+            <p className="text-sm text-ink-600">No itinerary has been generated for this trip yet.</p>
           ) : (
             days.map((day) => {
               const dayItems = items.filter((i) => i.day === day).sort((a, b) => a.time.localeCompare(b.time));
@@ -224,11 +225,11 @@ export default function TripPrint() {
                     <h3 className="font-display text-base text-ink-900">
                       Day {day}
                       {dayItems[0]?.date && (
-                        <span className="ml-2 text-xs font-body text-ink-900/60">{formatDate(dayItems[0].date)}</span>
+                        <span className="ml-2 text-sm font-body text-ink-600">{formatDate(dayItems[0].date)}</span>
                       )}
-                      {theme && <span className="ml-2 text-xs font-body text-ink-900/55">· {theme}</span>}
+                      {theme && <span className="ml-2 text-sm font-body text-ink-600">· {theme}</span>}
                     </h3>
-                    {dayCost > 0 && <span className="text-xs font-mono text-ink-900/65">{formatBdt(dayCost)}</span>}
+                    {dayCost > 0 && <span className="text-xs font-mono text-ink-600">{formatBdt(dayCost)}</span>}
                   </div>
 
                   <ul>
@@ -238,12 +239,12 @@ export default function TripPrint() {
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm text-ink-900 leading-snug">{item.activity}</span>
                           {(item.location || item.city) && (
-                            <span className="block text-xs text-ink-900/55">
+                            <span className="block text-sm text-ink-600">
                               {[item.location, item.city].filter(Boolean).join(" · ")}
                             </span>
                           )}
                         </span>
-                        <span className="w-20 shrink-0 text-right font-mono text-xs text-ink-900/65 pt-0.5">
+                        <span className="w-20 shrink-0 text-right font-mono text-xs text-ink-600 pt-0.5">
                           {item.est_cost > 0 ? formatBdt(item.est_cost) : "Free"}
                         </span>
                       </li>
@@ -274,7 +275,7 @@ export default function TripPrint() {
           </section>
         )}
 
-        <footer className="print-block mt-6 pt-3 border-t border-sand text-3xs text-ink-900/50 flex flex-wrap justify-between gap-2">
+        <footer className="print-block mt-6 pt-3 border-t border-sand text-3xs text-ink-500 flex flex-wrap justify-between gap-2">
           <span>Printed {formatDate(new Date())} · TourGenie AI</span>
           <span>Costs are estimates in BDT. Bookings shown are demonstration records.</span>
         </footer>

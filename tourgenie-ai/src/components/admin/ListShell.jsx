@@ -66,7 +66,7 @@ export function AdminToolbar({ list, placeholder = "Search…", children }) {
           </kbd>
         </label>
         {children}
-        <span className="text-xs text-ink-900/45 ml-auto tabular-nums">
+        <span className="text-xs text-ink-500 ml-auto tabular-nums">
           {list.loading ? "…" : `${list.total} result${list.total === 1 ? "" : "s"}`}
         </span>
       </div>
@@ -135,7 +135,7 @@ function SavedViews({ list }) {
           <button
             type="button"
             onClick={() => setNaming(true)}
-            className="text-xs font-semibold text-ink-900/45 hover:text-teal-dark px-2 py-1"
+            className="text-xs font-semibold text-ink-500 hover:text-teal-dark px-2 py-1"
           >
             Save this view
           </button>
@@ -146,7 +146,7 @@ function SavedViews({ list }) {
         <button
           type="button"
           onClick={list.reset}
-          className="text-xs text-ink-900/40 hover:text-ink-900 px-2 py-1"
+          className="text-xs text-ink-500 hover:text-ink-900 px-2 py-1"
         >
           Clear filters
         </button>
@@ -189,7 +189,7 @@ export function ColumnPicker({ columns, hidden, onToggle, onReset }) {
       >
         <Columns3 className="w-4 h-4" />
         Columns
-        {hidden.length > 0 && <span className="text-xs text-ink-900/40">({columns.length - hidden.length})</span>}
+        {hidden.length > 0 && <span className="text-xs text-ink-500">({columns.length - hidden.length})</span>}
       </button>
 
       {open && (
@@ -214,7 +214,7 @@ export function ColumnPicker({ columns, hidden, onToggle, onReset }) {
               <button
                 type="button"
                 onClick={onReset}
-                className="w-full text-left text-xs text-ink-900/45 hover:text-teal-dark px-2 py-1.5 border-t border-sand mt-1 pt-2"
+                className="w-full text-left text-xs text-ink-500 hover:text-teal-dark px-2 py-1.5 border-t border-sand mt-1 pt-2"
               >
                 Show all columns
               </button>
@@ -253,7 +253,7 @@ export function Pager({ list }) {
   if (list.pages <= 1) return null;
   return (
     <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-sand">
-      <p className="text-xs text-ink-900/50 tabular-nums">
+      <p className="text-xs text-ink-500 tabular-nums">
         Page {list.page} of {list.pages}
         <span className="hidden sm:inline text-ink-900/30"> · [ and ] to move</span>
       </p>
@@ -283,13 +283,13 @@ export function Pager({ list }) {
 export function ListState({ list, empty = "Nothing here yet." }) {
   if (list.loading && list.rows.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-ink-900/50 text-sm py-10 justify-center">
+      <div className="flex items-center gap-2 text-ink-500 text-sm py-10 justify-center">
         <Loader2 className="w-4 h-4 animate-spin" /> Loading…
       </div>
     );
   }
   if (!list.loading && list.rows.length === 0) {
-    return <p className="text-sm text-ink-900/50 text-center py-10">{empty}</p>;
+    return <p className="text-sm text-ink-500 text-center py-10">{empty}</p>;
   }
   return null;
 }

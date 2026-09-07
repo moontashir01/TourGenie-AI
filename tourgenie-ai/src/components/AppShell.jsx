@@ -130,8 +130,8 @@ function CurrentTripCard({ onNavigate }) {
           <RefreshCw className="w-3.5 h-3.5 text-sunset-dark" strokeWidth={1.75} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold text-ink-900/75">Trip didn't load</span>
-          <span className="block text-2xs text-ink-900/55 leading-snug">Still open — tap to retry</span>
+          <span className="block text-sm font-semibold text-ink-900/75">Trip didn't load</span>
+          <span className="block text-2xs text-ink-600 leading-snug">Still open — tap to retry</span>
         </span>
       </button>
     );
@@ -148,10 +148,10 @@ function CurrentTripCard({ onNavigate }) {
           <Map className="w-4 h-4 text-ink-900/30" strokeWidth={1.75} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold text-ink-900/70">
+          <span className="block text-sm font-semibold text-ink-900/70">
             {t("nav.no_trip_selected", "No trip selected")}
           </span>
-          <span className="block text-2xs text-ink-900/45 leading-snug">
+          <span className="block text-2xs text-ink-500 leading-snug">
             {t("nav.choose_trip", "Choose one from your trips")}
           </span>
         </span>
@@ -172,17 +172,17 @@ function CurrentTripCard({ onNavigate }) {
           <span className="block font-display text-sm text-ink-900 truncate">
             {currentTrip.destination}
           </span>
-          <span className="block text-2xs text-ink-900/50 truncate">
+          <span className="block text-2xs text-ink-500 truncate">
             {currentTrip.origin} → {currentTrip.destination}
           </span>
         </span>
         <StatusBadge status={status} label={t(`trip.status_${status}`, status)} className="shrink-0" />
       </div>
       <div className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-sand">
-        <span className="text-2xs font-mono text-ink-900/45">
+        <span className="text-2xs font-mono text-ink-500">
           {formatRange(currentTrip.start_date, currentTrip.end_date)}
         </span>
-        <span className="text-3xs text-ink-900/35 group-hover:text-teal-dark">
+        <span className="text-3xs text-ink-500 group-hover:text-teal-dark">
           {t("nav.change", "Change")}
         </span>
       </div>
@@ -206,8 +206,8 @@ function SearchHint() {
       className="flex items-center gap-2 w-[calc(100%-0.5rem)] mx-1 mb-3 px-3 py-2 rounded-xl border border-sand bg-surface/60 hover:bg-surface hover:border-teal/40 text-left transition-colors group"
     >
       <Search className="w-3.5 h-3.5 text-ink-900/30 group-hover:text-teal-dark shrink-0" />
-      <span className="text-xs text-ink-900/40 flex-1">Search…</span>
-      <kbd className="text-3xs font-mono text-ink-900/35 border border-sand rounded px-1.5 py-0.5 bg-paper">
+      <span className="text-sm text-ink-500 flex-1">Search…</span>
+      <kbd className="text-3xs font-mono text-ink-500 border border-sand rounded px-1.5 py-0.5 bg-paper">
         {isMac ? "⌘" : "Ctrl "}K
       </kbd>
     </button>
@@ -229,7 +229,7 @@ function NavLinks({ onNavigate }) {
             </p>
 
             {muted && (
-              <p className="px-4 mb-1.5 text-3xs text-ink-900/35 leading-snug">
+              <p className="px-4 mb-1.5 text-3xs text-ink-500 leading-snug">
                 {t("nav.pick_trip_hint", "Pick a trip to use these")}
               </p>
             )}
@@ -245,8 +245,8 @@ function NavLinks({ onNavigate }) {
                       isActive
                         ? "bg-teal-light text-teal-dark shadow-soft"
                         : muted
-                          ? "text-ink-900/30 hover:bg-surface/60 hover:text-ink-900/60"
-                          : "text-ink-900/60 hover:bg-surface hover:text-ink-900 hover:shadow-soft"
+                          ? "text-ink-900/30 hover:bg-surface/60 hover:text-ink-600"
+                          : "text-ink-600 hover:bg-surface hover:text-ink-900 hover:shadow-soft"
                     }`
                   }
                 >
@@ -255,7 +255,7 @@ function NavLinks({ onNavigate }) {
                       {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-teal" />}
                       <l.icon
                         className={`w-4 h-4 transition-transform duration-fast group-hover:scale-110 ${
-                          isActive ? "text-teal-dark" : muted ? "text-ink-900/25" : "text-ink-900/40 group-hover:text-teal-dark"
+                          isActive ? "text-teal-dark" : muted ? "text-ink-900/25" : "text-ink-500 group-hover:text-teal-dark"
                         }`}
                         strokeWidth={1.75}
                       />
@@ -283,7 +283,7 @@ function UserFooter({ user, onLogout, onNavigate }) {
 
   const adminLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-      isActive ? "bg-ink-900 text-paper" : "text-ink-900/60 hover:bg-surface hover:text-ink-900 hover:shadow-soft"
+      isActive ? "bg-ink-900 text-paper" : "text-ink-600 hover:bg-surface hover:text-ink-900 hover:shadow-soft"
     }`;
 
   return (
@@ -317,13 +317,13 @@ function UserFooter({ user, onLogout, onNavigate }) {
           </div>
           <div className="text-xs flex-1 min-w-0">
             <p className="font-semibold text-ink-900 truncate">{user?.name || "…"}</p>
-            <p className="text-ink-900/50 capitalize">{user?.role || ""}</p>
+            <p className="text-ink-500 capitalize">{user?.role || ""}</p>
           </div>
         </NavLink>
         <button
           onClick={onLogout}
           title={t("nav.logout", "Log out")}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-900/40 hover:text-sunset-dark hover:bg-sunset/10 transition-colors shrink-0"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-500 hover:text-sunset-dark hover:bg-sunset/10 transition-colors shrink-0"
         >
           <LogOut className="w-4 h-4" />
         </button>
@@ -353,7 +353,7 @@ function SidebarBody({ onNavigate }) {
 // `actions` is the page's own controls — the one or two buttons that belong
 // beside its title rather than floating at the top of its content, which is
 // where every page had been putting them.
-export default function AppShell({ children, title, subtitle, actions }) {
+export default function AppShell({ children, title, subtitle, actions, titleId }) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -390,7 +390,7 @@ export default function AppShell({ children, title, subtitle, actions }) {
           <Brand />
           <button
             onClick={() => setMobileOpen(false)}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-900/50 hover:bg-surface"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-ink-500 hover:bg-surface"
             aria-label={t("common.close", "Close")}
           >
             <X className="w-5 h-5" />
@@ -407,14 +407,14 @@ export default function AppShell({ children, title, subtitle, actions }) {
           <div className="flex items-center gap-1">
             <Link
               to="/plan"
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-teal-dark hover:bg-teal-light"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-teal-dark hover:bg-teal-light"
               aria-label={t("trip.plan_new", "Plan New Trip")}
             >
               <Plus className="w-5 h-5" />
             </Link>
             <button
               onClick={() => setMobileOpen(true)}
-              className="w-9 h-9 rounded-lg flex items-center justify-center text-ink-900/60 hover:bg-surface"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-ink-600 hover:bg-surface"
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -422,16 +422,38 @@ export default function AppShell({ children, title, subtitle, actions }) {
           </div>
         </div>
 
+        {/* The header rule spans the full width but its contents are held to
+            the same column as <main> below, so the title sits over the first
+            card rather than drifting left of it on a wide monitor. */}
         {(title || subtitle || actions) && (
-          <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6 flex items-start justify-between gap-4 flex-wrap">
-            <div className="min-w-0">
-              {title && <h1 className="font-display text-2xl text-ink-900">{title}</h1>}
-              {subtitle && <p className="text-sm text-ink-900/60 mt-1">{subtitle}</p>}
+          <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6">
+            <div className="mx-auto w-full max-w-6xl flex items-start justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                {title && (
+                  <h1
+                    className="font-display text-display-sm text-ink-900"
+                    // Pairs with the trip card that opened this page, so the
+                    // browser morphs one into the other instead of crossfading
+                    // the whole document. Must be unique in the document,
+                    // which is why it carries the trip's id.
+                    style={titleId ? { viewTransitionName: titleId } : undefined}
+                  >
+                    {title}
+                  </h1>
+                )}
+                {subtitle && <p className="text-sm text-ink-600 mt-1.5 max-w-prose">{subtitle}</p>}
+              </div>
+              {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
             </div>
-            {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
           </header>
         )}
-        <main className="px-6 md:px-10 py-8 animate-fade-up">{children}</main>
+        {/* Capped because <main> had no maximum: on a 27" monitor the two
+            column form on Plan Trip stretched past 2,000px and its reading
+            line ran over 150 characters. Pages that want a narrower column
+            still opt into one inside this. */}
+        <main className="px-6 md:px-10 py-10 animate-fade-up">
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
       </div>
 
       {/* Available from every authenticated page. */}

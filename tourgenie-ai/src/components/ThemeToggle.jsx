@@ -12,7 +12,7 @@ export default function ThemeToggle({ tone = "app", className = "" }) {
   const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   const tones = {
-    app: "bg-surface/70 border-sand text-ink-900/60 hover:text-ink-900 hover:border-teal/50",
+    app: "bg-surface/70 border-sand text-ink-600 hover:text-ink-900 hover:border-teal/50",
     ink: "bg-ink-800/60 border-ink-700 text-paper/70 hover:text-paper hover:border-teal/50",
   };
 

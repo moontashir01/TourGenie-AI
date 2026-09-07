@@ -5,6 +5,9 @@ import AppShell from "../components/AppShell";
 import { documentApi, packingApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useLanguage } from "../context/LanguageContext";
+import Button from "../components/ui/Button";
+import SectionHeader from "../components/ui/SectionHeader";
+import Badge from "../components/ui/Badge";
 
 const DOC_TYPES = ["passport", "visa", "id", "insurance", "ticket", "hotel", "other"];
 
@@ -21,9 +24,9 @@ const CATEGORY_LABELS = {
 function expiryBadge(date) {
   if (!date) return null;
   const days = Math.ceil((new Date(date) - Date.now()) / 86400000);
-  if (days < 0) return { label: "Expired", tone: "bg-sunset/15 text-sunset-dark" };
-  if (days <= 30) return { label: `Expires in ${days}d`, tone: "bg-gold/20 text-ink-900" };
-  return { label: `Expires ${new Date(date).toLocaleDateString()}`, tone: "bg-paper text-ink-900/50" };
+  if (days < 0) return { label: "Expired", tone: "sunset" };
+  if (days <= 30) return { label: `Expires in ${days}d`, tone: "gold" };
+  return { label: `Expires ${new Date(date).toLocaleDateString()}`, tone: "outline" };
 }
 
 // FR-15 — the generated packing list for the current trip: rule-matched
@@ -96,7 +99,7 @@ function PackingPanel() {
             onClick={generate}
             disabled={generating}
             title="Regenerate from the latest weather (keeps your ticks)"
-            className="text-ink-900/40 hover:text-teal-dark disabled:opacity-50"
+            className="text-ink-500 hover:text-teal-dark disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${generating ? "animate-spin" : ""}`} />
           </button>
@@ -104,32 +107,31 @@ function PackingPanel() {
       </div>
 
       {!currentTripId ? (
-        <p className="text-sm text-ink-900/50 mt-3">
+        <p className="text-sm text-ink-500 mt-3">
           Open a trip from your <Link to="/dashboard" className="text-teal-dark font-semibold hover:text-teal">dashboard</Link>{" "}
           first — the list is generated from that trip's dates, cities and weather.
         </p>
       ) : loading ? (
-        <p className="text-sm text-ink-900/40 mt-3 flex items-center gap-2">
+        <p className="text-sm text-ink-500 mt-3 flex items-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading…
         </p>
       ) : !list ? (
         <div className="mt-3">
-          <p className="text-sm text-ink-900/50 mb-4">
+          <p className="text-sm text-ink-500 mb-4">
             No list yet for this trip. It's built from your trip length, party size, the destinations' weather
             forecast and your interests — no two trips pack the same.
           </p>
-          <button onClick={generate} disabled={generating} className="btn-primary w-full">
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          <Button onClick={generate} loading={generating} icon={Sparkles} fullWidth>
             {generating ? "Reading the forecast…" : "Generate packing list"}
-          </button>
-          {error && <p className="text-xs text-sunset-dark mt-2">{error}</p>}
+          </Button>
+          {error && <p className="text-sm text-sunset-dark mt-2">{error}</p>}
         </div>
       ) : (
         <div>
-          <p className="text-xs text-ink-900/50 mb-1">{list.based_on?.weather_summary}</p>
+          <p className="text-sm text-ink-500 mb-1">{list.based_on?.weather_summary}</p>
           {totals && (
             <div className="mb-4">
-              <p className="text-xs text-ink-900/40 mb-1.5">
+              <p className="text-sm text-ink-500 mb-1.5">
                 {totals.done} of {totals.total} packed
               </p>
               <div className="w-full h-1.5 bg-paper rounded-full overflow-hidden">
@@ -140,11 +142,11 @@ function PackingPanel() {
               </div>
             </div>
           )}
-          {error && <p className="text-xs text-sunset-dark mb-2">{error}</p>}
+          {error && <p className="text-sm text-sunset-dark mb-2">{error}</p>}
           <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-1">
             {list.categories.map((group) => (
               <div key={group.category}>
-                <p className="text-xs font-semibold tracking-wide uppercase text-ink-900/50 mb-2">
+                <p className="text-xs font-semibold tracking-wide uppercase text-ink-500 mb-2">
                   {t(`packing.${group.category}`, CATEGORY_LABELS[group.category] || group.category)}
                 </p>
                 <ul className="space-y-1.5">
@@ -157,15 +159,15 @@ function PackingPanel() {
                           checked={item.checked}
                           onChange={(e) => toggle(group.category, item.name, e.target.checked)}
                         />
-                        <span className={item.checked ? "line-through text-ink-900/40" : ""}>
+                        <span className={item.checked ? "line-through text-ink-500" : ""}>
                           {item.name}
-                          {item.qty > 1 && <span className="text-ink-900/40 font-mono text-xs"> ×{item.qty}</span>}
+                          {item.qty > 1 && <span className="text-ink-500 font-mono text-xs"> ×{item.qty}</span>}
                           {item.essential && !item.checked && (
                             <span className="ml-1.5 text-3xs font-semibold uppercase tracking-wide text-sunset-dark">
                               essential
                             </span>
                           )}
-                          {item.note && <span className="block text-xs text-ink-900/40">{item.note}</span>}
+                          {item.note && <span className="block text-sm text-ink-500">{item.note}</span>}
                         </span>
                       </label>
                     </li>
@@ -238,22 +240,26 @@ export default function Documents() {
             <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3">{error}</div>
           )}
 
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg text-ink-900">Your documents ({docs.length})</h3>
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-dark hover:text-teal"
-            >
-              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {showForm ? "Cancel" : "Add document"}
-            </button>
-          </div>
+          <SectionHeader
+            title="Your documents"
+            count={docs.length}
+            className="mb-0"
+            action={
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-dark hover:text-teal"
+              >
+                {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                {showForm ? "Cancel" : "Add document"}
+              </button>
+            }
+          />
 
           {showForm && (
             <form onSubmit={handleAdd} className="card p-6 space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Type</span>
+                  <span className="text-sm font-medium text-ink-600 mb-1.5 block">Type</span>
                   <select name="type" required className="input capitalize">
                     {DOC_TYPES.map((t) => (
                       <option key={t} value={t}>{t}</option>
@@ -261,12 +267,12 @@ export default function Documents() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Title</span>
+                  <span className="text-sm font-medium text-ink-600 mb-1.5 block">Title</span>
                   <input name="title" type="text" placeholder="e.g. Passport — your name" className="input" />
                 </label>
               </div>
               <label className="block">
-                <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">File link</span>
+                <span className="text-sm font-medium text-ink-600 mb-1.5 block">File link</span>
                 <input
                   name="file_url"
                   type="url"
@@ -274,28 +280,28 @@ export default function Documents() {
                   placeholder="https://… (Google Drive, Dropbox, or any hosted copy)"
                   className="input"
                 />
-                <span className="text-xs text-ink-900/40 mt-1 block">
+                <span className="text-sm text-ink-500 mt-1 block">
                   Paste a link to the scanned copy — direct file upload is on the roadmap.
                 </span>
               </label>
               <label className="block sm:w-1/2">
-                <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">Expiry date (optional)</span>
+                <span className="text-sm font-medium text-ink-600 mb-1.5 block">Expiry date (optional)</span>
                 <input name="expiry_date" type="date" className="input" />
               </label>
-              <button type="submit" disabled={saving} className="btn-primary">
+              <Button type="submit" loading={saving}>
                 {saving ? "Saving…" : "Save document"}
-              </button>
+              </Button>
             </form>
           )}
 
           {loading ? (
-            <div className="flex items-center gap-2 text-ink-900/50 text-sm py-10 justify-center">
+            <div className="flex items-center gap-2 text-ink-500 text-sm py-10 justify-center">
               <Loader2 className="w-4 h-4 animate-spin" /> Loading documents…
             </div>
           ) : docs.length === 0 ? (
             <div className="bg-surface border border-dashed border-sand rounded-2xl p-10 text-center">
               <FileText className="w-7 h-7 text-teal mx-auto mb-3" strokeWidth={1.5} />
-              <p className="text-sm text-ink-900/60">
+              <p className="text-sm text-ink-600">
                 No documents yet. Keep scans of your passport, visa, tickets and bookings here so they travel with the
                 trip.
               </p>
@@ -305,24 +311,24 @@ export default function Documents() {
               {docs.map((d) => {
                 const badge = expiryBadge(d.expiry_date);
                 return (
-                  <div key={d._id} className="card card-hover p-4 flex items-start gap-3">
+                  <div key={d._id} className="card p-4 flex items-start gap-3">
                     <div className="w-10 h-10 rounded-lg bg-teal-light flex items-center justify-center shrink-0">
                       <FileText className="w-5 h-5 text-teal-dark" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-ink-900 truncate capitalize">{d.title || d.type}</p>
-                      <p className="text-xs text-ink-900/50 capitalize">{d.type}</p>
+                      <p className="text-sm text-ink-500 capitalize">{d.type}</p>
                       {badge && (
-                        <span className={`inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full mt-1.5 ${badge.tone}`}>
-                          <CalendarClock className="w-3 h-3" /> {badge.label}
-                        </span>
+                        <Badge tone={badge.tone} size="md" icon={CalendarClock} className="mt-1.5">
+                          {badge.label}
+                        </Badge>
                       )}
                       <div className="mt-2">
                         <a
                           href={d.file_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs font-semibold text-teal-dark hover:text-teal"
+                          className="text-sm font-semibold text-teal-dark hover:text-teal"
                         >
                           Open file →
                         </a>

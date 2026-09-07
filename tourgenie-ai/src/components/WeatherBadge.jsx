@@ -36,7 +36,7 @@ export default function WeatherBadge({ forecast }) {
     <span
       title={`${forecast.description}${forecast.rain_chance_pct != null ? ` · ${forecast.rain_chance_pct}% rain` : ""}`}
       className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
-        wet ? "bg-gold/15 text-ink-900" : "bg-paper text-ink-900/60"
+        wet ? "bg-gold/15 text-ink-900" : "bg-paper text-ink-600"
       }`}
     >
       <Icon className={`w-3.5 h-3.5 ${wet ? "text-gold" : "text-teal-dark"}`} strokeWidth={1.75} />
@@ -66,12 +66,12 @@ export function WeatherDetail({ forecast }) {
       {forecast.rain_chance_pct != null && <span>{forecast.rain_chance_pct}% chance of rain</span>}
       {forecast.humidity_pct != null && <span>{forecast.humidity_pct}% humidity</span>}
       {forecast.sunrise && (
-        <span className="text-ink-900/50">
+        <span className="text-ink-500">
           ☀ {forecast.sunrise} – {forecast.sunset}
         </span>
       )}
       {forecast.source === "climate-normal" && (
-        <span className="text-ink-900/40 italic">typical for the season, not a live forecast</span>
+        <span className="text-ink-500 italic">typical for the season, not a live forecast</span>
       )}
     </div>
   );

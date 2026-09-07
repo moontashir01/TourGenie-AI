@@ -39,10 +39,10 @@ function DecisionPrompt({ target, busy, onCancel, onConfirm }) {
 
   return (
     <Overlay open onClose={onCancel} size="md" label="Moderation decision" dismissable={!busy} className="p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">
+        <h3 className="font-display text-xl text-ink-900 mb-1">
           {removing ? "Remove this permanently?" : target.action === "hide" ? "Hide this from the feed?" : "Put this on the feed?"}
         </h3>
-        <p className="text-sm text-ink-900/60 mb-4">
+        <p className="text-sm text-ink-600 mb-4">
           {removing
             ? "It is deleted for good. Hiding it is reversible; this is not."
             : target.action === "hide"
@@ -53,7 +53,7 @@ function DecisionPrompt({ target, busy, onCancel, onConfirm }) {
           {target.excerpt}
         </blockquote>
         <label className="block mb-4">
-          <span className="text-xs font-medium text-ink-900/60 mb-1.5 block">
+          <span className="text-xs font-medium text-ink-600 mb-1.5 block">
             {needsReason ? "Reason (recorded in the activity log)" : "Note (optional)"}
           </span>
           <input
@@ -148,27 +148,27 @@ export default function Moderation() {
 
       <section className="card p-6">
         <div className="flex items-center justify-between gap-3 mb-1">
-          <h3 className="font-display text-lg text-ink-900">Waiting for a decision</h3>
+          <h3 className="font-display text-xl text-ink-900">Waiting for a decision</h3>
           <button
             type="button"
             onClick={load}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-900/60 hover:text-teal-dark"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-600 hover:text-teal-dark"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
         </div>
-        <p className="text-sm text-ink-900/55 mb-5">
+        <p className="text-sm text-ink-600 mb-5">
           Oldest first. Approving puts it on the feed and closes any reports about it.
         </p>
 
         {loading && queue.length === 0 ? (
-          <div className="flex items-center gap-2 text-ink-900/50 text-sm py-10 justify-center">
+          <div className="flex items-center gap-2 text-ink-500 text-sm py-10 justify-center">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading the queue…
           </div>
         ) : queue.length === 0 ? (
           <div className="text-center py-12">
             <ShieldCheck className="w-8 h-8 text-teal mx-auto mb-3" strokeWidth={1.5} />
-            <p className="text-sm text-ink-900/60">Nothing is waiting. {total === 0 ? "The queue is empty." : ""}</p>
+            <p className="text-sm text-ink-600">Nothing is waiting. {total === 0 ? "The queue is empty." : ""}</p>
           </div>
         ) : (
           <ul className="space-y-4">
@@ -185,11 +185,11 @@ export default function Moderation() {
                           <Star className="w-3.5 h-3.5 text-gold fill-current" /> {entry.rating} · {entry.subject}
                         </span>
                       )}
-                      <span className="text-2xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-sand text-ink-900/60">
+                      <span className="text-2xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full bg-sand text-ink-600">
                         {entry.kind}
                       </span>
                     </p>
-                    <p className="text-xs text-ink-900/50 mt-0.5">
+                    <p className="text-xs text-ink-500 mt-0.5">
                       {entry.author?.name || "deleted account"} · {new Date(entry.created_at).toLocaleString()}
                     </p>
                   </div>
@@ -203,11 +203,11 @@ export default function Moderation() {
                 {entry.reports.length > 0 && (
                   <ul className="space-y-1.5 mb-3 border-l-2 border-sunset/30 pl-3">
                     {entry.reports.map((report) => (
-                      <li key={report._id} className="text-xs text-ink-900/60">
+                      <li key={report._id} className="text-xs text-ink-600">
                         <Flag className="w-3 h-3 inline mr-1 text-sunset-dark" />
                         <span className="font-semibold">{REASON_LABELS[report.reason] || report.reason}</span>
                         {report.details ? ` — ${report.details}` : ""}
-                        <span className="text-ink-900/35"> · {report.reporter_email}</span>
+                        <span className="text-ink-500"> · {report.reporter_email}</span>
                       </li>
                     ))}
                   </ul>
@@ -243,8 +243,8 @@ export default function Moderation() {
       </section>
 
       <section className="card p-6">
-        <h3 className="font-display text-lg text-ink-900 mb-1">Reports</h3>
-        <p className="text-sm text-ink-900/55 mb-4">
+        <h3 className="font-display text-xl text-ink-900 mb-1">Reports</h3>
+        <p className="text-sm text-ink-600 mb-4">
           Every complaint a traveller has raised, and what was done about it.
         </p>
         <ErrorBanner message={reports.error} onDismiss={() => reports.setError("")} />
@@ -263,7 +263,7 @@ export default function Moderation() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+                <tr className="text-left text-xs text-ink-500 border-b border-sand">
                   <th className="pb-3 font-medium">Raised</th>
                   <th className="pb-3 font-medium">Reporter</th>
                   <th className="pb-3 font-medium">Reason</th>
@@ -275,7 +275,7 @@ export default function Moderation() {
               <tbody className="divide-y divide-sand">
                 {reports.rows.map((report) => (
                   <tr key={report._id}>
-                    <td className="py-3 text-ink-900/60 text-xs whitespace-nowrap">
+                    <td className="py-3 text-ink-600 text-xs whitespace-nowrap">
                       {new Date(report.created_at).toLocaleDateString()}
                     </td>
                     <td className="py-3 text-ink-900/70 text-xs">
@@ -284,7 +284,7 @@ export default function Moderation() {
                     <td className="py-3 text-ink-900/70">
                       {REASON_LABELS[report.reason] || report.reason}
                       {report.details && (
-                        <span className="block text-xs text-ink-900/45 max-w-xs truncate" title={report.details}>
+                        <span className="block text-xs text-ink-500 max-w-xs truncate" title={report.details}>
                           {report.details}
                         </span>
                       )}
@@ -308,12 +308,12 @@ export default function Moderation() {
                         <button
                           type="button"
                           onClick={() => closeReport(report._id, "dismissed")}
-                          className="text-xs font-semibold text-ink-900/60 hover:text-teal-dark"
+                          className="text-xs font-semibold text-ink-600 hover:text-teal-dark"
                         >
                           Dismiss
                         </button>
                       ) : (
-                        <span className="text-xs text-ink-900/35">
+                        <span className="text-xs text-ink-500">
                           {report.resolved_by?.name || "closed"}
                         </span>
                       )}
@@ -341,8 +341,8 @@ export default function Moderation() {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-surface border border-sand rounded-2xl p-5">
-      <p className="text-xs font-medium text-ink-900/50 mb-2">{label}</p>
+    <div className="card p-5">
+      <p className="text-xs font-medium text-ink-500 mb-2">{label}</p>
       <p className="font-mono text-2xl font-semibold text-ink-900">{value}</p>
     </div>
   );

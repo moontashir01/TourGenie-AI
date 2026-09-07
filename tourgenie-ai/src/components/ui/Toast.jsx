@@ -16,7 +16,7 @@ import usePresence from "../../hooks/usePresence";
 const TONES = {
   success: { icon: Check, ring: "border-teal/40", chip: "bg-teal-light text-teal-dark" },
   error: { icon: TriangleAlert, ring: "border-sunset/40", chip: "bg-sunset-light text-sunset-dark" },
-  info: { icon: Info, ring: "border-sand", chip: "bg-sand text-ink-900/60" },
+  info: { icon: Info, ring: "border-sand", chip: "bg-sand text-ink-600" },
 };
 
 function ToastItem({ toast, onRemove }) {
@@ -59,7 +59,7 @@ function ToastItem({ toast, onRemove }) {
       </span>
       <div className="min-w-0 flex-1">
         {toast.title && <p className="text-sm font-semibold text-ink-900">{toast.title}</p>}
-        {toast.message && <p className="text-xs text-ink-900/60 mt-0.5 leading-relaxed">{toast.message}</p>}
+        {toast.message && <p className="text-sm text-ink-600 mt-0.5 leading-relaxed">{toast.message}</p>}
       </div>
       <button
         type="button"

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Compass, Mail, Lock, AlertCircle, Clock } from "lucide-react";
+import { Mail, Lock, AlertCircle, Clock } from "lucide-react";
 import RouteLine from "../components/RouteLine";
 import { useAuth } from "../context/AuthContext";
 import { consumeSessionExpiredNotice } from "../lib/api";
+import AuthLayout from "../components/AuthLayout";
 
 const STAFF_ROLES = ["moderator", "admin", "owner"];
 
@@ -38,17 +39,10 @@ export default function Login() {
   }
 
   return (
-    <div className="theme-ink min-h-screen bg-ink-900 flex items-center justify-center px-6 relative overflow-hidden">
-      <svg className="absolute -bottom-10 -left-10 w-72 h-72 opacity-20" viewBox="0 0 200 200" aria-hidden="true">
-        <circle cx="100" cy="100" r="90" fill="none" stroke="#1C8C82" strokeWidth="1" strokeDasharray="1 8" />
-      </svg>
-      <div className="w-full max-w-sm relative z-10">
-        <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <Compass className="w-7 h-7 text-sunset" strokeWidth={1.75} />
-          <span className="font-display text-xl text-paper">TourGenie <span className="text-sunset">AI</span></span>
-        </Link>
-
-        <div className="bg-ink-800 border border-ink-700 rounded-2xl p-8">
+    <AuthLayout
+      headline="Plan the whole trip, not just the flight."
+      sub="Your itinerary, route, hotels and spending stay in one place, and pick up wherever you left them."
+    >
           <h1 className="font-display text-2xl text-paper mb-1">Welcome back</h1>
           <p className="text-sm text-paper/50 mb-6">Log in to pick up where your trip planning left off.</p>
 
@@ -68,7 +62,7 @@ export default function Login() {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Email</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Email</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <Mail className="w-4 h-4 text-paper/30" />
                 <input
@@ -82,7 +76,7 @@ export default function Login() {
               </div>
             </label>
             <label className="block">
-              <span className="text-xs font-medium text-paper/60 mb-1.5 block">Password</span>
+              <span className="text-sm font-medium text-paper/60 mb-1.5 block">Password</span>
               <div className="flex items-center gap-2 bg-ink-900 border border-ink-700 rounded-lg px-3 focus-within:border-teal">
                 <Lock className="w-4 h-4 text-paper/30" />
                 <input
@@ -97,7 +91,7 @@ export default function Login() {
             </label>
 
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-xs text-teal hover:text-teal-dark">Forgot password?</Link>
+              <Link to="/forgot-password" className="text-sm text-teal hover:text-teal-dark">Forgot password?</Link>
             </div>
 
             <button
@@ -117,8 +111,6 @@ export default function Login() {
               Create an account
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   );
 }

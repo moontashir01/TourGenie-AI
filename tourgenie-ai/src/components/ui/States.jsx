@@ -30,12 +30,27 @@ export default function EmptyState({
         .join(" ")}
     >
       {Icon && (
-        <span className="w-11 h-11 rounded-xl bg-paper border border-sand inline-flex items-center justify-center mb-3">
-          <Icon className="w-5 h-5 text-ink-900/30" strokeWidth={1.75} aria-hidden />
+        <span className="relative inline-flex items-center justify-center w-24 h-14 mb-3" aria-hidden>
+          {/* The same dotted route line the landing hero and the trip panel
+              use, so an empty page still looks like this product. */}
+          <svg className="absolute inset-0 w-full h-full text-sand" viewBox="0 0 96 56" fill="none">
+            <path
+              d="M6 40 Q 30 12, 48 28 T 90 18"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="1 7"
+            />
+            <circle cx="6" cy="40" r="3" fill="currentColor" />
+            <circle cx="90" cy="18" r="3" fill="currentColor" />
+          </svg>
+          <span className="relative w-11 h-11 rounded-xl bg-paper border border-sand inline-flex items-center justify-center">
+            <Icon className="w-5 h-5 text-ink-500" strokeWidth={1.75} />
+          </span>
         </span>
       )}
       {title && <p className="font-display text-lg text-ink-900 mb-1">{title}</p>}
-      {description && <p className="text-sm text-ink-900/55 max-w-sm mx-auto">{description}</p>}
+      {description && <p className="text-sm text-ink-600 max-w-sm mx-auto">{description}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </div>
   );
@@ -75,7 +90,7 @@ export function ErrorState({ message, onRetry, inline = false, className = "" })
         <TriangleAlert className="w-5 h-5 text-sunset-dark" strokeWidth={1.75} aria-hidden />
       </span>
       <p className="font-display text-lg text-ink-900 mb-1">That didn't load</p>
-      <p className="text-sm text-ink-900/55 max-w-sm mx-auto">{message}</p>
+      <p className="text-sm text-ink-600 max-w-sm mx-auto">{message}</p>
       {onRetry && (
         <div className="mt-5 flex justify-center">
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={onRetry}>

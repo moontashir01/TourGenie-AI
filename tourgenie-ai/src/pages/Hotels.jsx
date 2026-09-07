@@ -7,6 +7,7 @@ import Money from "../components/Money";
 import HotelBookingModal from "../components/HotelBookingModal";
 import { tripsApi, hotelApi, itineraryApi, destinationsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import PlaceImage from "../components/ui/PlaceImage";
 
 const sortOptions = [
   { value: "", label: "Best match" },
@@ -190,7 +191,7 @@ export default function Hotels() {
                 onClick={() => changeCity(city)}
                 className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-full border transition-colors ${
                   activeCity === city
-                    ? "bg-teal text-white border-teal"
+                    ? "bg-teal text-paper-fixed border-teal"
                     : "bg-surface text-ink-900/70 border-sand hover:border-teal/40"
                 }`}
               >
@@ -203,9 +204,9 @@ export default function Hotels() {
       )}
 
       <div className="flex items-center justify-between mb-6">
-        <p className="text-sm text-ink-900/50">{hotels.length} hotel{hotels.length !== 1 ? "s" : ""} found{trip?.multi_city && activeCity ? ` in ${activeCity}` : ""}</p>
+        <p className="text-sm text-ink-500">{hotels.length} hotel{hotels.length !== 1 ? "s" : ""} found{trip?.multi_city && activeCity ? ` in ${activeCity}` : ""}</p>
         <div className="flex items-center gap-2">
-          <ArrowUpDown className="w-4 h-4 text-ink-900/40" />
+          <ArrowUpDown className="w-4 h-4 text-ink-500" />
           <select
             value={sort}
             onChange={(e) => changeSort(e.target.value)}
@@ -226,7 +227,7 @@ export default function Hotels() {
         </div>
       ) : hotels.length === 0 ? (
         <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 text-sm">
+          <p className="text-ink-600 text-sm">
             No seeded hotels for {trip?.multi_city ? activeCity : trip?.destination} yet — add some via the admin console or the seed script.
           </p>
         </div>
@@ -236,22 +237,20 @@ export default function Hotels() {
             const isSelected = activeSelectedHotelId === h._id;
             return (
               <div key={h._id} className="group card card-hover overflow-hidden flex flex-col">
-                <div className="h-28 bg-gradient-to-br from-teal-light via-teal-light to-teal/25 flex items-center justify-center">
-                  <Wifi className="w-8 h-8 text-teal-dark transition-transform duration-base group-hover:scale-110" strokeWidth={1.5} />
-                </div>
+                <PlaceImage src={h.image_url} alt={h.name} icon={Wifi} ratio="21/9" />
                 <div className="p-5 flex flex-col flex-1">
                   <h4 className="font-display text-lg text-ink-900 mb-1">{h.name}</h4>
                   <div className="flex items-center gap-1 text-gold mb-2">
                     <Star className="w-3.5 h-3.5 fill-gold" />
-                    <span className="text-xs font-semibold text-ink-900/70">{h.rating.toFixed(1)}</span>
+                    <span className="text-sm font-semibold text-ink-900/70">{h.rating.toFixed(1)}</span>
                   </div>
                   <p className="font-mono text-lg text-ink-900 mb-3">
                     <Money bdt={h.price_per_night} local={localCurrency} localClassName="text-sm" />
-                    <span className="text-xs text-ink-900/40 font-sans"> /night</span>
+                    <span className="text-sm text-ink-500 font-sans"> /night</span>
                   </p>
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {h.facilities.map((f) => (
-                      <span key={f} className="text-2xs bg-paper text-ink-900/60 px-2 py-0.5 rounded-full">{f}</span>
+                      <span key={f} className="text-2xs bg-paper text-ink-600 px-2 py-0.5 rounded-full">{f}</span>
                     ))}
                   </div>
                   <div className="mt-auto flex flex-col gap-1.5">

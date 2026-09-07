@@ -14,7 +14,7 @@ const ACTION_TONE = [
 ];
 
 function toneFor(action) {
-  return ACTION_TONE.find((t) => t.match.test(action))?.tone || "bg-sand text-ink-900/60";
+  return ACTION_TONE.find((t) => t.match.test(action))?.tone || "bg-sand text-ink-600";
 }
 
 function timeAgo(value) {
@@ -36,13 +36,13 @@ function Changes({ before, after }) {
   return (
     <div className="space-y-0.5">
       {keys.slice(0, 4).map((key) => (
-        <p key={key} className="text-2xs text-ink-900/60 font-mono truncate max-w-xs">
-          <span className="text-ink-900/40">{key}:</span>{" "}
+        <p key={key} className="text-2xs text-ink-600 font-mono truncate max-w-xs">
+          <span className="text-ink-500">{key}:</span>{" "}
           {before?.[key] !== undefined && <span className="line-through opacity-60">{format(before[key])}</span>}{" "}
           {after?.[key] !== undefined && <span>{format(after[key])}</span>}
         </p>
       ))}
-      {keys.length > 4 && <p className="text-2xs text-ink-900/40">+{keys.length - 4} more</p>}
+      {keys.length > 4 && <p className="text-2xs text-ink-500">+{keys.length - 4} more</p>}
     </div>
   );
 }
@@ -78,7 +78,7 @@ export default function Activity() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-ink-900/50 border-b border-sand">
+              <tr className="text-left text-xs text-ink-500 border-b border-sand">
                 <th className="pb-3 font-medium">When</th>
                 <th className="pb-3 font-medium">Who</th>
                 <th className="pb-3 font-medium">Action</th>
@@ -90,12 +90,12 @@ export default function Activity() {
             <tbody className="divide-y divide-sand">
               {list.rows.map((row) => (
                 <tr key={row._id}>
-                  <td className="py-3 text-ink-900/50 text-xs whitespace-nowrap" title={new Date(row.created_at).toLocaleString()}>
+                  <td className="py-3 text-ink-500 text-xs whitespace-nowrap" title={new Date(row.created_at).toLocaleString()}>
                     {timeAgo(row.created_at)}
                   </td>
                   <td className="py-3 text-ink-900/70 text-xs">
                     {row.actor_email || "—"}
-                    <span className="block text-ink-900/35 capitalize">{row.actor_role}</span>
+                    <span className="block text-ink-500 capitalize">{row.actor_role}</span>
                   </td>
                   <td className="py-3">
                     <span className={`text-2xs font-semibold px-2 py-1 rounded-full font-mono ${toneFor(row.action)}`}>
@@ -104,12 +104,12 @@ export default function Activity() {
                   </td>
                   <td className="py-3 text-ink-900/70 text-xs max-w-[16rem] truncate" title={row.entity_label}>
                     {row.entity_label || "—"}
-                    <span className="block text-ink-900/35">{row.entity_type}</span>
+                    <span className="block text-ink-500">{row.entity_type}</span>
                   </td>
                   <td className="py-3">
                     <Changes before={row.before} after={row.after} />
                   </td>
-                  <td className="py-3 text-ink-900/60 text-xs max-w-[12rem]">
+                  <td className="py-3 text-ink-600 text-xs max-w-[12rem]">
                     {row.reason || <span className="text-ink-900/25">—</span>}
                   </td>
                 </tr>

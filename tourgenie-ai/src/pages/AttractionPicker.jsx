@@ -6,6 +6,7 @@ import AppShell from "../components/AppShell";
 import { NoTripState } from "../components/ui/States";
 import { tripsApi, attractionApi, destinationsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
+import PlaceImage from "../components/ui/PlaceImage";
 
 export default function AttractionPicker() {
   const { currentTripId } = useCurrentTrip();
@@ -116,7 +117,7 @@ export default function AttractionPicker() {
               onClick={() => changeCity(city)}
               className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-full border transition-colors ${
                 activeCity === city
-                  ? "bg-teal text-white border-teal"
+                  ? "bg-teal text-paper-fixed border-teal"
                   : "bg-surface text-ink-900/70 border-sand hover:border-teal/40"
               }`}
             >
@@ -131,7 +132,7 @@ export default function AttractionPicker() {
           <button
             onClick={() => setCategory("")}
             className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-              !category ? "bg-ink-900 text-paper border-ink-900" : "bg-surface text-ink-900/60 border-sand hover:border-ink-900/30"
+              !category ? "bg-ink-900 text-paper border-ink-900" : "bg-surface text-ink-600 border-sand hover:border-ink-900/30"
             }`}
           >
             All
@@ -141,7 +142,7 @@ export default function AttractionPicker() {
               key={c}
               onClick={() => setCategory(c)}
               className={`text-xs font-medium px-3 py-1.5 rounded-full border capitalize transition-colors ${
-                category === c ? "bg-ink-900 text-paper border-ink-900" : "bg-surface text-ink-900/60 border-sand hover:border-ink-900/30"
+                category === c ? "bg-ink-900 text-paper border-ink-900" : "bg-surface text-ink-600 border-sand hover:border-ink-900/30"
               }`}
             >
               {c}
@@ -151,12 +152,12 @@ export default function AttractionPicker() {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-ink-900/50 text-sm py-12 justify-center">
+        <div className="flex items-center gap-2 text-ink-500 text-sm py-12 justify-center">
           <Loader2 className="w-4 h-4 animate-spin" /> Loading attractions…
         </div>
       ) : visible.length === 0 ? (
         <div className="bg-surface border border-dashed border-sand rounded-2xl p-12 text-center">
-          <p className="text-ink-900/60 text-sm">No seeded attractions for {activeCity} yet.</p>
+          <p className="text-ink-600 text-sm">No seeded attractions for {activeCity} yet.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 pb-24">
@@ -166,24 +167,29 @@ export default function AttractionPicker() {
               <button
                 key={a._id}
                 onClick={() => toggle(a._id)}
-                className={`group text-left bg-surface border rounded-2xl overflow-hidden transition duration-base flex flex-col ${
+                className={`group text-left card overflow-hidden flex flex-col ${
                   isSelected
-                    ? "border-teal shadow-lift ring-1 ring-teal -translate-y-0.5"
-                    : "border-sand shadow-soft hover:border-teal/40 hover:shadow-lift hover:-translate-y-0.5"
+                    ? "border-teal shadow-soft ring-1 ring-teal -translate-y-0.5"
+                    : "card-hover"
                 }`}
               >
-                <div className="h-24 bg-gradient-to-br from-teal-light via-teal-light to-teal/25 flex items-center justify-center relative">
-                  <Landmark className="w-7 h-7 text-teal-dark transition-transform duration-base group-hover:scale-110" strokeWidth={1.5} />
-                  {isSelected && (
-                    <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-teal text-white flex items-center justify-center">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                  )}
-                </div>
+                <PlaceImage
+                  src={a.image_url}
+                  alt={a.name}
+                  icon={Landmark}
+                  ratio="21/9"
+                  corner={
+                    isSelected && (
+                      <span className="w-6 h-6 rounded-full bg-teal text-paper-fixed flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </span>
+                    )
+                  }
+                />
                 <div className="p-4 flex flex-col flex-1">
                   <p className="text-3xs font-semibold uppercase tracking-wide text-teal-dark mb-1">{a.category}</p>
                   <h4 className="font-display text-base text-ink-900 mb-1.5 leading-snug">{a.name}</h4>
-                  <div className="flex items-center gap-3 text-xs text-ink-900/50 mb-2">
+                  <div className="flex items-center gap-3 text-sm text-ink-500 mb-2">
                     {a.rating > 0 && (
                       <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-gold text-gold" /> {a.rating.toFixed(1)}</span>
                     )}
@@ -202,12 +208,12 @@ export default function AttractionPicker() {
       )}
 
       <div className="fixed bottom-0 left-0 md:left-64 right-0 bg-surface border-t border-sand px-6 md:px-10 py-4 flex items-center justify-between">
-        <p className="text-sm text-ink-900/60">
+        <p className="text-sm text-ink-600">
           {selected.size} attraction{selected.size !== 1 ? "s" : ""} picked
           {saved && <span className="text-teal-dark font-medium ml-2">· Saved</span>}
         </p>
         <div className="flex items-center gap-3">
-          <Link to="/itinerary" className="text-sm font-semibold text-ink-900/60 hover:text-ink-900">
+          <Link to="/itinerary" className="text-sm font-semibold text-ink-600 hover:text-ink-900">
             Skip to itinerary
           </Link>
           <Button variant="teal" icon={CheckCircle2} loading={saving} onClick={handleSave}>

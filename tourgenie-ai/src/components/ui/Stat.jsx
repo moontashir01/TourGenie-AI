@@ -12,7 +12,7 @@ const TONES = {
   default: "text-ink-900",
   teal: "text-teal-dark",
   sunset: "text-sunset-dark",
-  muted: "text-ink-900/50",
+  muted: "text-ink-500",
 };
 
 export default function Stat({
@@ -32,13 +32,13 @@ export default function Stat({
   return (
     <div className={`card p-5 ${className}`}>
       <div className="flex items-center gap-2 mb-1.5">
-        {Icon && <Icon className="w-3.5 h-3.5 text-ink-900/35 shrink-0" aria-hidden />}
-        <p className="text-xs font-semibold uppercase tracking-wide text-ink-900/45">{label}</p>
+        {Icon && <Icon className="w-3.5 h-3.5 text-ink-500 shrink-0" aria-hidden />}
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">{label}</p>
       </div>
       {/* tabular-nums so a tweening figure doesn't jitter its own width as
           the digits change. */}
       <p className={`font-display text-2xl tabular-nums ${TONES[tone] || TONES.default}`}>{shown}</p>
-      {hint && <p className="text-xs text-ink-900/45 mt-1">{hint}</p>}
+      {hint && <p className="text-sm text-ink-500 mt-1">{hint}</p>}
     </div>
   );
 }

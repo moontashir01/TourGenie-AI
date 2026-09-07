@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StickyNote, Pin, Trash2, Loader2 } from "lucide-react";
 import { adminApi } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import Button from "../ui/Button";
 
 // The notes an admin leaves for the next admin, on a traveller or a trip.
 //
@@ -72,9 +73,9 @@ export default function AdminNotes({ targetType, targetId }) {
   return (
     <section className="mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <StickyNote className="w-4 h-4 text-ink-900/40" />
+        <StickyNote className="w-4 h-4 text-ink-500" />
         <h4 className="font-display text-base text-ink-900">Notes</h4>
-        <span className="text-xs text-ink-900/40">{notes.length}</span>
+        <span className="text-xs text-ink-500">{notes.length}</span>
       </div>
 
       {error && <p className="text-xs text-sunset-dark mb-2">{error}</p>}
@@ -89,18 +90,18 @@ export default function AdminNotes({ targetType, targetId }) {
           className="input resize-y"
         />
         <div className="flex justify-end mt-2">
-          <button type="submit" disabled={saving || !draft.trim()} className="btn-secondary text-xs">
+          <Button type="submit" variant="secondary" size="sm" loading={saving} disabled={!draft.trim()}>
             {saving ? "Saving…" : "Add note"}
-          </button>
+          </Button>
         </div>
       </form>
 
       {loading ? (
-        <p className="flex items-center gap-2 text-xs text-ink-900/45">
+        <p className="flex items-center gap-2 text-xs text-ink-500">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading notes…
         </p>
       ) : notes.length === 0 ? (
-        <p className="text-xs text-ink-900/40">No notes yet.</p>
+        <p className="text-xs text-ink-500">No notes yet.</p>
       ) : (
         <ul className="space-y-2">
           {notes.map((note) => (
@@ -111,7 +112,7 @@ export default function AdminNotes({ targetType, targetId }) {
               } ${busyId === note._id ? "opacity-50" : ""}`}
             >
               <p className="text-ink-900/80 whitespace-pre-wrap break-words">{note.body}</p>
-              <div className="flex items-center gap-2 mt-1.5 text-2xs text-ink-900/45">
+              <div className="flex items-center gap-2 mt-1.5 text-2xs text-ink-500">
                 <span>{note.author_name || note.author_email}</span>
                 <span>·</span>
                 <span>{when(note.created_at)}</span>
@@ -121,7 +122,7 @@ export default function AdminNotes({ targetType, targetId }) {
                       type="button"
                       title={note.pinned ? "Unpin" : "Pin to the top"}
                       onClick={() => act(note._id, () => adminApi.notes.update(note._id, { pinned: !note.pinned }))}
-                      className={note.pinned ? "text-gold" : "text-ink-900/35 hover:text-ink-900"}
+                      className={note.pinned ? "text-gold" : "text-ink-500 hover:text-ink-900"}
                     >
                       <Pin className="w-3.5 h-3.5" />
                     </button>
@@ -129,7 +130,7 @@ export default function AdminNotes({ targetType, targetId }) {
                       type="button"
                       title="Delete note"
                       onClick={() => act(note._id, () => adminApi.notes.remove(note._id))}
-                      className="text-ink-900/35 hover:text-sunset-dark"
+                      className="text-ink-500 hover:text-sunset-dark"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

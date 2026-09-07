@@ -15,7 +15,8 @@
     "db:verify": "node src/scripts/verify.js",
     "make-owner": "node src/scripts/makeOwner.js",
     "db:orphans": "node src/scripts/findOrphans.js",
-    "set-password": "node src/scripts/setPassword.js"
+    "set-password": "node src/scripts/setPassword.js",
+    "images:upload": "node src/scripts/uploadPlaceImages.js"
   },
   "keywords": [],
   "author": "",

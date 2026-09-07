@@ -115,7 +115,7 @@ export default function DayMap({ items, cityCoordinates }) {
 
   if (stops.length === 0) {
     return (
-      <div className="w-full h-48 rounded-xl bg-paper border border-sand flex items-center justify-center text-xs text-ink-900/40 mb-4">
+      <div className="w-full h-48 rounded-xl bg-paper border border-sand flex items-center justify-center text-xs text-ink-500 mb-4">
         No location data available to map this day yet.
       </div>
     );
