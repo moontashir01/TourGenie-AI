@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, AlertCircle, MapPin, Globe2, Wallet, Loader2, Plane } from "lucide-react";
+import { Sparkles, AlertCircle, MapPin, Globe2, Wallet, Loader2, Plane, Route } from "lucide-react";
 import AppShell from "../components/AppShell";
 import { destinationsApi, referenceApi, tripsApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
@@ -1018,8 +1018,10 @@ function BudgetSection({
           onChange={(e) => setField("budget_includes_flights", e.target.checked)}
         />
         <span>
+          {/* The flag governs intercity transport of every kind — bus, train,
+              launch, flight — so the label can't name one of them. */}
           <span className="inline-flex items-center gap-1.5 font-medium text-ink-900">
-            <Plane className="w-3.5 h-3.5" /> This budget covers the flights in and out
+            <Route className="w-3.5 h-3.5" /> This budget covers getting there and back
           </span>
           <span className="block text-sm text-ink-500">
             Untick if you've already booked (or budgeted) the journey separately — it's still shown on the Budget

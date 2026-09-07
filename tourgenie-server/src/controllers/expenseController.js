@@ -17,12 +17,33 @@ function mapCategory(cat) {
   if (c === "travel" || c === "transport") return "Transport";
   if (c === "meal" || c === "food") return "Food";
   if (["attraction", "activity", "leisure", "nightlife"].includes(c)) return "Attractions";
-  if (c === "hotel" || c === "accommodation") return "Hotel";
+  // The synthesised stay rows are the hotel bill, not a category of their
+  // own — "Checkout" sitting beside "Hotel" in the chart named the same money
+  // twice over.
+  if (c === "hotel" || c === "accommodation" || c === "checkin" || c === "checkout") return "Hotel";
   if (c === "shopping") return "Shopping";
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
 const AIR_LEG = /\b(flight|flights|fly|flying|airport|airline|airways|plane)\b/i;
+
+/**
+ * The journey in and out — day one out of the origin, the last day back to
+ * it — whatever it travels by.
+ *
+ * `budget_includes_flights` is named for flights but governs getting there
+ * and back generally, so this predicate has to recognise a bus or a launch
+ * as readily as a plane. Without it the toggle only ever reached
+ * trip.selected_flight, and a domestic road fare kept eating the budget
+ * however the traveller set it.
+ */
+function isGatewayLeg(item, trip, lastDay) {
+  if (item.category !== "travel") return false;
+  if (item.day !== 1 && item.day !== lastDay) return false;
+  const touchesOrigin =
+    (item.from_city && item.from_city === trip.origin) || (item.to_city && item.to_city === trip.origin);
+  return touchesOrigin || AIR_LEG.test(`${item.activity || ""} ${item.location || ""}`);
+}
 
 // A booked flight arrives twice: once as trip.selected_flight, and again as
 // the AI itinerary's own "travel" item for the same journey (the country
@@ -30,12 +51,7 @@ const AIR_LEG = /\b(flight|flights|fly|flying|airport|airline|airways|plane)\b/i
 // the last day). Counting both doubled the fare, so the itinerary copy is
 // dropped once a fare is actually booked.
 function isBookedFlightLeg(item, trip, lastDay) {
-  if (!trip.selected_flight) return false;
-  if (item.category !== "travel") return false;
-  if (item.day !== 1 && item.day !== lastDay) return false;
-  const touchesOrigin =
-    (item.from_city && item.from_city === trip.origin) || (item.to_city && item.to_city === trip.origin);
-  return touchesOrigin || AIR_LEG.test(`${item.activity || ""} ${item.location || ""}`);
+  return Boolean(trip.selected_flight) && isGatewayLeg(item, trip, lastDay);
 }
 
 /**
@@ -149,6 +165,12 @@ export async function getVirtualExpenses(trip) {
       amount: item.est_cost,
       date: new Date(new Date(trip.start_date).getTime() + (item.day - 1) * 86400000),
       is_estimated: true,
+      // Getting there and back obeys the same toggle a booked fare does —
+      // still shown, just not counted when the traveller says their budget
+      // doesn't cover the journey.
+      ...(isGatewayLeg(item, trip, lastDay)
+        ? { is_gateway: true, counts_toward_budget: trip.budget_includes_flights !== false }
+        : {}),
     });
   }
 

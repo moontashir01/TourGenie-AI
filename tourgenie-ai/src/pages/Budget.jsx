@@ -3,7 +3,7 @@ import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import SectionHeader from "../components/ui/SectionHeader";
 import Stat from "../components/ui/Stat";
-import { Plus, X, Plane, AlertTriangle } from "lucide-react";
+import { Plus, X, Route, AlertTriangle } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import AppShell from "../components/AppShell";
 import { NoTripState } from "../components/ui/States";
@@ -167,7 +167,10 @@ export default function Budget() {
       </div>
       {summary?.budget_includes_flights === false && summary?.flights_excluded > 0 ? (
         <p className="text-sm text-ink-500 mb-10 inline-flex items-center gap-1">
-          <Plane className="w-3 h-3" /> {money(summary.flights_excluded)} airfare tracked outside this budget
+          {/* The excluded figure is whatever getting there costs — a fare, a
+              bus ticket — not only airfare, so the wording can't say "flight". */}
+          <Route className="w-3 h-3" /> {money(summary.flights_excluded)} for getting there and back, tracked
+          outside this budget
         </p>
       ) : (
         <div className="mb-10" />

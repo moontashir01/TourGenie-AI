@@ -542,20 +542,45 @@ export default function Itinerary() {
   const days = [...new Set(items.map((i) => i.day))].sort((a, b) => a - b);
   const lastDay = days[days.length - 1] || 0;
 
-  // Same rule the Budget API applies (isBookedFlightLeg): once a round-trip
-  // fare is selected, the AI's own arrival (day 1) and departure (last day)
-  // travel rows must not be charged again — the fare already covers both ways.
+  // Same rules the Budget API applies (isGatewayLeg / isBookedFlightLeg).
+  // A gateway leg is the journey in and out — day one out of the origin, the
+  // last day back to it — whatever it travels by.
   const AIR_LEG = /\b(flight|flights|fly|flying|airport|airline|airways|plane)\b/i;
-  const isBookedFlightLeg = (item) =>
-    Boolean(trip?.selected_flight) &&
+  const isGatewayLeg = (item) =>
     item.category === "travel" &&
     (item.day === 1 || item.day === lastDay) &&
-    ((item.from_city && item.from_city === trip.origin) ||
-      (item.to_city && item.to_city === trip.origin) ||
+    ((item.from_city && item.from_city === trip?.origin) ||
+      (item.to_city && item.to_city === trip?.origin) ||
       AIR_LEG.test(`${item.activity || ""} ${item.location || ""}`));
+  // Once a round-trip fare is selected the AI's own arrival and departure
+  // rows must not be charged again — the fare already covers both ways.
+  const isBookedFlightLeg = (item) => Boolean(trip?.selected_flight) && isGatewayLeg(item);
 
-  const itineraryCost = items.reduce((s, i) => (isBookedFlightLeg(i) ? s : s + (i.est_cost || 0)), 0);
-  const flightCost = trip?.selected_flight?.price || 0;
+  let itineraryCost = 0;
+  let travelCost = trip?.selected_flight?.price || 0;
+  for (const i of items) {
+    if (isBookedFlightLeg(i)) continue;
+    if (isGatewayLeg(i)) travelCost += i.est_cost || 0;
+    else itineraryCost += i.est_cost || 0;
+  }
+
+  // "This budget covers getting there and back". Off, and the journey is
+  // still shown — it just stops counting against the budget, the same way
+  // the Budget page treats it.
+  const budgetCoversTravel = trip?.budget_includes_flights !== false;
+  const travelLabel = trip?.selected_flight
+    ? `Flight${trip.selected_flight.tripType === "round_trip" ? " (both ways)" : ""}`
+    : "Getting there and back";
+
+  // A budget may be typed in any currency the rate table knows, but it is
+  // always stored in BDT — so the converted figure is shown before saving,
+  // the same bargain the Plan form makes.
+  const knownCurrencies = Object.values(rates);
+  const budgetCurrencies = knownCurrencies.length
+    ? [...knownCurrencies].sort((a, b) => a.code.localeCompare(b.code))
+    : [{ code: "BDT", symbol: "৳", rate: 1 }];
+  const draftBdt = Math.round((Number(budgetDraft) || 0) * (rates[budgetCurrency]?.rate || 1));
+
   let hotelCost = 0;
   if (trip?.multi_city && trip.hotel_selections?.length) {
     // Each day's last activity (items are ordered by day, time, so later
@@ -581,7 +606,7 @@ export default function Itinerary() {
     // Nights, not days — a 4-day trip is 3 hotel nights.
     hotelCost = (trip.hotel_id.price_per_night || 0) * Math.max(1, (trip.duration_days || 1) - 1);
   }
-  const totalCost = itineraryCost + flightCost + hotelCost;
+  const totalCost = itineraryCost + hotelCost + (budgetCoversTravel ? travelCost : 0);
 
   return (
     <AppShell
@@ -929,12 +954,12 @@ export default function Itinerary() {
               <DataRow tone="inverse" label="Route" value={`${trip?.origin || ""} → ${trip?.destination || ""}`} />
               <DataRow tone="inverse" label="Travelers" value={trip?.travelers} numeric />
               <DataRow tone="inverse" label="Activities" value={`৳${itineraryCost.toLocaleString()}`} numeric />
-              {flightCost > 0 && (
+              {travelCost > 0 && (
                 <DataRow
                   tone="inverse"
                   numeric
-                  label={`Flight${trip?.selected_flight?.tripType === "round_trip" ? " (both ways)" : ""}`}
-                  value={`৳${flightCost.toLocaleString()}`}
+                  label={budgetCoversTravel ? travelLabel : `${travelLabel} (outside budget)`}
+                  value={`৳${travelCost.toLocaleString()}`}
                 />
               )}
               {hotelCost > 0 && (
