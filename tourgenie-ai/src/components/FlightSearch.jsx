@@ -12,6 +12,7 @@ import {
   CalendarClock,
   BadgeCheck,
   FlaskConical,
+  Route,
 } from "lucide-react";
 import { flightApi, tripsApi } from "../lib/api";
 
@@ -40,7 +41,7 @@ const SOURCES = {
   },
 };
 
-export default function FlightSearch({ trip, onFlightSelected }) {
+export default function FlightSearch({ trip, autoSearch = true, onFlightSelected }) {
   const [flights, setFlights] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -48,12 +49,18 @@ export default function FlightSearch({ trip, onFlightSelected }) {
   const [searched, setSearched] = useState(false);
   const [selectedFlightId, setSelectedFlightId] = useState(trip?.selected_flight?.id || null);
 
-  // Auto-search when the component mounts if we have enough info
+  // Auto-search when the component mounts if we have enough info.
+  //
+  // `autoSearch` is off when the trip's budget doesn't cover getting there
+  // and back: the traveller has already booked or budgeted the journey, so
+  // spending a provider call on a fare they told us not to count is work
+  // nobody asked for. The button in the header still searches on demand.
   useEffect(() => {
+    if (!autoSearch) return;
     if (trip?.origin && trip?.destination && trip?.start_date) {
       doSearch();
     }
-  }, [trip?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trip?._id, autoSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function doSearch() {
     setLoading(true);
@@ -108,12 +115,12 @@ export default function FlightSearch({ trip, onFlightSelected }) {
             </span>
           )}
         </div>
-        {searched && !loading && (
+        {!loading && (searched || !autoSearch) && (
           <button
             onClick={doSearch}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-teal-dark"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh fares
+            <RefreshCw className="w-3.5 h-3.5" /> {searched ? "Refresh fares" : "Search fares"}
           </button>
         )}
       </div>
@@ -178,6 +185,18 @@ export default function FlightSearch({ trip, onFlightSelected }) {
         <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-xl px-4 py-3">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <p>{error}</p>
+        </div>
+      )}
+
+      {/* Nothing searched yet because the budget doesn't cover the journey */}
+      {!loading && !searched && !autoSearch && (
+        <div className="flex items-start gap-2 bg-paper border border-sand text-ink-600 text-sm rounded-xl px-4 py-3">
+          <Route className="w-4 h-4 shrink-0 mt-0.5 text-teal" />
+          <span>
+            Your budget doesn't cover getting there and back, so fares aren't looked up automatically. Search
+            anyway if you want to compare them — a fare you pick is still shown on the Budget page, it just
+            doesn't count against the budget.
+          </span>
         </div>
       )}
 

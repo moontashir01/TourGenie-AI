@@ -631,6 +631,9 @@ export default function Itinerary() {
           ) && (
             <FlightSearch
               trip={trip.multi_city ? { ...trip, destination: trip.entry_city } : trip}
+              // No unasked-for provider call when the budget doesn't cover
+              // getting there and back — the panel offers a manual search.
+              autoSearch={budgetCoversTravel}
               onFlightSelected={(flight) => setTrip((prev) => ({ ...prev, selected_flight: flight }))}
             />
           )}

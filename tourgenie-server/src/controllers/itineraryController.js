@@ -108,6 +108,13 @@ export async function augmentTravelItems(items, trip) {
   }
   const sameCity = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
 
+  // FR-09 — "this budget covers getting there and back". Unticked, the
+  // traveller has already booked or budgeted the journey, so pricing it is a
+  // provider call spent on a figure they told us not to count. Only the
+  // gateway legs are held back: the toggle says nothing about an internal hop
+  // between two cities on the trip, and a multi-city plan still needs those.
+  const budgetCoversTravel = trip.budget_includes_flights !== false;
+
   for (const item of items) {
     if (item.category !== "travel") continue;
 
@@ -118,14 +125,16 @@ export async function augmentTravelItems(items, trip) {
       toCity = trip.origin;
     }
 
-    if (isInternational && (sameCity(fromCity, trip.origin) || sameCity(toCity, trip.origin))) {
+    const isGatewayLeg = sameCity(fromCity, trip.origin) || sameCity(toCity, trip.origin);
+
+    if (isInternational && isGatewayLeg) {
       item.available_transport_options = [];
       continue;
     }
 
     const options = [];
 
-    if (process.env.TRAVELPAYOUTS_API_KEY) {
+    if (process.env.TRAVELPAYOUTS_API_KEY && (budgetCoversTravel || !isGatewayLeg)) {
       try {
         const [fromAirport, toAirport] = await Promise.all([resolveAirport(fromCity), resolveAirport(toCity)]);
         if (fromAirport?.iata && toAirport?.iata && fromAirport.iata !== toAirport.iata) {
