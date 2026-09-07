@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Overlay from "./ui/Overlay";
 import { X, BedDouble, Users, CalendarRange, Loader2, Check, CircleCheck, Info, TriangleAlert } from "lucide-react";
-import { hotelBookingApi } from "../lib/api";
+import { hotelBookingApi, notificationApi } from "../lib/api";
 import Money from "./Money";
 
 // FR-08 for accommodation. Demonstration only — the disclaimer appears
@@ -79,6 +79,10 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
       });
       setConfirmation(res);
       onBooked?.(res.booking);
+      // The booking_confirmed rule can fire the moment this lands, and the
+      // badge poll is on a ten-minute server cooldown. Forcing the sweep is
+      // what that endpoint exists for; nothing here waits on it.
+      notificationApi.refresh().catch(() => {});
     } catch (err) {
       setError(err.message);
     } finally {

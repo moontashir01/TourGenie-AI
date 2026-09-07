@@ -329,6 +329,11 @@ function NotificationTemplates() {
         </div>
         <p className="text-sm text-ink-900/55 mb-5">
           The engine reads these on every sweep, so an edit changes the next notification anyone receives.
+          <span className="block mt-1">
+            <strong className="font-semibold text-ink-900/70">Fired</strong> counts the last 30 days over all
+            time — a rule sitting at <span className="font-mono text-xs">never</span> is one whose trigger has
+            not matched anybody's data yet.
+          </span>
           Placeholders: <span className="font-mono text-xs">{placeholders.join(" ")}</span>
         </p>
 
@@ -340,6 +345,11 @@ function NotificationTemplates() {
                 <th className="pb-3 font-medium">Fires on</th>
                 <th className="pb-3 font-medium">Title</th>
                 <th className="pb-3 font-medium">Severity</th>
+                {/* A rule can be active, read sensibly and never match
+                    anything — weather_cold at 12°C will not fire for a
+                    Bangladeshi destination in any month. This is the only
+                    place that shows it. */}
+                <th className="pb-3 font-medium">Fired</th>
                 <th className="pb-3 font-medium">Active</th>
                 <th className="pb-3 font-medium text-right">Actions</th>
               </tr>
@@ -357,6 +367,23 @@ function NotificationTemplates() {
                     {template.title_template}
                   </td>
                   <td className="py-3 text-ink-900/60 capitalize">{template.severity}</td>
+                  <td className="py-3 text-xs tabular-nums whitespace-nowrap">
+                    {template.fired_total > 0 ? (
+                      <span
+                        className="text-ink-900/70"
+                        title={
+                          template.last_fired_at
+                            ? `Last fired ${new Date(template.last_fired_at).toLocaleString()}`
+                            : undefined
+                        }
+                      >
+                        {template.fired_last_30d}
+                        <span className="text-ink-900/35"> / {template.fired_total}</span>
+                      </span>
+                    ) : (
+                      <span className="text-ink-900/35">never</span>
+                    )}
+                  </td>
                   <td className="py-3">
                     <button
                       type="button"

@@ -8,6 +8,7 @@
 import AppSetting from "../models/AppSetting.js";
 import NotificationTemplate from "../models/NotificationTemplate.js";
 import Translation from "../models/Translation.js";
+import Notification from "../models/Notification.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { recordAudit, diffFields } from "../services/auditLog.js";
 
@@ -117,11 +118,45 @@ const pick = (body) =>
 
 export const listNotificationTemplates = asyncHandler(async (req, res) => {
   const templates = await NotificationTemplate.find().sort({ type: 1, code: 1 }).lean();
+
+  // How often each rule has actually fired. A template can be active, look
+  // sensible and never match anything — `weather_cold` at 12°C will not fire
+  // for a Bangladeshi destination in any month — and there was no way to see
+  // that short of reading the notifications collection by hand.
+  //
+  // Several rules write a composite code (`weather_rain:2026-09-14`), so the
+  // count groups on the part before the colon.
+  const usage = await Notification.aggregate([
+    {
+      $group: {
+        _id: { $arrayElemAt: [{ $split: ["$template_code", ":"] }, 0] },
+        total: { $sum: 1 },
+        last_fired_at: { $max: "$created_at" },
+        recent: {
+          $sum: { $cond: [{ $gte: ["$created_at", new Date(Date.now() - 30 * 86400000)] }, 1, 0] },
+        },
+      },
+    },
+  ]);
+  const byCode = new Map(usage.map((row) => [row._id, row]));
+
   res.json({
-    templates,
+    templates: templates.map((template) => {
+      const stats = byCode.get(template.code);
+      return {
+        ...template,
+        fired_total: stats?.total || 0,
+        fired_last_30d: stats?.recent || 0,
+        last_fired_at: stats?.last_fired_at || null,
+      };
+    }),
     // The placeholders the engine substitutes, so the form can list them
     // rather than an admin guessing at the syntax.
-    placeholders: ["{{destination}}", "{{trip_name}}", "{{hours}}", "{{days}}", "{{temp}}", "{{condition}}", "{{amount}}"],
+    placeholders: [
+      "{{destination}}", "{{origin}}", "{{trip_title}}", "{{trip_id}}", "{{hours}}", "{{days}}",
+      "{{date}}", "{{temp}}", "{{condition}}", "{{amount}}", "{{percent}}", "{{document_type}}",
+      "{{reference}}", "{{content_kind}}", "{{excerpt}}",
+    ],
     events: NotificationTemplate.schema.path("trigger.event").enumValues,
   });
 });

@@ -21,7 +21,7 @@ import GenerationProgress from "../components/GenerationProgress";
 import RainyDayPlan from "../components/RainyDayPlan";
 import Money from "../components/Money";
 import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton";
-import { tripsApi, itineraryApi, weatherApi, nearbyApi } from "../lib/api";
+import { tripsApi, itineraryApi, weatherApi, nearbyApi, notificationApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useChat } from "../context/ChatContext";
 
@@ -296,6 +296,9 @@ export default function Itinerary() {
       setCityCoordinates(city_coordinates || {});
       setOpenDay(generated[0]?.day || 1);
       loadWeather(currentTripId); // the cities per day may have changed
+      // A fresh plan sets itinerary_generated_at and changes which cities
+      // the weather rules read, so both of those become answerable now.
+      notificationApi.refresh().catch(() => {});
     } catch (err) {
       setError(err.message);
     } finally {

@@ -28,6 +28,11 @@ const notificationTemplateSchema = new mongoose.Schema(
           "budget_threshold",
           "document_expiring",
           "booking_confirmed",
+          // A booking an admin cancelled for a traveller who phoned in — the
+          // one thing that changes a trip without the traveller doing it.
+          "booking_cancelled",
+          // FR-23 — a post or review the moderation rules held at write time.
+          "content_held",
           "itinerary_generated",
           "trip_completed",
         ],

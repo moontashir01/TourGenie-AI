@@ -6,8 +6,8 @@
 // weather advisories, not live traffic or disruption feeds.
 //
 // Templates support {{destination}}, {{origin}}, {{trip_title}}, {{hours}},
-// {{days}}, {{date}}, {{temp}}, {{condition}}, {{amount}}, {{percent}} and
-// {{document_type}}.
+// {{days}}, {{date}}, {{temp}}, {{condition}}, {{amount}}, {{percent}},
+// {{document_type}}, {{reference}}, {{content_kind}} and {{excerpt}}.
 
 export const notificationTemplates = [
   // ── Departure reminders ──
@@ -130,6 +130,21 @@ export const notificationTemplates = [
     title_template: "Last day in {{destination}}",
     message_template: "Your {{destination}} trip ends tomorrow. Check your return booking, and log any expenses you haven't recorded yet.",
     severity: "reminder", icon: "CalendarCheck", action_url: "/trips/{{trip_id}}/budget",
+  },
+  // ── Things that happen to you rather than because of you ──
+  {
+    code: "booking_cancelled", type: "booking", label: "Booking cancelled",
+    trigger: { event: "booking_cancelled", offset_hours: 0 },
+    title_template: "Booking {{reference}} was cancelled",
+    message_template: "The reservation is no longer held and the seats or room have gone back to the operator. If this wasn't you, an administrator cancelled it on your behalf — the reason is on the booking.",
+    severity: "warning", icon: "CircleAlert", action_url: "/trips/{{trip_id}}/booking",
+  },
+  {
+    code: "content_held", type: "moderation", label: "Post held for review",
+    trigger: { event: "content_held", offset_hours: 0 },
+    title_template: "Your {{content_kind}} is waiting for a moderator",
+    message_template: "\"{{excerpt}}…\" is not on the feed yet. A moderator reads everything held, and nothing is deleted while it waits — you can still see it yourself.",
+    severity: "reminder", icon: "FileWarning", action_url: "/community",
   },
   {
     code: "trip_completed", type: "review", label: "Trip completed",

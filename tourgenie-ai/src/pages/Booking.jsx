@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import AppShell from "../components/AppShell";
 import { PanelSkeleton } from "../components/Skeleton";
-import { tripsApi, transportApi, bookingApi } from "../lib/api";
+import { tripsApi, transportApi, bookingApi, notificationApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -156,6 +156,9 @@ export default function Booking() {
       });
       setConfirmation({ booking, message });
       setBookings((prev) => [booking, ...prev]);
+      // Let the booking_confirmed rule fire now rather than on the badge's
+      // next long-cooldown poll.
+      notificationApi.refresh().catch(() => {});
       setSelectedId(null);
     } catch (err) {
       setError(err.message);

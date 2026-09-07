@@ -339,6 +339,9 @@ export const notificationApi = {
   markRead: (id) => request(`/notifications/${id}/read`, { method: "PATCH" }),
   markAllRead: () => request("/notifications/read-all", { method: "PATCH" }),
   remove: (id) => request(`/notifications/${id}`, { method: "DELETE" }),
+  // Drops everything already read. The sweep regenerates anything whose
+  // trigger still holds, so clearing is tidying, not suppression.
+  clearRead: () => request("/notifications/read", { method: "DELETE" }),
 };
 
 export const communityApi = {
