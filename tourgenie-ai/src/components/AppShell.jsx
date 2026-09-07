@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Compass, LayoutGrid, MapPinned, FileStack, Users, Settings, Wallet,
   MessageCircleMore, LogOut, Building2, Landmark, Menu, X, Languages,
   Scale, Route as RouteIcon, Ticket, CalendarRange, ChevronRight, Plus, Map, RefreshCw, Search,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import BackButton, { canGoBack } from "./ui/BackButton";
 import { useLanguage } from "../context/LanguageContext";
 import { useCurrentTrip } from "../context/TripContext";
 import NotificationBell from "./NotificationBell";
@@ -170,7 +171,7 @@ function CurrentTripCard({ onNavigate }) {
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0">
           <span className="block font-display text-sm text-ink-900 truncate">
-            {currentTrip.destination}
+            {currentTrip.title || currentTrip.destination}
           </span>
           <span className="block text-2xs text-ink-500 truncate">
             {currentTrip.origin} → {currentTrip.destination}
@@ -350,14 +351,25 @@ function SidebarBody({ onNavigate }) {
   );
 }
 
+// Where the app starts. Back is meaningless on these when the tab opened on
+// them; reached from somewhere else, it still is a way home.
+const LANDING_PATHS = ["/", "/dashboard"];
+
 // `actions` is the page's own controls — the one or two buttons that belong
 // beside its title rather than floating at the top of its content, which is
 // where every page had been putting them.
-export default function AppShell({ children, title, subtitle, actions, titleId }) {
+export default function AppShell({ children, title, subtitle, actions, titleId, backTo = "/dashboard" }) {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Trip-scoped pages carry no URL parameters and are reached from the
+  // sidebar, so browser Back can land somewhere unrelated to what the
+  // traveller was just looking at. On a landing surface with nothing behind
+  // it there is genuinely nowhere to go, and the button stays out of the way.
+  const showBack = !(LANDING_PATHS.includes(pathname) && !canGoBack());
 
   function handleLogout() {
     logout();
@@ -428,20 +440,25 @@ export default function AppShell({ children, title, subtitle, actions, titleId }
         {(title || subtitle || actions) && (
           <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6">
             <div className="mx-auto w-full max-w-6xl flex items-start justify-between gap-4 flex-wrap">
-              <div className="min-w-0">
-                {title && (
-                  <h1
-                    className="font-display text-display-sm text-ink-900"
-                    // Pairs with the trip card that opened this page, so the
-                    // browser morphs one into the other instead of crossfading
-                    // the whole document. Must be unique in the document,
-                    // which is why it carries the trip's id.
-                    style={titleId ? { viewTransitionName: titleId } : undefined}
-                  >
-                    {title}
-                  </h1>
-                )}
-                {subtitle && <p className="text-sm text-ink-600 mt-1.5 max-w-prose">{subtitle}</p>}
+              {/* Left of the title on every width — the mobile top bar above
+                  is already full, and this must not become a second row. */}
+              <div className="min-w-0 flex items-start gap-3">
+                {showBack && <BackButton fallbackTo={backTo} label={t("common.back", "Back")} className="mt-1 shrink-0" />}
+                <div className="min-w-0">
+                  {title && (
+                    <h1
+                      className="font-display text-display-sm text-ink-900"
+                      // Pairs with the trip card that opened this page, so the
+                      // browser morphs one into the other instead of crossfading
+                      // the whole document. Must be unique in the document,
+                      // which is why it carries the trip's id.
+                      style={titleId ? { viewTransitionName: titleId } : undefined}
+                    >
+                      {title}
+                    </h1>
+                  )}
+                  {subtitle && <p className="text-sm text-ink-600 mt-1.5 max-w-prose">{subtitle}</p>}
+                </div>
               </div>
               {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
             </div>

@@ -18,6 +18,10 @@ export function TripProvider({ children }) {
     () => localStorage.getItem("tourgenie_current_trip") || null
   );
   const [currentTrip, setCurrentTrip] = useState(null);
+  // "owner" | "editor" | "viewer" — what this account may do with the open
+  // trip. A trip someone shared is loaded exactly like one you own, so
+  // without this the pages would offer controls the API refuses.
+  const [currentRole, setCurrentRole] = useState("owner");
   const [loadingTrip, setLoadingTrip] = useState(false);
   const [tripError, setTripError] = useState(false);
 
@@ -25,7 +29,10 @@ export function TripProvider({ children }) {
     if (id) localStorage.setItem("tourgenie_current_trip", id);
     else localStorage.removeItem("tourgenie_current_trip");
     setCurrentTripIdState(id);
-    if (!id) setCurrentTrip(null);
+    if (!id) {
+      setCurrentTrip(null);
+      setCurrentRole("owner");
+    }
   }, []);
 
   // Which account this provider is currently holding a trip for. Logging out
@@ -59,8 +66,9 @@ export function TripProvider({ children }) {
     setTripError(false);
     return tripsApi
       .get(currentTripId)
-      .then(({ trip }) => {
+      .then(({ trip, role }) => {
         setCurrentTrip(trip);
+        setCurrentRole(role || "owner");
         setTripError(false);
         return trip;
       })
@@ -90,7 +98,17 @@ export function TripProvider({ children }) {
 
   return (
     <TripContext.Provider
-      value={{ currentTripId, setCurrentTripId, currentTrip, loadingTrip, tripError, refreshCurrentTrip: loadTrip }}
+      value={{
+        currentTripId,
+        setCurrentTripId,
+        currentTrip,
+        currentRole,
+        isTripOwner: currentRole === "owner",
+        canEditTrip: currentRole === "owner" || currentRole === "editor",
+        loadingTrip,
+        tripError,
+        refreshCurrentTrip: loadTrip,
+      }}
     >
       {children}
     </TripContext.Provider>

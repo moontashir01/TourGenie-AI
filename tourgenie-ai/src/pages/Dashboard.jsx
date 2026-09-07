@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Plus, Waves, Mountain, Trees, Clock, Users2, X, MapPinned } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Plus, Waves, Mountain, Trees, Clock, Users2, X, MapPinned, Users } from "lucide-react";
 import AppShell from "../components/AppShell";
 import Skeleton, { CardSkeleton } from "../components/Skeleton";
-import { StatusBadge } from "../components/ui/Badge";
+import Badge, { StatusBadge } from "../components/ui/Badge";
 import EmptyState from "../components/ui/States";
 import Button from "../components/ui/Button";
 import { tripsApi } from "../lib/api";
@@ -33,6 +33,9 @@ export default function Dashboard() {
   const [deletingId, setDeletingId] = useState(null);
   const { setCurrentTripId } = useCurrentTrip();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const invite = params.get("invite");
+  const [inviteNotice, setInviteNotice] = useState("");
 
   useEffect(() => {
     tripsApi
@@ -41,6 +44,30 @@ export default function Dashboard() {
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
+
+  // Arriving from an invitation email. Accepting is idempotent, so a link
+  // opened twice — or by someone the share was already attached to at
+  // registration — is fine; only a link meant for a different account fails.
+  useEffect(() => {
+    if (!invite) return;
+    let cancelled = false;
+    tripsApi.shares
+      .accept(invite)
+      .then(({ trip }) => {
+        if (cancelled) return;
+        setInviteNotice(`${trip?.title || trip?.destination || "The trip"} is now in your trips.`);
+        return tripsApi.list().then(({ trips: list }) => setTrips(list));
+      })
+      .catch((err) => !cancelled && setError(err.message || "That invitation couldn't be opened"))
+      .finally(() => {
+        // The token has done its job; leaving it in the address bar would
+        // re-run this on every visit to a bookmarked dashboard.
+        if (!cancelled) setParams({}, { replace: true });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [invite, setParams]);
 
   function openTrip(id) {
     setCurrentTripId(id);
@@ -98,6 +125,12 @@ export default function Dashboard() {
       {error && (
         <div className="bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-6">
           Couldn't load trips: {error}
+        </div>
+      )}
+
+      {inviteNotice && !error && (
+        <div className="flex items-center gap-2 bg-teal/10 border border-teal/30 text-teal-dark text-sm rounded-lg px-4 py-3 mb-6">
+          <Users className="w-4 h-4 shrink-0" /> {inviteNotice}
         </div>
       )}
 
@@ -172,7 +205,12 @@ export default function Dashboard() {
                 className="group relative text-left card card-hover overflow-hidden flex flex-col cursor-pointer"
               >
                 <div className="absolute top-3 right-3 z-20" onClick={(e) => e.stopPropagation()}>
-                  {confirmId === t._id ? (
+                  {t.shared ? (
+                    <Badge tone="teal" size="md" className="inline-flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {t.role === "editor" ? "Shared · can edit" : "Shared"}
+                    </Badge>
+                  ) : confirmId === t._id ? (
                     <div className="w-40 origin-top-right animate-pop-in bg-surface border border-sand rounded-xl shadow-lift p-3">
                       <p className="text-sm text-ink-900/70 mb-2.5 leading-snug">Delete this trip?</p>
                       <div className="flex gap-1.5">
@@ -198,7 +236,7 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => setConfirmId(t._id)}
                       title="Delete trip"
-                      aria-label={`Delete trip to ${t.destination}`}
+                      aria-label={`Delete ${t.title || `trip to ${t.destination}`}`}
                       className="p-1.5 rounded-full bg-ink-900/60 text-paper opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-sunset transition-opacity"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -220,10 +258,20 @@ export default function Dashboard() {
                       className="font-display text-lg text-ink-900 leading-snug"
                       style={{ viewTransitionName: `trip-title-${t._id}` }}
                     >
-                      {t.destination}
+                      {t.title || t.destination}
                     </h4>
                     <StatusBadge status={t.status} size="md" className="shrink-0" />
                   </div>
+                  {t.shared && t.owner?.name && (
+                    <p className="text-sm text-ink-500 flex items-center gap-1.5 mb-1">
+                      <Users2 className="w-3.5 h-3.5" /> {t.owner.name}'s trip
+                    </p>
+                  )}
+                  {t.title && !t.title.includes(t.destination) && (
+                    <p className="text-sm text-ink-500 flex items-center gap-1.5 mb-1">
+                      <MapPinned className="w-3.5 h-3.5" /> {t.destination}
+                    </p>
+                  )}
                   <p className="text-sm text-ink-500 flex items-center gap-1.5 mb-1">
                     <Clock className="w-3.5 h-3.5" /> {new Date(t.start_date).toLocaleDateString()} – {new Date(t.end_date).toLocaleDateString()}
                   </p>

@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test 'test/**/*.test.js'",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/seed/index.js",
@@ -16,7 +16,9 @@
     "make-owner": "node src/scripts/makeOwner.js",
     "db:orphans": "node src/scripts/findOrphans.js",
     "set-password": "node src/scripts/setPassword.js",
-    "images:upload": "node src/scripts/uploadPlaceImages.js"
+    "images:upload": "node src/scripts/uploadPlaceImages.js",
+    "demo:gateway": "node src/scripts/demoGateway.js",
+    "dev:demo-pay": "SSLCZ_STORE_ID=demo SSLCZ_STORE_PASSWD=demo SSLCZ_IS_LIVE=false SSLCZ_API_BASE=http://127.0.0.1:9900 PUBLIC_API_URL=http://127.0.0.1:5000/api node --watch src/server.js"
   },
   "keywords": [],
   "author": "",

@@ -23,6 +23,7 @@ export const PROVIDERS = [
   { key: "openrouteservice", label: "OpenRouteService", env: "OPENROUTESERVICE_API_KEY", purpose: "Routing — seeded routes are used instead" },
   { key: "cloudinary", label: "Cloudinary", env: "CLOUDINARY_API_KEY", purpose: "Place photography — run `npm run images:upload`; cards fall back to a gradient without it" },
   { key: "mail", label: "Outgoing email", env: "MAIL_PASS", purpose: "Password reset codes (FR-02)" },
+  { key: "sslcommerz", label: "SSLCommerz", env: "SSLCZ_STORE_ID", purpose: "Card and mobile-wallet payments; bookings stay mock without it (FR-08)" },
 ];
 
 /**

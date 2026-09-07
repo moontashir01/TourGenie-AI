@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Country from "../models/Country.js";
+import TripShare from "../models/TripShare.js";
 import PasswordReset, {
   OTP_TTL_SECONDS,
   RESEND_COOLDOWN_SECONDS,
@@ -90,6 +91,14 @@ export const register = asyncHandler(async (req, res) => {
     country_code: country.code,
     preferences: { currency: country.pricing_currency },
   });
+
+  // An invite sent before this address had an account has been waiting for
+  // exactly this moment — attach it now rather than leaving the sender
+  // wondering why nothing happened.
+  await TripShare.updateMany(
+    { invited_email: user.email, status: "pending" },
+    { $set: { shared_with_user_id: user._id, status: "accepted", accepted_at: new Date() } }
+  );
 
   res.status(201).json({
     message: "Account created — you can now log in",

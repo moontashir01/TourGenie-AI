@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Button from "../components/ui/Button";
 import { Link } from "react-router-dom";
-import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer, GripVertical, Undo2, MailCheck, Route, Pencil } from "lucide-react";
+import { MapPin, MessageCircleMore, Wallet, ChevronDown, Loader2, Plus, X, Sparkles, AlertCircle, Building2, Landmark, AlertTriangle, Compass, Phone, Printer, GripVertical, Undo2, MailCheck, Route, Pencil, Users, Eye } from "lucide-react";
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, closestCenter, pointerWithin,
@@ -22,6 +22,8 @@ import RainyDayPlan from "../components/RainyDayPlan";
 import Money from "../components/Money";
 import Skeleton, { DayCardSkeleton, PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, itineraryApi, weatherApi, nearbyApi, notificationApi } from "../lib/api";
+import { cityStays, nightsByCity } from "../lib/tripCities";
+import ShareTripDialog from "../components/ShareTripDialog";
 import { useCurrentTrip } from "../context/TripContext";
 import { useChat } from "../context/ChatContext";
 import { useToast } from "../context/ToastContext";
@@ -237,8 +239,53 @@ function isInternationalTrip(trip) {
   return Boolean(originCountry && destinationCountry && originCountry !== destinationCountry);
 }
 
+// Where the trip goes, end to end — the one thing the day cards can't show
+// without scrolling through all of them. Each city jumps to the first day
+// spent there. Only rendered for trips with more than one city: a one-item
+// version of this would just repeat the page header.
+function CitiesStrip({ stays, onJump }) {
+  return (
+    <div className="card px-5 py-4">
+      <p className="flex items-center gap-1.5 text-2xs uppercase tracking-wide text-ink-500 mb-2.5">
+        <Route className="w-3.5 h-3.5" /> Cities on this trip
+      </p>
+      <div className="flex items-center flex-wrap gap-x-1.5 gap-y-2">
+        {stays.map((stay, i) => {
+          // No day means the plan hasn't been generated yet and these are the
+          // cities picked on the form — a count of nights would be invented.
+          const nights =
+            stay.firstDay == null
+              ? ""
+              : stay.nights
+                ? `${stay.nights} night${stay.nights === 1 ? "" : "s"}`
+                : "day stop";
+          return (
+            <Fragment key={stay.city}>
+              {i > 0 && (
+                <span aria-hidden className="text-ink-500 select-none">
+                  →
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => onJump(stay.firstDay)}
+                disabled={stay.firstDay == null}
+                aria-label={nights ? `${stay.city}, ${nights} — jump to day ${stay.firstDay}` : stay.city}
+                className="inline-flex items-baseline gap-1.5 px-3 py-1.5 rounded-full border border-sand bg-paper text-sm transition-colors enabled:hover:border-teal/50 enabled:hover:bg-teal-light/40 disabled:cursor-default"
+              >
+                <span className="font-semibold text-ink-900">{stay.city}</span>
+                {nights && <span className="text-2xs text-ink-500">{nights}</span>}
+              </button>
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Itinerary() {
-  const { currentTripId, refreshCurrentTrip } = useCurrentTrip();
+  const { currentTripId, refreshCurrentTrip, currentRole, isTripOwner, canEditTrip } = useCurrentTrip();
   const { itineraryVersion } = useChat();
   const toast = useToast();
   const { rates } = useCurrency();
@@ -265,6 +312,7 @@ export default function Itinerary() {
   // Snapshot taken before an optimistic reorder so a failed save can roll the
   // list back instead of leaving the screen disagreeing with the database.
   const [undoSnapshot, setUndoSnapshot] = useState(null);
+  const [sharing, setSharing] = useState(false);
 
   const sensors = useSensors(
     // A small activation distance keeps a tap on the transport buttons inside
@@ -539,7 +587,27 @@ export default function Itinerary() {
     );
   }
 
+  function jumpToDay(day) {
+    if (!day) return;
+    setOpenDay(day);
+    // The body only mounts once the day is open, so the scroll waits a frame
+    // for it — otherwise it lands on the collapsed height and stops short.
+    requestAnimationFrame(() => {
+      document.getElementById(`itinerary-day-${day}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   const days = [...new Set(items.map((i) => i.day))].sort((a, b) => a - b);
+
+  // Where this trip goes, end to end. Derived from the plan once there is
+  // one; before that the cities picked on the form are all we know, so they
+  // stand in without night counts. A single city is what the page header
+  // already says, so the strip stays out of the way for those trips.
+  const plannedStays = trip?.multi_city ? cityStays(items) : [];
+  const tripStays =
+    !trip?.multi_city || plannedStays.length
+      ? plannedStays
+      : (trip.preferred_cities || []).map((city) => ({ city, firstDay: null, nights: 0 }));
   const lastDay = days[days.length - 1] || 0;
 
   // Same rules the Budget API applies (isGatewayLeg / isBookedFlightLeg).
@@ -581,26 +649,21 @@ export default function Itinerary() {
     : [{ code: "BDT", symbol: "৳", rate: 1 }];
   const draftBdt = Math.round((Number(budgetDraft) || 0) * (rates[budgetCurrency]?.rate || 1));
 
+  const itineraryPricesHotel = items.some((i) => i.hotel_id && i.est_cost > 0);
+  // The generated itinerary carries its own check-out rows, priced from the
+  // nightly rate, and those are already inside itineraryCost. Estimating the
+  // stay again here would show the hotel twice — so this block is only the
+  // fallback for a trip whose itinerary hasn't been generated yet. Same rule
+  // the budget API applies.
   let hotelCost = 0;
-  if (trip?.multi_city && trip.hotel_selections?.length) {
-    // Each day's last activity (items are ordered by day, time, so later
-    // entries win) marks the city slept in that night. The final day is the
-    // day the traveler leaves, so it isn't a night anywhere.
-    const cityByDay = {};
-    for (const i of items) {
-      if (i.city) cityByDay[i.day] = i.city;
-    }
-    const sleepDays = Object.keys(cityByDay).map(Number).sort((a, b) => a - b).slice(0, -1);
-    const nightsByCity = {};
-    for (const day of sleepDays) {
-      const city = cityByDay[day];
-      nightsByCity[city] = (nightsByCity[city] || 0) + 1;
-    }
+  if (itineraryPricesHotel) {
+    hotelCost = items.reduce((s, i) => (i.hotel_id ? s + (i.est_cost || 0) : s), 0);
+  } else if (trip?.multi_city && trip.hotel_selections?.length) {
+    const nights = nightsByCity(items);
     hotelCost = trip.hotel_selections.reduce((s, sel) => {
       const hotel = sel.hotel_id;
       if (!hotel?.price_per_night) return s;
-      const nights = nightsByCity[sel.city] || 0;
-      return s + hotel.price_per_night * nights;
+      return s + hotel.price_per_night * (nights[sel.city] || 0);
     }, 0);
   } else if (trip?.hotel_id) {
     // Nights, not days — a 4-day trip is 3 hotel nights.
@@ -610,10 +673,49 @@ export default function Itinerary() {
 
   return (
     <AppShell
-      title={trip ? `${trip.destination} Itinerary` : "Itinerary"}
+      title={trip ? trip.title || `${trip.destination} Itinerary` : "Itinerary"}
       titleId={trip ? `trip-title-${trip._id}` : undefined}
-      subtitle={trip ? `${new Date(trip.start_date).toLocaleDateString()} – ${new Date(trip.end_date).toLocaleDateString()} · ${trip.travelers} travelers` : ""}
+      actions={
+        trip && isTripOwner ? (
+          <Button variant="secondary" size="sm" icon={Users} onClick={() => setSharing(true)}>
+            Share
+          </Button>
+        ) : null
+      }
+      subtitle={
+        trip
+          ? [
+              trip.title && !trip.title.includes(trip.destination) ? trip.destination : null,
+              `${new Date(trip.start_date).toLocaleDateString()} – ${new Date(trip.end_date).toLocaleDateString()}`,
+              `${trip.travelers} travelers`,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : ""
+      }
     >
+      {trip && isTripOwner && (
+        <ShareTripDialog
+          open={sharing}
+          onClose={() => setSharing(false)}
+          tripId={trip._id}
+          tripName={trip.title || trip.destination}
+        />
+      )}
+
+      {/* A shared trip looks exactly like your own, so it has to say that it
+          isn't — before someone reaches for a control that isn't there. */}
+      {trip && !isTripOwner && (
+        <div className="flex items-start gap-2 bg-teal/10 border border-teal/30 text-teal-dark text-sm rounded-lg px-4 py-3 mb-6">
+          <Eye className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            {currentRole === "editor"
+              ? "This trip was shared with you — you can change the plan, but only its owner can confirm it, book it or delete it."
+              : "This trip was shared with you to look at. Only its owner can change the plan."}
+          </span>
+        </div>
+      )}
+
       {error && (
         <div className="flex items-start gap-2 bg-sunset/10 border border-sunset/30 text-sunset-dark text-sm rounded-lg px-4 py-3 mb-6">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -623,6 +725,11 @@ export default function Itinerary() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
+          {/* Where the trip goes, first thing — the flight panel below runs
+              screens long on an international trip, and this is the answer to
+              "which cities is this?", which shouldn't be at the bottom. */}
+          {tripStays.length > 1 && <CitiesStrip stays={tripStays} onJump={jumpToDay} />}
+
           {/* Flight search panel — shown when transport preference is Flight
               OR when origin and destination are different countries */}
           {trip && (
@@ -640,7 +747,7 @@ export default function Itinerary() {
 
           {generating && <GenerationProgress trip={trip} />}
 
-          {!generating && items.length === 0 && !showForm && (
+          {!generating && items.length === 0 && !showForm && canEditTrip && (
             <div className="bg-surface border border-dashed border-sand rounded-2xl p-10 text-center">
               <p className="text-ink-600 mb-2 text-sm">No itinerary items yet — generate a full plan with AI, or build it by hand.</p>
               <p className="text-ink-500 mb-5 text-sm">
@@ -664,7 +771,7 @@ export default function Itinerary() {
             </div>
           )}
 
-          {!generating && days.length > 0 && (
+          {!generating && days.length > 0 && canEditTrip && (
             <div className="flex items-center justify-between gap-3 text-xs text-ink-500 px-1">
               <span className="inline-flex items-center gap-1.5">
                 <GripVertical className="w-3.5 h-3.5" />
@@ -704,7 +811,7 @@ export default function Itinerary() {
             const dayCost = dayItems.reduce((s, i) => (isBookedFlightLeg(i) ? s : s + (i.est_cost || 0)), 0);
             return (
               <DayDropZone key={day} day={day}>
-              <div className={`card transition-shadow mb-4 ${open ? "shadow-soft" : ""}`}>
+              <div id={`itinerary-day-${day}`} className={`card transition-shadow mb-4 ${open ? "shadow-soft" : ""}`}>
                 <button
                   onClick={() => setOpenDay(open ? null : day)}
                   className={`w-full flex items-center justify-between gap-3 px-5 py-4 rounded-t-2xl hover:bg-paper/60 transition-colors ${
@@ -760,7 +867,7 @@ export default function Itinerary() {
                     >
                     <ul className="space-y-4">
                       {dayItems.map((item) => (
-                        <SortableRow key={item._id} id={item._id} disabled={reordering}>
+                        <SortableRow key={item._id} id={item._id} disabled={reordering || !canEditTrip}>
                         {({ ref, style, handleProps, isDragging }) => (
                         <li
                           ref={ref}
@@ -890,24 +997,32 @@ export default function Itinerary() {
               >
                 <Printer className="w-4 h-4" /> Print / save as PDF
               </Link>
-              <RainyDayPlan
-                tripId={currentTripId}
-                onApplied={() =>
-                  itineraryApi.get(currentTripId).then((res) => setItems(res.items))
-                }
-              />
-              <button
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal"
-              >
-                <Plus className="w-4 h-4" /> Add another activity
-              </button>
-              <button
-                onClick={handleGenerateAI}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-ink-500 hover:text-sunset-dark"
-              >
-                <Sparkles className="w-4 h-4" /> Regenerate with AI (replaces current plan)
-              </button>
+              {canEditTrip && (
+                <RainyDayPlan
+                  tripId={currentTripId}
+                  onApplied={() =>
+                    itineraryApi.get(currentTripId).then((res) => setItems(res.items))
+                  }
+                />
+              )}
+              {canEditTrip && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-teal-dark hover:text-teal"
+                >
+                  <Plus className="w-4 h-4" /> Add another activity
+                </button>
+              )}
+              {/* Regenerating throws the whole plan away and rebuilds it —
+                  the owner's call even when someone else may edit rows. */}
+              {isTripOwner && (
+                <button
+                  onClick={handleGenerateAI}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-ink-500 hover:text-sunset-dark"
+                >
+                  <Sparkles className="w-4 h-4" /> Regenerate with AI (replaces current plan)
+                </button>
+              )}
             </div>
           )}
 
@@ -956,7 +1071,7 @@ export default function Itinerary() {
             <dl className="space-y-3 text-sm">
               <DataRow tone="inverse" label="Route" value={`${trip?.origin || ""} → ${trip?.destination || ""}`} />
               <DataRow tone="inverse" label="Travelers" value={trip?.travelers} numeric />
-              <DataRow tone="inverse" label="Activities" value={`৳${itineraryCost.toLocaleString()}`} numeric />
+              <DataRow tone="inverse" label="Activities" value={`৳${(itineraryCost - (itineraryPricesHotel ? hotelCost : 0)).toLocaleString()}`} numeric />
               {travelCost > 0 && (
                 <DataRow
                   tone="inverse"
@@ -981,7 +1096,7 @@ export default function Itinerary() {
               <p className="text-xs font-semibold tracking-wide uppercase text-teal flex items-center gap-1.5">
                 <Wallet className="w-3.5 h-3.5" /> Budget snapshot
               </p>
-              {trip && !editingBudget && (
+              {trip && !editingBudget && canEditTrip && (
                 <button
                   type="button"
                   onClick={startEditingBudget}
@@ -1062,7 +1177,8 @@ export default function Itinerary() {
           </div>
 
           {/* FR-03 — the one action that leaves the traveller holding a copy
-              of the plan outside the app. */}
+              of the plan outside the app. Owner-only, matching the API. */}
+          {isTripOwner && (
           <div className="card p-6">
             <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
               <MailCheck className="w-3.5 h-3.5" /> Confirmation
@@ -1112,6 +1228,7 @@ export default function Itinerary() {
               </>
             )}
           </div>
+          )}
 
           <Button as={Link} to="/attractions" variant="secondary" icon={Landmark} fullWidth className="py-3">
             {trip?.must_visit_attraction_ids?.length > 0

@@ -61,7 +61,9 @@ const tripSchema = new mongoose.Schema(
     must_visit_attraction_ids: { type: [mongoose.Schema.Types.ObjectId], ref: "Attraction", default: [] },
 
     // — additive —
-    title: { type: String, default: "" }, // "4 days in Cox's Bazar"
+    // The traveler's own name for the trip ("Honeymoon"). Falls back to the
+    // auto-generated "4 days in Cox's Bazar" when they don't supply one.
+    title: { type: String, default: "", trim: true, maxlength: 80 },
     origin_destination_id: { type: mongoose.Schema.Types.ObjectId, ref: "Destination", default: null },
     destination_id: { type: mongoose.Schema.Types.ObjectId, ref: "Destination", default: null },
 

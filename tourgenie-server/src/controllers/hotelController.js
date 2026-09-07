@@ -2,6 +2,7 @@ import Hotel from "../models/Hotel.js";
 import HotelRate from "../models/HotelRate.js";
 import { fetchAndCacheStayApiHotels } from "../services/stayApiHotels.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, EDIT } from "../services/tripAccess.js";
 
 // How long a quoted rate is treated as current. Hotel pricing moves, but not
 // minute to minute, and a free-tier quota is far more precious than a
@@ -163,7 +164,7 @@ function sortAndFilter(hotels, { maxPrice, sort }) {
 // and replaces any prior pick for that same city rather than the whole trip.
 export const selectHotelForTrip = asyncHandler(async (req, res) => {
   const Trip = (await import("../models/Trip.js")).default;
-  const trip = await Trip.findOne({ _id: req.body.trip_id, user_id: req.user._id });
+  const trip = await findTripForUser(req.body.trip_id, req.user._id, { level: EDIT });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   if (trip.multi_city) {

@@ -9,6 +9,13 @@ import {
   confirmTrip,
   getTripCities,
 } from "../controllers/tripController.js";
+import {
+  listTripShares,
+  shareTrip,
+  updateTripShare,
+  revokeTripShare,
+  acceptTripShare,
+} from "../controllers/tripShareController.js";
 import { protect } from "../middleware/auth.js";
 import { tripConfirmLimiter } from "../middleware/rateLimit.js";
 
@@ -20,6 +27,14 @@ router.post("/", createTrip);
 // FR-03 — explicit confirmation; sends the plan as a PDF by email.
 router.post("/:id/confirm", tripConfirmLimiter, confirmTrip);
 router.get("/", getMyTrips);
+
+// Sharing. The literal paths are declared before "/:id" so a share route is
+// never read as a trip id.
+router.post("/shares/accept/:token", acceptTripShare);
+router.get("/:id/shares", listTripShares);
+router.post("/:id/shares", shareTrip);
+router.patch("/:id/shares/:shareId", updateTripShare);
+router.delete("/:id/shares/:shareId", revokeTripShare);
 // FR-07 x FR-12 — the cities this trip covers, so Hotels and Attractions
 // stop listing the whole country.
 router.get("/:id/cities", getTripCities);

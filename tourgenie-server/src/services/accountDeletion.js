@@ -23,6 +23,7 @@ import ChatSession from "../models/ChatSession.js";
 import PackingList from "../models/PackingList.js";
 import PasswordReset from "../models/PasswordReset.js";
 import AdminNote from "../models/AdminNote.js";
+import TripShare from "../models/TripShare.js";
 
 /** What deleting this account would take with it — shown before confirming. */
 export async function summariseAccountFootprint(userId) {
@@ -96,6 +97,12 @@ export async function deleteAccountAndContent(userId) {
       Report.deleteMany({ $or: [{ reporter_id: id }, { target_author_id: id }] }),
       Notification.deleteMany({ user_id: id }),
       PasswordReset.deleteMany({ user_id: id }),
+      // Both directions: the invitations this person sent (their trips are
+      // going with them) and the ones they were given, which would otherwise
+      // keep pointing at a user that no longer exists.
+      TripShare.deleteMany({
+        $or: [{ trip_id: { $in: tripIds } }, { owner_id: id }, { shared_with_user_id: id }],
+      }),
     ]);
 
   // Support notes about this account and its trips. They are context, not a

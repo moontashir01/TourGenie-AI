@@ -166,6 +166,19 @@ export const tripsApi = {
   // narrowed by the same rule the itinerary planner uses. `all_cities` backs
   // the "show every city in the country" escape hatch.
   cities: (id) => request(`/trips/${id}/cities`),
+
+  // Sharing. Everything but `accept` is the owner's; the API enforces that
+  // and answers 404 to anyone else, so these are safe to call optimistically.
+  shares: {
+    list: (id) => request(`/trips/${id}/shares`),
+    invite: (id, { email, role }) => request(`/trips/${id}/shares`, { method: "POST", body: { email, role } }),
+    setRole: (id, shareId, role) =>
+      request(`/trips/${id}/shares/${shareId}`, { method: "PATCH", body: { role } }),
+    revoke: (id, shareId) => request(`/trips/${id}/shares/${shareId}`, { method: "DELETE" }),
+    // Claims an invite from the link in its email. Already-accepted invites
+    // come back fine, so the dashboard can call this without checking first.
+    accept: (token) => request(`/trips/shares/accept/${token}`, { method: "POST" }),
+  },
 };
 
 export const referenceApi = {
@@ -322,8 +335,9 @@ export const bookingApi = {
     request(`/transport/${transportId}/availability${date ? `?date=${date}` : ""}`, { auth: false }),
 };
 
-// FR-08 for accommodation — demonstration reservations. No payment is
-// taken and nothing is reserved with the property.
+// FR-08 for accommodation. A reservation is a demonstration record until it
+// is paid for through paymentApi below; nothing is ever reserved with the
+// property itself.
 export const hotelBookingApi = {
   availability: (hotelId, checkIn, checkOut) => {
     const qs = new URLSearchParams({ ...(checkIn && { check_in: checkIn }), ...(checkOut && { check_out: checkOut }) }).toString();
@@ -333,6 +347,20 @@ export const hotelBookingApi = {
   forTrip: (tripId) => request(`/hotel-bookings/trips/${tripId}`),
   cancel: (tripId, bookingId) =>
     request(`/hotel-bookings/trips/${tripId}/${bookingId}/cancel`, { method: "PATCH" }),
+};
+
+// FR-08 — real payment through SSLCommerz.
+//
+// init() hands back a gateway URL the browser is sent to; the traveller comes
+// back to /booking?payment=… once the gateway has redirected through the API.
+// Nothing here decides whether a payment succeeded — the server validates
+// against SSLCommerz before it will mark anything paid.
+export const paymentApi = {
+  init: (bookingKind, bookingRef) =>
+    request("/payments/init", { method: "POST", body: { booking_kind: bookingKind, booking_ref: bookingRef } }),
+  list: () => request("/payments"),
+  get: (tranId) => request(`/payments/${tranId}`),
+  refund: (tranId) => request(`/payments/${tranId}/refund`, { method: "POST" }),
 };
 
 // FR-18 — reading the list is what runs the rule sweep server-side.

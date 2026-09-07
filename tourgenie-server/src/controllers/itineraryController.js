@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import ItineraryItem from "../models/ItineraryItem.js";
-import Trip from "../models/Trip.js";
 import Attraction from "../models/Attraction.js";
 import Destination from "../models/Destination.js";
 import TransportOption from "../models/TransportOption.js";
@@ -10,6 +9,7 @@ import { searchFlights as searchTravelpayouts } from "../services/travelpayoutsF
 import { benchmarkFor, roomsFor } from "../services/budgetEstimator.js";
 import { resolveAirport } from "./flightController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, EDIT, VIEW } from "../services/tripAccess.js";
 
 // Realistic per-meal prices for the WHOLE party, averaged across the cities
 // being visited, from the seeded CostBenchmark rows. Without these anchors
@@ -31,12 +31,13 @@ function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function assertOwnsTrip(tripId, userId) {
-  const trip = await Trip.findOne({ _id: tripId, user_id: userId }).populate(
-    "destination_id",
-    "name country country_code currency pricing_currency timezone",
-  );
-  return trip;
+// Reading a plan needs a viewer's access; changing one needs an editor's.
+// Both answer null the same way, so every caller's 404 stays as it was.
+function tripFor(tripId, userId, level) {
+  return findTripForUser(tripId, userId, {
+    level,
+    populate: [["destination_id", "name country country_code currency pricing_currency timezone"]],
+  });
 }
 
 // Candidate attractions + (for multi-city trips) candidate cities an AI call
@@ -369,6 +370,12 @@ export async function attachHotelStays(items, trip) {
 // items[] (the shape generateItineraryWithAI / adjustItineraryWithAI return),
 // carrying the traveller's own edits across — see CARRIED_FIELDS.
 export async function persistItinerary(trip, items) {
+  // Hotel rows are derived, never taken from the planner — see hotelStays.js.
+  // Done here rather than at the call sites so every path that writes an
+  // itinerary (AI generation, manual save, a chat edit) ends up with the
+  // same rows.
+  await attachHotelStays(items, trip);
+
   const previous = await ItineraryItem.find({ trip_id: trip._id }).lean();
   const take = matchPrevious(previous);
 
@@ -394,6 +401,7 @@ export async function persistItinerary(trip, items) {
       est_cost: i.est_cost || 0,
       category: i.category || "activity",
       attraction_id: i.attraction_id || null,
+      hotel_id: i.hotel_id || null,
       available_transport_options: i.available_transport_options || [],
     };
 
@@ -427,7 +435,7 @@ export async function persistItinerary(trip, items) {
 // database for the trip's destination, then saves it the same way
 // generateItinerary (manual save) does.
 export const generateAIItinerary = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const { attractions, candidateCities, mustVisitIds, mealGuidance } = await loadAttractionContext(trip);
@@ -456,7 +464,7 @@ export const generateAIItinerary = asyncHandler(async (req, res) => {
 // Manual save — used by the "Add activity" flow where the client sends
 // the full items[] array itself (no AI call).
 export const generateItinerary = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const { items } = req.body; // [{ day, time, activity, location, est_cost, attraction_id }]
@@ -464,13 +472,12 @@ export const generateItinerary = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "items[] is required" });
   }
 
-  await ItineraryItem.deleteMany({ trip_id: trip._id });
-  const created = await ItineraryItem.insertMany(
-    items.map((i) => ({ ...i, trip_id: trip._id }))
-  );
-
-  trip.status = "planned";
-  await trip.save();
+  // Delegated rather than doing its own delete-and-insert: persistItinerary
+  // is what reuses row ids the client is still holding, carries forward the
+  // fields an edit shouldn't drop, and derives the hotel check-in/check-out
+  // rows. This path used to skip all three, so a hand-built plan silently
+  // came out different from a generated one.
+  const created = await persistItinerary(trip, items);
 
   res.status(201).json({ items: created });
 });
@@ -493,7 +500,7 @@ async function buildCityCoordinates(trip, items) {
 }
 
 export const getItinerary = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, VIEW);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const items = await ItineraryItem.find({ trip_id: trip._id })
@@ -523,7 +530,7 @@ function pickEditableFields(body = {}) {
 }
 
 export const updateItineraryItem = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const update = pickEditableFields(req.body);
@@ -550,7 +557,7 @@ export const updateItineraryItem = asyncHandler(async (req, res) => {
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export const reorderItineraryItems = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const { items } = req.body;
@@ -596,7 +603,7 @@ export const reorderItineraryItems = asyncHandler(async (req, res) => {
 });
 
 export const deleteItineraryItem = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const item = await ItineraryItem.findOneAndDelete({ _id: req.params.itemId, trip_id: trip._id });
@@ -605,7 +612,7 @@ export const deleteItineraryItem = asyncHandler(async (req, res) => {
 });
 
 export const selectTransportOption = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const { selected_option } = req.body;

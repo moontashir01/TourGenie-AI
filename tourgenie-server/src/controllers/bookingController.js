@@ -6,10 +6,10 @@
 // schedule, and inventory that goes down when you book and back up when you
 // cancel.
 import Booking from "../models/Booking.js";
-import Trip from "../models/Trip.js";
 import TransportOption from "../models/TransportOption.js";
 import AppSetting from "../models/AppSetting.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, EDIT, VIEW, OWN } from "../services/tripAccess.js";
 import { releaseBooking } from "../services/bookingCancellation.js";
 
 const DAY_MS = 86400000;
@@ -80,7 +80,7 @@ export const getSeatAvailability = asyncHandler(async (req, res) => {
 
 // POST /api/bookings
 export const createBooking = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.body.trip_id, user_id: req.user._id });
+  const trip = await findTripForUser(req.body.trip_id, req.user._id, { level: EDIT });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const option = await TransportOption.findById(req.body.transport_id);
@@ -231,7 +231,7 @@ export const createBooking = asyncHandler(async (req, res) => {
 });
 
 export const getTripBookings = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.tripId, user_id: req.user._id });
+  const trip = await findTripForUser(req.params.tripId, req.user._id, { level: VIEW });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const bookings = await Booking.find({ trip_id: trip._id })
@@ -241,7 +241,9 @@ export const getTripBookings = asyncHandler(async (req, res) => {
 });
 
 export const cancelBooking = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.tripId, user_id: req.user._id });
+  // Cancelling can reverse money that has already moved, so it sits with the
+  // payment flow on the owner's side of the line.
+  const trip = await findTripForUser(req.params.tripId, req.user._id, { level: OWN });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const booking = await Booking.findOne({ _id: req.params.bookingId, trip_id: trip._id });

@@ -5,7 +5,6 @@
 // weather + destinations + interests + duration, merge their items. The
 // result is persisted so ticked checkboxes survive reloads, and regeneration
 // carries the ticks over for items that are still on the list.
-import Trip from "../models/Trip.js";
 import ItineraryItem from "../models/ItineraryItem.js";
 import Destination from "../models/Destination.js";
 import WeatherForecast from "../models/WeatherForecast.js";
@@ -13,27 +12,28 @@ import PackingTemplate from "../models/PackingTemplate.js";
 import PackingList from "../models/PackingList.js";
 import { buildPackingList } from "../services/packingService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, EDIT, VIEW } from "../services/tripAccess.js";
 
 function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-async function assertOwnsTrip(tripId, userId) {
-  return Trip.findOne({ _id: tripId, user_id: userId }).populate(
-    "destination_id",
-    "name type country_code"
-  );
+function tripFor(tripId, userId, level) {
+  return findTripForUser(tripId, userId, {
+    level,
+    populate: [["destination_id", "name type country_code"]],
+  });
 }
 
 export const getPackingList = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, VIEW);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
   const list = await PackingList.findOne({ trip_id: trip._id });
   res.json({ packing_list: list || null });
 });
 
 export const generatePackingList = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   // The cities actually being visited (from the itinerary), falling back to
@@ -145,7 +145,7 @@ export const generatePackingList = asyncHandler(async (req, res) => {
 
 // Tick or untick one item — the whole point of persisting the list.
 export const togglePackingItem = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const { category, name, checked } = req.body;

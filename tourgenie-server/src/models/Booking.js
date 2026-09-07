@@ -54,7 +54,13 @@ const bookingSchema = new mongoose.Schema(
     inventory_held: { type: Number, default: 0 },
 
     is_mock: { type: Boolean, default: true }, // always true — FR-08
-    payment_status: { type: String, enum: ["not_required", "simulated"], default: "not_required" },
+    payment_status: {
+      type: String,
+      // not_required/simulated are the mock flow the demo still runs on when
+      // SSLCommerz is unconfigured; the rest describe a real charge.
+      enum: ["not_required", "simulated", "pending", "paid", "failed", "refunded"],
+      default: "not_required",
+    },
     cancelled_at: { type: Date, default: null },
   },
   { timestamps: { createdAt: "created_at", updatedAt: "updated_at" } }

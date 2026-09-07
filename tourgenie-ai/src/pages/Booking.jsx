@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
-  Bus, Train, Ship, Clock, Wallet, Users, Ticket, TriangleAlert, Loader2, Check,
+  Bus, Train, Ship, Clock, Users, Ticket, TriangleAlert, Loader2, Check,
   ArrowRight, X, Info, CircleCheck, Armchair,
 } from "lucide-react";
 import AppShell from "../components/AppShell";
+import PayButton from "../components/PayButton";
 import { PanelSkeleton } from "../components/Skeleton";
 import { tripsApi, transportApi, bookingApi, notificationApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useLanguage } from "../context/LanguageContext";
+import { useToast } from "../context/ToastContext";
 import SectionHeader from "../components/ui/SectionHeader";
 
 // FR-08 — Mock Ticket Booking (wireframe §3.9).
@@ -37,6 +39,8 @@ export default function Booking() {
   const { currentTripId } = useCurrentTrip();
   const { t } = useLanguage();
 
+  const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [trip, setTrip] = useState(null);
   const [options, setOptions] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -53,6 +57,38 @@ export default function Booking() {
 
   const selected = options.find((o) => o._id === selectedId) || null;
   const travelDate = trip?.start_date ? String(trip.start_date).slice(0, 10) : "";
+
+  // Coming back from SSLCommerz. The gateway redirects to the API, which
+  // validates and then sends the browser here with the outcome in the query
+  // string — a label only. The booking list below is what actually says
+  // whether a booking is paid, because that comes from the database.
+  // StrictMode runs this twice on mount, and both passes see the query string
+  // because clearing it is a state update that hasn't flushed yet — which
+  // announced every payment to the traveller twice. Keyed on the outcome so a
+  // genuine second payment still reports.
+  const announced = useRef(null);
+
+  useEffect(() => {
+    const outcome = searchParams.get("payment");
+    if (!outcome) return;
+
+    const ref = searchParams.get("ref");
+    const signature = `${outcome}:${ref || ""}`;
+    if (announced.current === signature) return;
+    announced.current = signature;
+    if (outcome === "success") {
+      toast.success("Payment received", ref ? `Booking ${ref} is confirmed and paid.` : "Your booking is confirmed.");
+    } else if (outcome === "cancelled") {
+      toast.info("Payment cancelled", "Nothing was charged — the booking is still waiting for payment.");
+    } else {
+      toast.error("Payment didn't go through", searchParams.get("detail") || "The gateway declined the transaction.");
+    }
+
+    // Clear it so a refresh doesn't replay the message.
+    const next = new URLSearchParams(searchParams);
+    ["payment", "ref", "detail"].forEach((k) => next.delete(k));
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, toast]);
 
   useEffect(() => {
     if (!currentTripId) {
@@ -201,7 +237,7 @@ export default function Booking() {
         <p className="text-sm text-ink-900/75 leading-relaxed">
           {t(
             "booking.demo_notice",
-            "Demonstration booking only — no payment is taken and no real ticket is issued."
+            "Demonstration booking — no ticket is issued with the operator. Paying settles a real charge; leaving it unpaid keeps the reservation as a record only."
           )}
         </p>
       </div>
@@ -398,6 +434,11 @@ export default function Booking() {
                             >
                               {b.status}
                             </span>
+                            {b.payment_status === "paid" && (
+                              <span className="text-3xs px-2 py-0.5 rounded-full font-semibold bg-gold/25 text-ink-800">
+                                paid
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-ink-600 mt-1">
                             {b.journey?.operator || b.transport_id?.operator} ·{" "}
@@ -411,12 +452,17 @@ export default function Booking() {
                           </p>
                         </div>
                         {b.status !== "cancelled" && (
-                          <button
-                            onClick={() => cancel(b._id)}
-                            className="text-sm text-ink-500 hover:text-sunset-dark underline shrink-0"
-                          >
-                            Cancel
-                          </button>
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            {b.payment_status !== "paid" && (
+                              <PayButton bookingKind="transport" bookingRef={b.reference} amount={b.total_fare} />
+                            )}
+                            <button
+                              onClick={() => cancel(b._id)}
+                              className="text-sm text-ink-500 hover:text-sunset-dark underline"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

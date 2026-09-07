@@ -3,6 +3,7 @@ import Overlay from "./ui/Overlay";
 import { X, BedDouble, Users, CalendarRange, Loader2, Check, CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { hotelBookingApi, notificationApi } from "../lib/api";
 import Money from "./Money";
+import PayButton from "./PayButton";
 import Button from "./ui/Button";
 
 // FR-08 for accommodation. Demonstration only — the disclaimer appears
@@ -153,9 +154,20 @@ export default function HotelBookingModal({ hotel, trip, localCurrency, onClose,
                 : ""}
             </p>
 
-            <Button onClick={onClose} fullWidth className="mt-5">
-              Done
-            </Button>
+            {/* The reservation exists either way; paying is what makes it a
+                real charge rather than a demonstration record. */}
+            <div className="mt-5 flex flex-col items-stretch gap-3">
+              <PayButton
+                bookingKind="hotel"
+                bookingRef={confirmation.booking.reference}
+                amount={confirmation.booking.total_amount}
+                size="md"
+                fullWidth
+              />
+              <Button onClick={onClose} variant="secondary" fullWidth>
+                Pay later
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="p-5 space-y-4">

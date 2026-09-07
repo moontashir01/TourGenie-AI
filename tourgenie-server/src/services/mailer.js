@@ -163,3 +163,72 @@ export function tripConfirmationEmail({ name, trip, budget }) {
 
   return { subject: `Your trip is confirmed — ${title}`, text, html };
 }
+
+// ── sharing a trip ───────────────────────────────────────────────────
+// Two audiences, one message: someone who already has an account is being
+// told they can open the trip now, and someone who doesn't is being told what
+// signing up would get them. Saying the same thing to both would strand the
+// second — "open the trip" is not an instruction you can follow without an
+// account.
+export function tripShareInviteEmail({ inviterName, trip, role, hasAccount, token }) {
+  const base = (process.env.CLIENT_URL || "http://localhost:5173").split(",")[0].trim().replace(/\/+$/, "");
+  const title = trip.title || `${trip.origin} → ${trip.destination}`;
+  const dates = `${confirmationDate(trip.start_date)} – ${confirmationDate(trip.end_date)}`;
+  const who = inviterName || "A TourGenie traveller";
+  const canEdit = role === "editor";
+  const what = canEdit
+    ? "You can view the plan and make changes to it."
+    : "You can see the whole plan; only the owner can change it.";
+
+  // The invite link carries the token so the dashboard can claim it. An
+  // address with no account is sent to sign-up first — registering with this
+  // address attaches the invite on its own.
+  const url = hasAccount ? `${base}/dashboard?invite=${token}` : `${base}/register?invite=${token}`;
+  const cta = hasAccount ? "Open the trip" : "Create an account";
+
+  const facts = [
+    ["Trip", title],
+    ["Dates", dates],
+    ["Your access", canEdit ? "Editor" : "Viewer"],
+  ];
+
+  const text =
+    `Hi,\n\n` +
+    `${who} shared a trip with you on TourGenie AI.\n\n` +
+    facts.map(([label, value]) => `${label}: ${value}`).join("\n") +
+    `\n\n${what}\n\n` +
+    (hasAccount
+      ? `Open it here: ${url}\n`
+      : `You don't have a TourGenie account yet. Sign up with this email address and the trip will be waiting: ${url}\n`) +
+    `\n— TourGenie AI`;
+
+  const rows = facts
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:6px 0;font-size:13px;color:rgba(244,241,236,0.55);">${label}</td>
+          <td style="padding:6px 0;font-size:13px;text-align:right;color:#F4F1EC;">${value}</td>
+        </tr>`
+    )
+    .join("");
+
+  const html = `
+  <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0E1B24;padding:32px;">
+    <div style="max-width:480px;margin:0 auto;background:#152632;border:1px solid #1A4358;border-radius:16px;padding:32px;color:#F4F1EC;">
+      <p style="margin:0 0 4px;font-size:20px;font-weight:600;">TourGenie <span style="color:#EF8354;">AI</span></p>
+      <p style="margin:0 0 24px;font-size:13px;color:rgba(244,241,236,0.5);">A trip was shared with you</p>
+      <p style="margin:0 0 20px;font-size:14px;">${who} shared a trip with you. ${what}</p>
+      <table style="width:100%;border-collapse:collapse;margin:0 0 24px;">${rows}</table>
+      <p style="margin:0 0 20px;">
+        <a href="${url}" style="display:inline-block;background:#EF8354;color:#0E1B24;text-decoration:none;font-weight:600;font-size:14px;padding:10px 20px;border-radius:999px;">${cta}</a>
+      </p>
+      ${
+        hasAccount
+          ? ""
+          : `<p style="margin:0;font-size:12px;color:rgba(244,241,236,0.4);">Sign up with this email address and the trip will be in your dashboard straight away.</p>`
+      }
+    </div>
+  </div>`;
+
+  return { subject: `${who} shared a trip with you — ${title}`, text, html };
+}

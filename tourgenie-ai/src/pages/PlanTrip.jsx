@@ -15,6 +15,8 @@ const interests = ["Beaches", "Hills & nature", "History", "Food", "Nightlife", 
 // after a full round-trip instead of while the dates were being picked.
 const MAX_TRIP_DAYS = 60;
 const MAX_TRAVELERS = 20;
+// Mirrors MAX_TRIP_TITLE in the API's trip controller.
+const MAX_TRIP_NAME = 80;
 
 // Ground modes only exist between cities we have seeded transport for, which
 // is domestic travel. Offering "Launch" for a Bangkok trip made the form look
@@ -72,6 +74,7 @@ const EMPTY_FORM = {
   end_date: "",
   travelers: "2",
   budget: "",
+  title: "", // the traveler's own name for the trip; blank = auto-generated
   budget_currency: "BDT",
   budget_tier: "mid",
   budget_includes_flights: true,
@@ -93,7 +96,13 @@ function readDraft() {
     // counts once one of the trip's own answers is in it.
     const f = draft?.form || {};
     const started =
-      f.destination_id || f.country_code || f.destination || f.start_date || f.end_date || f.budget;
+      f.title ||
+      f.destination_id ||
+      f.country_code ||
+      f.destination ||
+      f.start_date ||
+      f.end_date ||
+      f.budget;
     return started ? draft : null;
   } catch {
     return null;
@@ -307,6 +316,18 @@ export default function PlanTrip() {
     [destinations, form.destination_id]
   );
 
+  // What the API will call this trip if the name is left blank — mirrors
+  // autoTripTitle() there, so the placeholder promises what actually happens.
+  const autoTripName = useMemo(() => {
+    const place =
+      destinationMode === "country"
+        ? countries.find((c) => c.country_code === form.country_code)?.name || ""
+        : selectedDestination?.name || form.destination.trim();
+    if (!place) return "";
+    if (!tripDays) return `Trip to ${place}`;
+    return `${tripDays} day${tripDays > 1 ? "s" : ""} in ${place}`;
+  }, [destinationMode, countries, form.country_code, form.destination, selectedDestination, tripDays]);
+
   // Does this trip cross a border? Decides which transport modes are worth
   // offering, and whether an airfare warning applies.
   const crossesBorder = useMemo(() => {
@@ -482,6 +503,8 @@ export default function PlanTrip() {
     const tier = TIERS.find((t) => t.value === form.budget_tier) || TIERS[1];
 
     const payload = {
+      // "" is meaningful: the API reads it as "name this trip for me".
+      title: form.title.trim(),
       origin: selectedOrigin?.name || form.origin,
       origin_destination_id: form.origin_destination_id || undefined,
       start_date: form.start_date,
@@ -705,6 +728,22 @@ export default function PlanTrip() {
                 )}
               </div>
             </fieldset>
+            <Field label="Trip name (optional)" className="sm:col-span-2">
+              <input
+                name="title"
+                type="text"
+                maxLength={MAX_TRIP_NAME}
+                className="input"
+                placeholder={autoTripName || "e.g. Honeymoon"}
+                value={form.title}
+                onChange={(e) => setField("title", e.target.value)}
+              />
+              <p className="text-sm text-ink-500 mt-1.5">
+                {autoTripName
+                  ? `Leave blank and we'll call it "${autoTripName}".`
+                  : "Give it a name you'll recognise later — or leave it and we'll name it for you."}
+              </p>
+            </Field>
             <Field label="Start date">
               <input
                 name="start_date"
@@ -1063,9 +1102,9 @@ function Step({ n, total, title, hint, children }) {
   );
 }
 
-function Field({ label, children }) {
+function Field({ label, children, className = "" }) {
   return (
-    <label className="block">
+    <label className={`block ${className}`}>
       <span className="text-sm font-medium text-ink-600 mb-1.5 block">{label}</span>
       {children}
     </label>

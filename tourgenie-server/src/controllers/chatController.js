@@ -17,6 +17,7 @@ import { parseTripQuery, buildTripEstimate, describeEstimate } from "../services
 import { getVirtualExpenses } from "./expenseController.js";
 import { loadAttractionContext, augmentTravelItems, persistItinerary } from "./itineraryController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { resolveTrip, VIEW, OWN } from "../services/tripAccess.js";
 
 const MUTATING_ACTIONS = new Set([
   "reduce_budget",
@@ -65,10 +66,14 @@ async function totalCostFor(trip) {
 }
 
 async function loadTripWithHotels(tripId, userId) {
-  return Trip.findOne({ _id: tripId, user_id: userId })
-    .populate("hotel_id")
-    .populate("hotel_selections.hotel_id")
-    .populate("destination_id", "name country country_code currency pricing_currency timezone");
+  return resolveTrip(tripId, userId, {
+    level: VIEW,
+    populate: [
+      "hotel_id",
+      "hotel_selections.hotel_id",
+      ["destination_id", "name country country_code currency pricing_currency timezone"],
+    ],
+  });
 }
 
 async function applyItineraryEdit(trip, instruction) {
@@ -216,10 +221,17 @@ export const sendMessage = asyncHandler(async (req, res) => {
 
   const tripId = req.body.trip_id || null;
   let trip = null;
+  let role = null;
   if (tripId) {
-    trip = await loadTripWithHotels(tripId, req.user._id);
+    ({ trip, role } = await loadTripWithHotels(tripId, req.user._id));
     if (!trip) return res.status(404).json({ message: "Trip not found" });
   }
+
+  // A chat edit doesn't patch the plan — it regenerates it, deleting and
+  // recreating every row. Two people doing that at once would silently throw
+  // one of them away, so for now the AI may only rewrite the owner's plan.
+  // Everyone with access can still ask it questions.
+  const mayEditWithAI = role === OWN;
 
   let intent = await matchIntent(message);
   if (!intent) return res.status(500).json({ message: "No chat intents are configured — run the seed script." });
@@ -251,6 +263,8 @@ export const sendMessage = asyncHandler(async (req, res) => {
     source = enquiry.source;
   } else if (intent.requires_trip && !trip) {
     replyText = "I need an active trip to work with first — open one from your dashboard, then tell me what you'd like to change.";
+  } else if (intent.action.type === "swap_weather_dependent" && trip && !mayEditWithAI) {
+    replyText = "Only the owner of a shared trip can have the assistant reshuffle it for the weather.";
   } else if (intent.action.type === "swap_weather_dependent" && trip) {
     // FR-05 × FR-11 × FR-12, answered from stored data: the forecast picks
     // the days, weather_dependent picks the activities, is_indoor picks the
@@ -267,6 +281,10 @@ export const sendMessage = asyncHandler(async (req, res) => {
         cost_delta: Math.round(result.cost_delta || 0),
       };
     }
+  } else if (MUTATING_ACTIONS.has(intent.action.type) && trip && !mayEditWithAI) {
+    replyText =
+      "This trip is shared with you, and AI edits rewrite the whole itinerary — so only its owner can make them here. " +
+      "You can still add, move and remove activities yourself on the Itinerary page.";
   } else if (MUTATING_ACTIONS.has(intent.action.type) && trip) {
     try {
       const result = await applyItineraryEdit(trip, message);

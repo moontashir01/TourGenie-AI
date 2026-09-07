@@ -1,14 +1,15 @@
 import Expense from "../models/Expense.js";
-import Trip from "../models/Trip.js";
 import ItineraryItem from "../models/ItineraryItem.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, EDIT, VIEW } from "../services/tripAccess.js";
 import { currencyMeta, toBdt } from "../utils/currency.js";
-import { nightsFromDays } from "../services/budgetEstimator.js";
+import { nightsFromDays, roomsFor } from "../services/budgetEstimator.js";
 
-async function assertOwnsTrip(tripId, userId) {
-  return Trip.findOne({ _id: tripId, user_id: userId })
-    .populate("hotel_id")
-    .populate("hotel_selections.hotel_id");
+function tripFor(tripId, userId, level) {
+  return findTripForUser(tripId, userId, {
+    level,
+    populate: ["hotel_id", "hotel_selections.hotel_id"],
+  });
 }
 
 function mapCategory(cat) {
@@ -20,7 +21,7 @@ function mapCategory(cat) {
   // The synthesised stay rows are the hotel bill, not a category of their
   // own — "Checkout" sitting beside "Hotel" in the chart named the same money
   // twice over.
-  if (c === "hotel" || c === "accommodation" || c === "checkin" || c === "checkout") return "Hotel";
+  if (["hotel", "accommodation", "checkin", "checkout"].includes(c)) return "Hotel";
   if (c === "shopping") return "Shopping";
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
@@ -102,13 +103,17 @@ export async function getVirtualExpenses(trip) {
       if (!hotel) continue;
       if (pricedStayCities.has(String(sel.city).toLowerCase())) continue;
       const nights = hasCityData ? nightsByCity[sel.city] || 0 : fallbackNights;
-      const cost = (hotel.price_per_night || 0) * nights;
+      // Rooms, not just nights — a party of four needs two of them, which is
+      // what buildBudgetBreakdown already assumes when it sets the planned
+      // figure. Leaving it out here made the estimate disagree with both the
+      // plan and the itinerary's own check-out row.
+      const cost = (hotel.price_per_night || 0) * nights * roomsFor(trip.travelers);
       if (cost > 0) {
         virtuals.push({
           _id: `virt_hotel_${hotel._id}_${sel.city}`,
           trip_id: trip._id,
           category: "Hotel",
-          description: `${hotel.name} (${sel.city}, ${nights} night${nights > 1 ? "s" : ""})`,
+          description: `${hotel.name} (${sel.city}, ${nights} night${nights > 1 ? "s" : ""}, ${roomsFor(trip.travelers)} room${roomsFor(trip.travelers) > 1 ? "s" : ""})`,
           amount: cost,
           date: trip.start_date,
           is_estimated: true,
@@ -118,13 +123,13 @@ export async function getVirtualExpenses(trip) {
   } else if (trip.hotel_id && !pricedStayCities.size) {
     // Nights, not days — a 4-day trip is 3 hotel nights.
     const nights = nightsFromDays(trip.duration_days || 1);
-    const cost = (trip.hotel_id.price_per_night || 0) * nights;
+    const cost = (trip.hotel_id.price_per_night || 0) * nights * roomsFor(trip.travelers);
     if (cost > 0) {
       virtuals.push({
         _id: `virt_hotel_${trip.hotel_id._id}`,
         trip_id: trip._id,
         category: "Hotel",
-        description: `${trip.hotel_id.name} (${nights} night${nights > 1 ? "s" : ""})`,
+        description: `${trip.hotel_id.name} (${nights} night${nights > 1 ? "s" : ""}, ${roomsFor(trip.travelers)} room${roomsFor(trip.travelers) > 1 ? "s" : ""})`,
         amount: cost,
         date: trip.start_date,
         is_estimated: true,
@@ -257,14 +262,14 @@ export async function buildBudgetSummary(trip) {
 }
 
 export const getBudgetSummary = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, VIEW);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
   res.json(await buildBudgetSummary(trip));
 });
 
 // FR-10 — Expense Tracker
 export const addExpense = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const currency = (req.body.currency || "BDT").toUpperCase();
@@ -283,7 +288,7 @@ export const addExpense = asyncHandler(async (req, res) => {
 });
 
 export const getExpenses = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, VIEW);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const expenses = await Expense.find({ trip_id: trip._id }).sort({ date: -1 });
@@ -302,7 +307,7 @@ export const getExpenses = asyncHandler(async (req, res) => {
 });
 
 export const updateExpense = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const updates = { ...req.body };
@@ -328,7 +333,7 @@ export const updateExpense = asyncHandler(async (req, res) => {
 });
 
 export const deleteExpense = asyncHandler(async (req, res) => {
-  const trip = await assertOwnsTrip(req.params.tripId, req.user._id);
+  const trip = await tripFor(req.params.tripId, req.user._id, EDIT);
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const expense = await Expense.findOneAndDelete({ _id: req.params.expenseId, trip_id: trip._id });

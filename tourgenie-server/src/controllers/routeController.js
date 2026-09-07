@@ -3,13 +3,13 @@
 // road/rail/bus shape between two cities instead of a straight line,
 // wherever a matching row was seeded.
 import Route from "../models/Route.js";
-import Trip from "../models/Trip.js";
 import ItineraryItem from "../models/ItineraryItem.js";
 import Destination from "../models/Destination.js";
 import CarbonFactor from "../models/CarbonFactor.js";
 import Airport from "../models/Airport.js";
 import FlightOption from "../models/FlightOption.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, VIEW } from "../services/tripAccess.js";
 
 function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -199,7 +199,7 @@ function carbonKeyFor(mode, distanceKm) {
 // leg carries all its route variants plus endpoint coordinates, so the map
 // can draw a leg even where no corridor was seeded for it.
 export const getTripJourney = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.tripId, user_id: req.user._id }).lean();
+  const trip = await findTripForUser(req.params.tripId, req.user._id, { level: VIEW, lean: true });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const items = await ItineraryItem.find({ trip_id: trip._id })

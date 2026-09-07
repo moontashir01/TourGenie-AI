@@ -8,6 +8,11 @@ const itineraryItemSchema = new mongoose.Schema(
     // — proposal §4.1.3 —
     trip_id: { type: mongoose.Schema.Types.ObjectId, ref: "Trip", required: true },
     attraction_id: { type: mongoose.Schema.Types.ObjectId, ref: "Attraction", default: null },
+    // Set on the synthesised check-in/check-out rows. It names the property on
+    // the row itself, and it is how the budget knows the itinerary is already
+    // pricing the stay — without it the hotel would be counted twice, once
+    // here and once as the virtual hotel expense.
+    hotel_id: { type: mongoose.Schema.Types.ObjectId, ref: "Hotel", default: null },
     day: { type: Number, required: true, min: 1 },
     time: { type: String, required: true }, // "09:00"
     activity: { type: String, required: true },
@@ -49,5 +54,6 @@ const itineraryItemSchema = new mongoose.Schema(
 
 itineraryItemSchema.index({ trip_id: 1, day: 1, time: 1 });
 itineraryItemSchema.index({ attraction_id: 1 });
+itineraryItemSchema.index({ trip_id: 1, hotel_id: 1 });
 
 export default mongoose.model("ItineraryItem", itineraryItemSchema);

@@ -6,10 +6,10 @@
 // cancellation. No payment, nothing reserved with the hotel.
 import HotelBooking from "../models/HotelBooking.js";
 import Hotel from "../models/Hotel.js";
-import Trip from "../models/Trip.js";
 import Destination from "../models/Destination.js";
 import { fromBdt } from "../utils/currency.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, EDIT, VIEW, OWN } from "../services/tripAccess.js";
 
 const DAY_MS = 86400000;
 
@@ -102,7 +102,7 @@ export const getHotelAvailability = asyncHandler(async (req, res) => {
 
 // POST /api/hotel-bookings
 export const createHotelBooking = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.body.trip_id, user_id: req.user._id });
+  const trip = await findTripForUser(req.body.trip_id, req.user._id, { level: EDIT });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const hotel = await Hotel.findById(req.body.hotel_id);
@@ -230,7 +230,7 @@ export const createHotelBooking = asyncHandler(async (req, res) => {
 });
 
 export const getTripHotelBookings = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.tripId, user_id: req.user._id });
+  const trip = await findTripForUser(req.params.tripId, req.user._id, { level: VIEW });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const bookings = await HotelBooking.find({ trip_id: trip._id })
@@ -241,7 +241,8 @@ export const getTripHotelBookings = asyncHandler(async (req, res) => {
 });
 
 export const cancelHotelBooking = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.tripId, user_id: req.user._id });
+  // Owner-only for the same reason a transport cancellation is.
+  const trip = await findTripForUser(req.params.tripId, req.user._id, { level: OWN });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const booking = await HotelBooking.findOne({ _id: req.params.bookingId, trip_id: trip._id });

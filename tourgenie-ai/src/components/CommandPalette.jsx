@@ -111,7 +111,7 @@ export default function CommandPalette() {
     for (const trip of trips) {
       list.push({
         id: `trip-${trip._id}`,
-        label: trip.destination,
+        label: trip.title || trip.destination,
         hint: `${trip.origin} → ${trip.destination} · ${trip.status}`,
         icon: Map,
         group: "Switch trip",

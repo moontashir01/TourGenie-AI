@@ -6,7 +6,9 @@ import FlightOption from "../models/FlightOption.js";
 import ItineraryItem from "../models/ItineraryItem.js";
 import Booking from "../models/Booking.js";
 import HotelBooking from "../models/HotelBooking.js";
+import TripShare from "../models/TripShare.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { findTripForUser, resolveTrip, EDIT, VIEW, OWN } from "../services/tripAccess.js";
 import { toBdt, normalizeCode } from "../utils/currency.js";
 import { estimateTripBudget, resolveBudgetTier, verdictFor } from "../services/budgetEstimator.js";
 import { buildBudgetSummary } from "./expenseController.js";
@@ -16,6 +18,7 @@ import { sendMail, tripConfirmationEmail } from "../services/mailer.js";
 const DESTINATION_FIELDS = "name country country_code timezone currency pricing_currency nearest_airport type";
 const MAX_TRIP_DAYS = 60;
 const MAX_TRAVELERS = 20;
+const MAX_TRIP_TITLE = 80;
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -141,8 +144,35 @@ async function resolveTravelFare({ origin, arrivalCity }) {
   return { fare: null, mode: "flight", needs_airfare: true, known: false };
 }
 
+// ── the trip's name ────────────────────────────────────────────────
+// Travelers plan more than one trip to the same city, and "Cox's Bazar"
+// twice over tells them nothing apart. The form now offers a name; when it
+// is left blank the trip still gets one, generated from what was filled in.
+
+/** undefined = not supplied (leave alone); "" = blank (fall back to auto). */
+function parseTripTitle(raw) {
+  if (raw === undefined || raw === null) return undefined;
+  const title = String(raw).replace(/\s+/g, " ").trim();
+  if (title.length > MAX_TRIP_TITLE) {
+    throw badRequest(`Trip name can't be longer than ${MAX_TRIP_TITLE} characters`);
+  }
+  return title;
+}
+
+/** "4 days in Cox's Bazar" — never empty, so a trip always has a name. */
+function autoTripTitle(days, destination) {
+  const place = (destination || "").trim();
+  if (!Number.isFinite(Number(days)) || Number(days) < 1) {
+    return place ? `Trip to ${place}` : "Untitled trip";
+  }
+  const count = Number(days);
+  const span = `${count} day${count > 1 ? "s" : ""}`;
+  return place ? `${span} in ${place}` : `A ${span} trip`;
+}
+
 function allowedTripFields(body) {
   return {
+    title: parseTripTitle(body.title),
     interests: body.interests,
     transport_preference: body.transport_preference,
     hotel_preference: body.hotel_preference,
@@ -390,6 +420,9 @@ export const createTrip = asyncHandler(async (req, res) => {
     status: "draft",
   };
 
+  // A blank name is not an error — it just means the trip is named for us.
+  if (!common.title) common.title = autoTripTitle(plan.dates.days, plan.scope.label);
+
   if (plan.scope.multi_city) {
     const trip = await Trip.create({
       ...common,
@@ -413,24 +446,56 @@ export const createTrip = asyncHandler(async (req, res) => {
   res.status(201).json({ trip, estimate: plan.estimate, verdict: plan.verdict });
 });
 
-// List the logged-in traveler's trips (Dashboard / My Trips)
+// List the logged-in traveler's trips (Dashboard / My Trips).
+//
+// Owned and shared-with-me in one list, each carrying the role its reader
+// holds, so the dashboard can badge a shared trip and hide the controls a
+// viewer isn't allowed to press instead of finding out from a 404.
 export const getMyTrips = asyncHandler(async (req, res) => {
-  const trips = await Trip.find({ user_id: req.user._id })
+  const shares = await TripShare.find({ shared_with_user_id: req.user._id, status: "accepted" })
+    .select("trip_id role")
+    .lean();
+  const roleByTrip = new Map(shares.map((s) => [String(s.trip_id), s.role]));
+
+  const trips = await Trip.find({
+    $or: [{ user_id: req.user._id }, { _id: { $in: shares.map((s) => s.trip_id) } }],
+  })
     .populate("origin_destination_id", DESTINATION_FIELDS)
     .populate("destination_id", DESTINATION_FIELDS)
-    .sort({ created_at: -1 });
-  res.json({ trips });
+    .populate("user_id", "name email")
+    .sort({ created_at: -1 })
+    .lean();
+
+  res.json({
+    trips: trips.map((trip) => {
+      const owned = String(trip.user_id?._id || trip.user_id) === String(req.user._id);
+      return {
+        ...trip,
+        // The owner's name is only worth carrying on a trip that isn't yours.
+        owner: owned ? null : { name: trip.user_id?.name || "", email: trip.user_id?.email || "" },
+        user_id: trip.user_id?._id || trip.user_id,
+        shared: !owned,
+        role: owned ? OWN : roleByTrip.get(String(trip._id)) || VIEW,
+      };
+    }),
+  });
 });
 
 export const getTripById = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id })
-    .populate("hotel_id")
-    .populate("hotel_selections.hotel_id")
-    .populate("must_visit_attraction_ids")
-    .populate("origin_destination_id", DESTINATION_FIELDS)
-    .populate("destination_id", DESTINATION_FIELDS);
+  const { trip, role } = await resolveTrip(req.params.id, req.user._id, {
+    level: VIEW,
+    populate: [
+      "hotel_id",
+      "hotel_selections.hotel_id",
+      "must_visit_attraction_ids",
+      ["origin_destination_id", DESTINATION_FIELDS],
+      ["destination_id", DESTINATION_FIELDS],
+    ],
+  });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
-  res.json({ trip });
+  // The reader's role rides along so the page can render itself read-only
+  // rather than offering buttons the API will refuse.
+  res.json({ trip, role, shared: role !== OWN });
 });
 
 // Anything that moves the cost model — dates, party size, tier, budget — has
@@ -453,12 +518,18 @@ const COST_FIELDS = [
 ];
 
 export const updateTrip = asyncHandler(async (req, res) => {
-  const existing = await Trip.findOne({ _id: req.params.id, user_id: req.user._id });
+  const existing = await findTripForUser(req.params.id, req.user._id, { level: EDIT });
   if (!existing) return res.status(404).json({ message: "Trip not found" });
 
   const updates = Object.fromEntries(
     Object.entries(allowedTripFields(req.body)).filter(([, value]) => value !== undefined),
   );
+
+  // Clearing the name hands it back to the generator rather than leaving
+  // the trip nameless everywhere it is listed.
+  if (updates.title === "") {
+    updates.title = autoTripTitle(existing.duration_days, existing.destination);
+  }
 
   if (req.body.destination_id || req.body.destination) {
     const destination = await resolveDestination({
@@ -525,18 +596,19 @@ export const updateTrip = asyncHandler(async (req, res) => {
     }
   }
 
-  const trip = await Trip.findOneAndUpdate(
-    { _id: req.params.id, user_id: req.user._id },
-    updates,
-    { new: true, runValidators: true }
-  );
+  // Access was settled above; this addresses the same document by id.
+  const trip = await Trip.findByIdAndUpdate(existing._id, updates, { new: true, runValidators: true });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
   res.json({ trip });
 });
 
+// Deleting is the owner's alone, whatever an editor has been given.
 export const deleteTrip = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOneAndDelete({ _id: req.params.id, user_id: req.user._id });
+  const trip = await findTripForUser(req.params.id, req.user._id, { level: OWN });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
+  await Trip.findByIdAndDelete(trip._id);
+  // The invitations die with the trip they let people into.
+  await TripShare.deleteMany({ trip_id: trip._id });
   res.json({ message: "Trip deleted" });
 });
 
@@ -551,10 +623,10 @@ export const deleteTrip = asyncHandler(async (req, res) => {
 // `all_cities` rides along so the pages can offer "show every city in the
 // country" — a traveller may well want a hotel somewhere they didn't pick.
 export const getTripCities = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id }).populate(
-    "destination_id",
-    DESTINATION_FIELDS
-  );
+  const trip = await findTripForUser(req.params.id, req.user._id, {
+    level: VIEW,
+    populate: [["destination_id", DESTINATION_FIELDS]],
+  });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   // A single-destination trip has one city and nothing to show all of.
@@ -646,11 +718,13 @@ async function sendConfirmationEmail(trip, user) {
   }
 }
 
+// Confirming books the plan in and emails it — the owner's call, not a
+// collaborator's.
 export const confirmTrip = asyncHandler(async (req, res) => {
-  const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id })
-    .populate("hotel_id")
-    .populate("hotel_selections.hotel_id")
-    .populate("destination_id", DESTINATION_FIELDS);
+  const trip = await findTripForUser(req.params.id, req.user._id, {
+    level: OWN,
+    populate: ["hotel_id", "hotel_selections.hotel_id", ["destination_id", DESTINATION_FIELDS]],
+  });
   if (!trip) return res.status(404).json({ message: "Trip not found" });
 
   const itemCount = await ItineraryItem.countDocuments({ trip_id: trip._id });
