@@ -109,6 +109,37 @@ async function fetchPrices({ origin, destination, departureAt, returnAt, currenc
   return { rows: [], quoted };
 }
 
+/**
+ * A flight's real identity: who flies it, which number, when it leaves, and
+ * — for a round trip — when it comes back.
+ *
+ * The price used to be part of this string. Aviasales caches several fares
+ * per flight, so one physical departure came back as two distinct offers and
+ * the leg listed the same flight twice at two prices. `flightNumber` falls
+ * back to the bare airline code upstream, which is the right key for the
+ * offers that carry no number at all.
+ */
+function offerIdentity({ origin, destination, flightNumber, departure, returnAt }) {
+  return ["tp", `${origin}${destination}`, departure || "any", flightNumber, returnAt || "one-way"].join(":");
+}
+
+/**
+ * One physical flight, once, at the lowest fare found for it.
+ *
+ * Two things produce duplicates: the fare cache above, and the object-map
+ * response shape, which can repeat the same row under more than one key.
+ * Deliberately not keyed on price — that is what made the duplicates
+ * survive in the first place.
+ */
+function dedupeByFlight(flights) {
+  const cheapest = new Map();
+  for (const flight of flights) {
+    const existing = cheapest.get(flight.id);
+    if (!existing || flight.price < existing.price) cheapest.set(flight.id, flight);
+  }
+  return [...cheapest.values()].sort((a, b) => a.price - b.price);
+}
+
 function normalize(offer, { origin, destination, travelers, currency, airlines, marker, dateShifted, fxRate }) {
   const airlineCode = offer.airline || offer.airline_code || "—";
   const meta = airlines.get(airlineCode);
@@ -130,7 +161,7 @@ function normalize(offer, { origin, destination, travelers, currency, airlines, 
     : null;
 
   return {
-    id: `tp:${origin}${destination}:${departure || "any"}:${flightNumber}:${perSeat}`,
+    id: offerIdentity({ origin, destination, flightNumber, departure, returnAt: offer.return_at }),
     airline: meta?.name || airlineCode,
     airlineCode,
     flightNumber,
@@ -218,11 +249,11 @@ async function runSearch({ origin, destination, date, returnDate, travelers = 1,
     fxRate = amount;
   }
 
-  const flights = rows
-    .filter((offer) => offer && offer.price)
-    .map((offer) => normalize(offer, { ...shared, dateShifted, fxRate }))
-    .sort((a, b) => a.price - b.price)
-    .slice(0, limit);
+  // Dedupe before the slice, or a leg that came back as the same flight five
+  // times would return one option where the caller asked for five.
+  const flights = dedupeByFlight(
+    rows.filter((offer) => offer && offer.price).map((offer) => normalize(offer, { ...shared, dateShifted, fxRate }))
+  ).slice(0, limit);
 
   searchCache.set(key, { at: Date.now(), flights });
   return flights;
