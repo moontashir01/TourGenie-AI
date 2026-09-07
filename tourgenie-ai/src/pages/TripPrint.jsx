@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Printer, ArrowLeft, Loader2, TriangleAlert, Compass } from "lucide-react";
-import { tripsApi, itineraryApi, bookingApi, hotelBookingApi } from "../lib/api";
+import { tripsApi, itineraryApi, bookingApi, hotelBookingApi, expenseApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import { useCurrency } from "../context/CurrencyContext";
 import Button from "../components/ui/Button";
@@ -49,16 +49,25 @@ export default function TripPrint() {
     Promise.all([
       tripsApi.get(currentTripId),
       itineraryApi.get(currentTripId),
+      // The authoritative totals, from the same endpoint the Budget page
+      // reads. This page used to add up est_cost itself, which counted
+      // activities only — no hotel, no airfare, and none of the round-trip
+      // de-duplication — so the printed total disagreed with the app.
+      //
+      // Degrades rather than failing the whole document: a plan that prints
+      // without its budget beats a page that prints nothing.
+      expenseApi.budgetSummary(currentTripId).catch(() => null),
       // Bookings are a bonus, not a requirement — a trip with none should
       // still print.
       bookingApi.forTrip(currentTripId).catch(() => ({ bookings: [] })),
       hotelBookingApi.forTrip(currentTripId).catch(() => ({ bookings: [] })),
     ])
-      .then(([tripRes, itineraryRes, transportRes, hotelRes]) => {
+      .then(([tripRes, itineraryRes, budgetRes, transportRes, hotelRes]) => {
         if (cancelled) return;
         setData({
           trip: tripRes.trip,
           items: itineraryRes.items || [],
+          budget: budgetRes,
           transport: (transportRes.bookings || []).filter((b) => b.status !== "cancelled"),
           hotels: (hotelRes.bookings || []).filter((b) => b.status !== "cancelled"),
         });
@@ -103,7 +112,7 @@ export default function TripPrint() {
     );
   }
 
-  const { trip, items, transport, hotels } = data;
+  const { trip, items, budget, transport, hotels } = data;
   const local = trip.destination_id?.currency;
   const money = (bdt) => {
     const c = convert(bdt, local);
@@ -111,7 +120,9 @@ export default function TripPrint() {
   };
 
   const days = [...new Set(items.map((i) => i.day))].sort((a, b) => a - b);
-  const itineraryTotal = items.reduce((sum, i) => sum + (i.est_cost || 0), 0);
+  const spentByCategory = Object.entries(budget?.byCategory || {})
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="min-h-screen bg-paper py-8 px-4 print:p-0 print:bg-surface">
@@ -154,8 +165,14 @@ export default function TripPrint() {
           <dl>
             <Row label="Destination" value={`${trip.destination}${trip.destination_id?.country ? `, ${trip.destination_id.country}` : ""}`} />
             <Row label="Status" value={trip.status} />
-            <Row label="Budget" value={money(trip.budget)} />
-            {itineraryTotal > 0 && <Row label="Planned cost" value={money(itineraryTotal)} />}
+            <Row label="Budget" value={money(budget?.budget ?? trip.budget)} />
+            {budget && <Row label="Trip cost" value={money(budget.spent)} />}
+            {budget && (
+              <Row
+                label={budget.over_budget ? "Over budget by" : "Remaining"}
+                value={money(budget.over_budget ? budget.overspend : budget.remaining)}
+              />
+            )}
             {trip.carbon?.total_kg > 0 && (
               <Row label="Carbon" value={`${trip.carbon.total_kg} kg CO₂ (${trip.carbon.per_person_kg} kg per person)`} />
             )}
@@ -254,14 +271,54 @@ export default function TripPrint() {
               );
             })
           )}
+          {/* Day totals are per-activity estimates; the trip total above is the
+              authoritative figure. They differ by design when a round-trip fare
+              is booked, because that one fare already covers both legs — rather
+              than restate that rule here (it lives on the server, and this would
+              be the third copy of it), say so. */}
+          {trip.selected_flight && days.length > 0 && (
+            <p className="text-2xs text-ink-600 mt-2">
+              The arrival and departure legs are covered by the booked fare, so they are counted once in the trip
+              cost rather than again in the day totals.
+            </p>
+          )}
         </section>
 
-        {/* Budget */}
-        {trip.budget_breakdown?.length > 0 && (
+        {/* What the trip costs — the same figures the Budget page shows, from
+            the same endpoint, so a printed plan and the screen can't disagree. */}
+        {spentByCategory.length > 0 && (
           <section className="print-block mt-6 pt-4 border-t border-ink-900/25">
-            <h2 className="font-display text-lg text-ink-900 mb-2">Estimated budget</h2>
+            <h2 className="font-display text-lg text-ink-900 mb-2">Spending by category</h2>
             <dl>
-              {trip.budget_breakdown.map((line) => (
+              {spentByCategory.map(([category, amount]) => (
+                <div key={category} className="flex justify-between gap-3 py-1 border-b border-sand/60 last:border-0">
+                  <dt className="text-sm text-ink-900/70">{category}</dt>
+                  <dd className="text-sm font-mono text-ink-900">{formatBdt(amount)}</dd>
+                </div>
+              ))}
+              <div className="flex justify-between gap-3 pt-2 mt-1 border-t border-ink-900/25">
+                <dt className="text-sm font-semibold text-ink-900">Trip cost</dt>
+                <dd className="text-sm font-mono font-semibold text-ink-900">{money(budget.spent)}</dd>
+              </div>
+            </dl>
+            <p className="text-2xs text-ink-600 mt-2">
+              {formatBdt(budget.logged_total)} logged · {formatBdt(budget.estimated_total)} estimated from the plan.
+            </p>
+            {budget.flights_excluded > 0 && (
+              <p className="text-2xs text-ink-600 mt-1">
+                {formatBdt(budget.flights_excluded)} for getting there and back is tracked outside this budget.
+              </p>
+            )}
+          </section>
+        )}
+
+        {/* The split computed when the trip was planned — "Planned split" on
+            the Budget page, same rows, same name. */}
+        {budget?.planned_breakdown?.length > 0 && (
+          <section className="print-block mt-6 pt-4 border-t border-ink-900/25">
+            <h2 className="font-display text-lg text-ink-900 mb-2">Planned split</h2>
+            <dl>
+              {budget.planned_breakdown.map((line) => (
                 <div key={line.category} className="flex justify-between gap-3 py-1 border-b border-sand/60 last:border-0">
                   <dt className="text-sm text-ink-900/70">{line.label}</dt>
                   <dd className="text-sm font-mono text-ink-900">{formatBdt(line.amount)}</dd>
@@ -269,7 +326,7 @@ export default function TripPrint() {
               ))}
               <div className="flex justify-between gap-3 pt-2 mt-1 border-t border-ink-900/25">
                 <dt className="text-sm font-semibold text-ink-900">Total</dt>
-                <dd className="text-sm font-mono font-semibold text-ink-900">{money(trip.estimated_total)}</dd>
+                <dd className="text-sm font-mono font-semibold text-ink-900">{money(budget.planned_total)}</dd>
               </div>
             </dl>
           </section>
