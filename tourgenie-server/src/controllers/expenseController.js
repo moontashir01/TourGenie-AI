@@ -78,6 +78,15 @@ export async function getVirtualExpenses(trip) {
   const items = await ItineraryItem.find({ trip_id: trip._id }).sort({ day: 1, time: 1 });
   const lastDay = items.reduce((max, item) => Math.max(max, item.day), 0);
 
+  // itineraryController now writes a priced check-out row per city stayed in.
+  // Where one exists it is the stay's cost, so imputing the same nights again
+  // from trip.hotel_id would charge the hotel twice.
+  const pricedStayCities = new Set(
+    items
+      .filter((item) => item.category === "checkout" && item.est_cost > 0)
+      .map((item) => String(item.city || "").toLowerCase())
+  );
+
   if (trip.multi_city && trip.hotel_selections?.length) {
     const nightsByCity = nightsPerCity(items);
     // No itinerary yet (or no city data on it) — split the trip's nights
@@ -91,6 +100,7 @@ export async function getVirtualExpenses(trip) {
     for (const sel of trip.hotel_selections) {
       const hotel = sel.hotel_id;
       if (!hotel) continue;
+      if (pricedStayCities.has(String(sel.city).toLowerCase())) continue;
       const nights = hasCityData ? nightsByCity[sel.city] || 0 : fallbackNights;
       const cost = (hotel.price_per_night || 0) * nights;
       if (cost > 0) {
@@ -105,7 +115,7 @@ export async function getVirtualExpenses(trip) {
         });
       }
     }
-  } else if (trip.hotel_id) {
+  } else if (trip.hotel_id && !pricedStayCities.size) {
     // Nights, not days — a 4-day trip is 3 hotel nights.
     const nights = nightsFromDays(trip.duration_days || 1);
     const cost = (trip.hotel_id.price_per_night || 0) * nights;

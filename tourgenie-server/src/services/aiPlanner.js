@@ -34,35 +34,39 @@ function daysBetween(start, end) {
   return Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)) + 1);
 }
 
-// Splits the catalog into "the traveler explicitly picked this" (hard
-// requirement) vs "available, use at your discretion" — so a traveler who
-// picked specific attractions actually gets them, rather than the AI being
-// free to swap in whatever it likes.
+// The attractions the model is allowed to schedule.
 function formatAttractionSection(attractions, mustVisitIds, pricingCurrency) {
   const mustSet = new Set(mustVisitIds || []);
   const describe = (a) =>
     `- id:${a._id} | ${a.name} (${a.category}) in ${a.city} | entry fee ${a.entry_fee} ${a.currency || pricingCurrency} | hours: ${a.open_hours}`;
 
   const must = attractions.filter((a) => mustSet.has(String(a._id)));
-  // Free-tier Groq caps tokens per minute, so the optional catalog is capped
-  // too — a country with 60+ catalogued attractions would otherwise push the
-  // prompt past the limit on its own. Must-visits are never trimmed.
-  const optional = attractions
-    .filter((a) => !mustSet.has(String(a._id)))
-    .slice(0, MAX_OPTIONAL_ATTRACTIONS);
 
-  const parts = [];
+  // Picking attractions used to set a floor and no ceiling: the rest of the
+  // catalogue was still offered as optional and the model cheerfully filled
+  // the days with it, so a traveller who chose three places got a plan full
+  // of ones they hadn't. Picks are now the complete set of catalogued
+  // sightseeing — meals, travel, rest and free time still fill the day around
+  // them, the model just may not add sights of its own choosing.
   if (must.length > 0) {
-    parts.push(
-      `MUST INCLUDE — the traveler specifically picked these; every one of them must appear as an item's attraction_id exactly once somewhere in the itinerary:\n${must.map(describe).join("\n")}`
+    return (
+      `THE ONLY ATTRACTIONS ALLOWED — the traveler picked exactly these. Every one must appear as an item's ` +
+      `attraction_id exactly once, and you must NOT schedule any other sightseeing stop, museum, landmark, ` +
+      `beach, market or tour. Fill the rest of each day with meals, travel legs, rest and unstructured free ` +
+      `time (attraction_id null):\n${must.map(describe).join("\n")}`
     );
   }
-  parts.push(
-    `${must.length > 0 ? "Other attractions available (optional — use where they fit, no obligation to include them)" : "Attractions available (use these where relevant via their id in attraction_id; you may also add generic activities like meals or travel legs with attraction_id null)"}:\n${
+
+  // Nothing picked, so the whole catalogue is the menu. Free-tier Groq caps
+  // tokens per minute, so it is capped too — a country with 60+ catalogued
+  // attractions would otherwise push the prompt past the limit on its own.
+  const optional = attractions.slice(0, MAX_OPTIONAL_ATTRACTIONS);
+  return (
+    `Attractions available (use these where relevant via their id in attraction_id; you may also add generic ` +
+    `activities like meals or travel legs with attraction_id null):\n${
       optional.map(describe).join("\n") || "(none — invent reasonable generic activities and note costs are estimates)"
     }`
   );
-  return parts.join("\n\n");
 }
 
 // Anchors every meal's est_cost to the destination's real price level.
@@ -111,13 +115,14 @@ ${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
 [
-  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout" }
+  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping" }
 ]
 
 Rules:
 - Cover all ${numDays} day(s), roughly 3-5 activities per day including at least one meal.
-- Every attraction id listed under MUST INCLUDE (if any) must appear as an item's attraction_id exactly once, scheduled at a sensible time given its open hours.
+- Where a THE ONLY ATTRACTIONS ALLOWED list is given, every id in it must appear as an item's attraction_id exactly once at a sensible time for its open hours, and NO other sightseeing stop may be scheduled — fill the remaining hours with meals, rest and free time instead.
 - Keep the sum of est_cost values reasonably within the total budget of ${trip.budget} ${pricingCurrency} across the whole trip for all ${trip.travelers} traveler(s).
+- Do NOT write hotel check-in or check-out items. The app adds those itself from the hotel the traveler actually booked, with its name and its real cost.
 - time must be 24-hour "HH:MM".
 - est_cost is a number in ${pricingCurrency} covering ALL ${trip.travelers} traveler(s) combined — never a per-person figure (0 for free activities).
 - Only use attraction_id values from the lists above, or null.
@@ -258,7 +263,7 @@ Trip details:
 - Food preference: ${trip.food_preference}
 
 ${citySection}
-${mustCities.length > 0 ? `\nThe cities you choose MUST include: ${mustCities.join(", ")} — the traveler picked specific attractions there (see MUST INCLUDE below).` : ""}
+${mustCities.length > 0 ? `\nThe cities you choose MUST include: ${mustCities.join(", ")} — the traveler picked specific attractions there (see the attractions list below).` : ""}
 
 ${foodPricingSection(trip, meals)}
 
@@ -268,18 +273,19 @@ ${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
 [
-  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string — the real city this happens in, must be one of the cities you chose", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string or null — only set on category=travel items", "to_city": "string or null — only set on category=travel items" }
+  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string — the real city this happens in, must be one of the cities you chose", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping", "from_city": "string or null — only set on category=travel items", "to_city": "string or null — only set on category=travel items" }
 ]
 Keep the JSON compact: omit "attraction_id", "from_city" and "to_city" entirely when they would be null — from_city/to_city belong ONLY on travel items.
 
 Rules:
 - Cover all ${numDays} day(s), roughly ${numDays >= 8 ? "3-4" : "3-5"} activities per day including at least one meal.
-${preferred.length > 0 ? `- Follow the day ranges above exactly (${rangedAllocation.map((a) => `${a.city} ${a.startDay === a.endDay ? `day ${a.startDay}` : `days ${a.startDay}-${a.endDay}`}`).join(", ")}) — they divide the traveler's own travel dates. The first day of each new city starts with a "travel" item carrying from_city, to_city, a realistic transport mode in "activity" and a realistic est_cost.\n` : ""}- Every attraction id listed under MUST INCLUDE (if any) must appear as an item's attraction_id exactly once, in whichever city it belongs to.
+${preferred.length > 0 ? `- Follow the day ranges above exactly (${rangedAllocation.map((a) => `${a.city} ${a.startDay === a.endDay ? `day ${a.startDay}` : `days ${a.startDay}-${a.endDay}`}`).join(", ")}) — they divide the traveler's own travel dates. The first day of each new city starts with a "travel" item carrying from_city, to_city, a realistic transport mode in "activity" and a realistic est_cost.\n` : ""}- Where a THE ONLY ATTRACTIONS ALLOWED list is given, every id in it must appear as an item's attraction_id exactly once in whichever city it belongs to, and NO other sightseeing stop may be scheduled — fill the remaining hours with meals, rest and free time instead.
 - Day 1's first item must be a "travel" item with from_city "${trip.origin}" and to_city "${trip.entry_city}" (the international arrival).
 - The last day's final item must be a "travel" item with from_city set to whatever city the traveler ends the trip in and to_city "${trip.origin}" (the international departure).
 - Whenever the traveler moves between two cities within ${trip.destination}, add a "travel" item on that transition with from_city and to_city set to the two real city names (never the country name), and describe a realistic transport mode in "activity" (e.g. "Overnight train to Chiang Mai", "Domestic flight to Phuket", "Bus to Pattaya") with a realistic est_cost.
 - Every item's "city" field must be a real city name, never the country name.
 - Keep the sum of est_cost values reasonably within the total budget of ${trip.budget} ${pricingCurrency} across the whole trip for all ${trip.travelers} traveler(s).
+- Do NOT write hotel check-in or check-out items. The app adds those itself from the hotel the traveler actually booked, with its name and its real cost.
 - time must be 24-hour "HH:MM".
 - est_cost is a number in ${pricingCurrency} covering ALL ${trip.travelers} traveler(s) combined — never a per-person figure (0 for free activities).
 - Only use attraction_id values from the lists above, or null.
@@ -338,8 +344,13 @@ const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
 // rejects all of those at insert with a ValidationError, which surfaced to the
 // traveler as a bare "Validation failed". Repair what is repairable and drop
 // what isn't, so one stray field can't sink a whole generated plan.
-export function sanitizeItems(items, attractions = []) {
+export function sanitizeItems(items, attractions = [], mustVisitIds = []) {
   const validAttractionIds = new Set(attractions.map((a) => String(a._id)));
+  // When the traveler picked attractions, those are the only ones allowed.
+  // The prompt says so, but a prompt is a request and models take liberties —
+  // this makes the ceiling real. Empty means they picked none, so the whole
+  // catalogue stands.
+  const allowed = new Set((mustVisitIds || []).map(String));
 
   const cleaned = [];
   for (const raw of Array.isArray(items) ? items : []) {
@@ -369,6 +380,16 @@ export function sanitizeItems(items, attractions = []) {
       attractionId && OBJECT_ID_RE.test(attractionId) && validAttractionIds.has(attractionId)
         ? attractionId
         : null;
+
+    // A catalogued sight the traveler did not pick is dropped outright rather
+    // than demoted to a generic item: keeping it would leave "Visit the Grand
+    // Palace" in the plan with the id stripped off, which is the same
+    // complaint with the link removed.
+    if (allowed.size > 0 && attraction_id && !allowed.has(attraction_id)) continue;
+
+    // The hotel stay is written by itineraryController from the traveler's
+    // actual booking, so anything the model invented here is discarded.
+    if (category === "checkin" || category === "checkout") continue;
 
     const estCost = Number(raw.est_cost);
 
@@ -619,12 +640,13 @@ ${attractionSection}
 
 Return ONLY a JSON array of itinerary items covering days ${fromDay + 1} to ${numDays}, in this exact shape:
 [
-  { "day": ${fromDay + 1}, "time": "08:00", "activity": "string", "location": "string", "city": "string", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string — travel items only", "to_city": "string — travel items only" }
+  { "day": ${fromDay + 1}, "time": "08:00", "activity": "string", "location": "string", "city": "string", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping", "from_city": "string — travel items only", "to_city": "string — travel items only" }
 ]
 Keep the JSON compact: omit "attraction_id", "from_city" and "to_city" entirely when they would be null.
 
 Rules:
 - Plan EVERY day from ${fromDay + 1} to ${numDays}, roughly ${numDays >= 8 ? "3-4" : "3-5"} activities per day including at least one meal. No "day" value outside that range.
+- Do NOT write hotel check-in or check-out items. The app adds those itself from the hotel the traveler actually booked, with its name and its real cost.
 - time must be 24-hour "HH:MM". est_cost is a number in ${pricingCurrency} covering ALL ${trip.travelers} traveler(s) combined.
 - Only use attraction_id values from the lists above, or null.
 - Output valid JSON only — it will be parsed programmatically.`;
@@ -641,7 +663,7 @@ async function completeItinerary(trip, attractions, candidateCities, mustVisitId
 
     const prompt = buildContinuationPrompt(trip, attractions, candidateCities, mustVisitIds, items, maxDay, numDays, instruction, meals);
     const { items: more } = await runProviders(prompt);
-    const cleaned = sanitizeItems(more, attractions).filter((i) => i.day > maxDay && i.day <= numDays);
+    const cleaned = sanitizeItems(more, attractions, mustVisitIds).filter((i) => i.day > maxDay && i.day <= numDays);
     if (!cleaned.length) break; // no forward progress — stop rather than loop
     items = [...items, ...cleaned].sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
   }
@@ -659,7 +681,7 @@ export async function generateItineraryWithAI(trip, attractions, candidateCities
     ? buildCountryPrompt(trip, attractions, candidateCities, mustVisitIds, meals)
     : buildPrompt(trip, attractions, mustVisitIds, meals);
   const { items } = await runProviders(prompt);
-  const first = sanitizeItems(items, attractions);
+  const first = sanitizeItems(items, attractions, mustVisitIds);
   const completed = await completeItinerary(trip, attractions, candidateCities, mustVisitIds, first, numDays, "", meals);
   return enforceMealFloors(completed, meals);
 }
@@ -708,15 +730,16 @@ ${attractionSection}
 
 Return ONLY a JSON array (no wrapping object, no prose) of itinerary items, one entry per activity, in this exact shape:
 [
-  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string or null", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping|checkin|checkout", "from_city": "string or null — only for category=travel", "to_city": "string or null — only for category=travel" }
+  { "day": 1, "time": "08:00", "activity": "string", "location": "string", "city": "string or null", "est_cost": 0, "attraction_id": "string or null", "category": "travel|meal|sightseeing|activity|rest|shopping", "from_city": "string or null — only for category=travel", "to_city": "string or null — only for category=travel" }
 ]
 Keep the JSON compact: omit "attraction_id", "from_city" and "to_city" entirely when they would be null — from_city/to_city belong ONLY on travel items.
 
 Rules:
 - Apply the traveler's request faithfully — that might mean changing costs, adding/removing a day, changing pace, swapping meals, or adding rainy-day alternatives.
-- Every attraction id listed under MUST INCLUDE (if any) must still appear as an item's attraction_id exactly once — the traveler picked those specifically, so keep them even while applying the requested change.
+- Where a THE ONLY ATTRACTIONS ALLOWED list is given, every id in it must still appear as an item's attraction_id exactly once and no other sightseeing may be introduced — the traveler picked those specifically, so keep them even while applying the requested change.
 - Keep everything the request didn't ask you to change as close to the original as makes sense.
 - Output a complete itinerary covering every day of the (possibly changed) trip length — not just the days you touched.
+- Do NOT write hotel check-in or check-out items. The app adds those itself from the hotel the traveler actually booked, with its name and its real cost.
 - time must be 24-hour "HH:MM". est_cost is a number in ${pricingCurrency} covering ALL ${trip.travelers} traveler(s) combined — never a per-person figure (0 for free activities).
 - Only use attraction_id values from the lists above, or null.
 - Output valid JSON only — it will be parsed programmatically.`;
@@ -726,7 +749,7 @@ export async function adjustItineraryWithAI(trip, attractions, existingItems, in
   const numDays = trip.duration_days || daysBetween(trip.start_date, trip.end_date);
   const prompt = buildAdjustmentPrompt(trip, attractions, existingItems, instruction, candidateCities, mustVisitIds, meals);
   const { items, provider } = await runProviders(prompt);
-  let cleaned = sanitizeItems(items, attractions);
+  let cleaned = sanitizeItems(items, attractions, mustVisitIds);
 
   // A long trip's revised plan can also outgrow one completion. Top up only
   // when the result is clearly truncated (more than one day short) — a plan

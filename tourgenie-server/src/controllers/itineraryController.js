@@ -4,9 +4,10 @@ import Trip from "../models/Trip.js";
 import Attraction from "../models/Attraction.js";
 import Destination from "../models/Destination.js";
 import TransportOption from "../models/TransportOption.js";
+import Hotel from "../models/Hotel.js";
 import { generateItineraryWithAI } from "../services/aiPlanner.js";
 import { searchFlights as searchTravelpayouts } from "../services/travelpayoutsFlights.js";
-import { benchmarkFor } from "../services/budgetEstimator.js";
+import { benchmarkFor, roomsFor } from "../services/budgetEstimator.js";
 import { resolveAirport } from "./flightController.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -245,6 +246,125 @@ function matchPrevious(previous) {
   };
 }
 
+// ── FR-07 — the hotel, in the plan ───────────────────────────────────
+//
+// The planner was asked for check-in and check-out rows and produced them
+// unreliably: usually a bare "check in" on day one, never the hotel's name,
+// never its cost, and often no check-out at all. So they are not asked for
+// any more — they are derived from the traveller's actual pick, the same way
+// transport options are attached, and any the model emitted are dropped.
+
+const CHECKIN_FALLBACK = "14:00";
+const CHECKOUT_FALLBACK = "12:00";
+
+/**
+ * Contiguous runs of nights, one per city the plan sleeps in.
+ *
+ * Where a day ends is where that night is spent, so the last item of each day
+ * decides its city. The final day of the trip is the day the traveller leaves
+ * and is a night nowhere — the same rule the Budget page applies.
+ */
+function staySegments(items, trip) {
+  const cityByDay = new Map();
+  for (const item of [...items].sort((a, b) => a.day - b.day || String(a.time).localeCompare(String(b.time)))) {
+    const city = item.city || (trip.multi_city ? "" : trip.destination);
+    if (city) cityByDay.set(item.day, city);
+  }
+
+  const days = [...cityByDay.keys()].sort((a, b) => a - b);
+  if (!days.length) return [];
+  const lastDay = days[days.length - 1];
+
+  const segments = [];
+  for (const day of days) {
+    const city = cityByDay.get(day);
+    const open = segments[segments.length - 1];
+    if (open && open.city === city && open.endDay === day - 1) open.endDay = day;
+    else segments.push({ city, startDay: day, endDay: day });
+  }
+
+  return segments
+    .map((segment) => ({
+      ...segment,
+      nights: segment.endDay === lastDay ? segment.endDay - segment.startDay : segment.endDay - segment.startDay + 1,
+    }))
+    .filter((segment) => segment.nights > 0);
+}
+
+/** The hotel the traveller picked for each city, by lower-cased city name. */
+async function hotelsByCity(trip) {
+  const byCity = new Map();
+
+  if (trip.multi_city) {
+    const ids = (trip.hotel_selections || []).map((s) => s.hotel_id?._id || s.hotel_id).filter(Boolean);
+    if (!ids.length) return byCity;
+    const found = await Hotel.find({ _id: { $in: ids } }).lean();
+    const byId = new Map(found.map((h) => [String(h._id), h]));
+    for (const selection of trip.hotel_selections || []) {
+      const hotel = byId.get(String(selection.hotel_id?._id || selection.hotel_id));
+      if (hotel) byCity.set(String(selection.city).toLowerCase(), hotel);
+    }
+    return byCity;
+  }
+
+  const id = trip.hotel_id?._id || trip.hotel_id;
+  if (!id) return byCity;
+  const hotel = await Hotel.findById(id).lean();
+  if (hotel) byCity.set(String(trip.destination).toLowerCase(), hotel);
+  return byCity;
+}
+
+/**
+ * Returns `items` with a named check-in/check-out pair per city stayed in.
+ *
+ * The whole stay is charged once, on check-out: a nightly rate repeated on
+ * every night reads as something paid daily, and the Budget page sums
+ * est_cost per item. Rooms are priced with roomsFor() rather than re-derived,
+ * so a family of four is not charged for one room here and two elsewhere.
+ */
+export async function attachHotelStays(items, trip) {
+  const plan = items.filter((i) => i.category !== "checkin" && i.category !== "checkout");
+  const byCity = await hotelsByCity(trip);
+  if (!byCity.size) return plan;
+
+  const rooms = roomsFor(trip.travelers);
+  const money = (n) => Math.round(n).toLocaleString("en-US");
+  const stays = [];
+
+  for (const segment of staySegments(plan, trip)) {
+    const hotel = byCity.get(segment.city.toLowerCase());
+    if (!hotel) continue;
+
+    const rate = hotel.price_per_night || 0;
+    const nightsLabel = `${segment.nights} night${segment.nights === 1 ? "" : "s"}`;
+    const roomsLabel = `${rooms} room${rooms === 1 ? "" : "s"}`;
+
+    stays.push({
+      day: segment.startDay,
+      time: hotel.checkin_time || CHECKIN_FALLBACK,
+      activity: `Check in to ${hotel.name}`,
+      location: hotel.name,
+      city: segment.city,
+      category: "checkin",
+      est_cost: 0,
+      notes: [hotel.address, `BDT ${money(rate)} per night, ${roomsLabel}`].filter(Boolean).join(" · "),
+    });
+
+    stays.push({
+      day: segment.startDay + segment.nights,
+      time: hotel.checkout_time || CHECKOUT_FALLBACK,
+      activity: `Check out of ${hotel.name}`,
+      location: hotel.name,
+      city: segment.city,
+      category: "checkout",
+      est_cost: Math.round(rate * segment.nights * rooms),
+      notes: `${nightsLabel} x ${roomsLabel} at BDT ${money(rate)} per night`,
+    });
+  }
+
+  return [...plan, ...stays].sort((a, b) => a.day - b.day || String(a.time).localeCompare(String(b.time)));
+}
+
 // Replaces a trip's itinerary wholesale with a freshly generated/adjusted
 // items[] (the shape generateItineraryWithAI / adjustItineraryWithAI return),
 // carrying the traveller's own edits across — see CARRIED_FIELDS.
@@ -252,7 +372,11 @@ export async function persistItinerary(trip, items) {
   const previous = await ItineraryItem.find({ trip_id: trip._id }).lean();
   const take = matchPrevious(previous);
 
-  const rows = items.map((i) => {
+  // Done here rather than at each call site so a chat-driven rewrite cannot
+  // quietly lose the hotel the generation path added.
+  const withStays = await attachHotelStays(items, trip);
+
+  const rows = withStays.map((i) => {
     const prior = take(i);
     const row = {
       // The id of the row this item replaces is reused, so an item id the
