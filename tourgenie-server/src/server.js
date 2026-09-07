@@ -43,7 +43,33 @@ if (process.env.TRUST_PROXY) {
   app.set("trust proxy", Number.isFinite(hops) ? hops : process.env.TRUST_PROXY);
 }
 
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
+// A single allowed origin meant that opening the dev client at
+// http://127.0.0.1:5173 instead of http://localhost:5173 — same server, same
+// port, different origin to the browser — failed the preflight and surfaced
+// in the UI as a bare "Failed to fetch" on the login form. CLIENT_URL still
+// names the deployed client (a comma-separated list is accepted), and outside
+// production any loopback origin is allowed so the address bar can say
+// localhost, 127.0.0.1 or ::1 interchangeably.
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const LOOPBACK_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Same-origin and non-browser callers (curl, the seeder) send no Origin.
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (process.env.NODE_ENV !== "production" && LOOPBACK_ORIGIN.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
+  })
+);
 app.use(express.json());
 app.use(morgan("dev"));
 
