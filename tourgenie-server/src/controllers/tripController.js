@@ -71,13 +71,58 @@ async function seededFare(origin, destination) {
 }
 
 /**
+ * Cheapest seeded airfare between two cities, per passenger, one way.
+ *
+ * The estimate cannot ask a live flight provider: it re-runs on every
+ * keystroke, and a provider round trip is seconds where this has to be
+ * milliseconds. So an international trip used to be priced with no journey in
+ * it at all, and ticking "this budget covers getting there and back" moved
+ * the figure by nothing. FlightOption is the seeded catalogue the rest of the
+ * app already falls back to; the number is indicative and the response says
+ * so, which is the same bargain every other provider here is on.
+ *
+ * Nobody flies Dhaka to Phuket directly and the catalogue doesn't pretend
+ * otherwise: with no direct row the fare is the border hop plus the cheapest
+ * domestic connection on to the arrival city.
+ */
+async function seededAirFare(origin, arrivalCity) {
+  const from = origin?.nearest_airport;
+  const to = arrivalCity?.nearest_airport;
+  if (!from || !to || from === to) return null;
+
+  const cheapest = (query) =>
+    FlightOption.findOne({ is_active: true, ...query }).sort({ total_fare_bdt: 1 }).lean();
+
+  const direct = await cheapest({ from_iata: from, to_iata: to });
+  if (direct) {
+    return { fare: direct.total_fare_bdt, mode: "flight", operator: direct.airline, via: null };
+  }
+
+  const borderHops = await FlightOption.find({ is_active: true, from_iata: from, is_domestic: false })
+    .sort({ total_fare_bdt: 1 })
+    .lean();
+  for (const hop of borderHops) {
+    const onward = await cheapest({ from_iata: hop.to_iata, to_iata: to });
+    // An onward leg existing is what proves this gateway is in the right
+    // country — no separate country check needed.
+    if (onward) {
+      return {
+        fare: hop.total_fare_bdt + onward.total_fare_bdt,
+        mode: "flight",
+        operator: hop.airline,
+        via: hop.to_city,
+      };
+    }
+  }
+  return null;
+}
+
+/**
  * What it costs to reach the trip and come home, per passenger one way.
  *
- * `fare: null` with `needs_airfare: true` is the honest answer for an
- * international hop: we have no seeded ground fare and won't invent one, and
- * live flight pricing is far too slow to sit behind a debounced estimate that
- * re-runs as the traveler types. The form surfaces it as "airfare not
- * included" rather than quietly costing the trip at zero.
+ * `fare: null` with `needs_airfare: true` is the honest answer when even the
+ * seeded flight catalogue has nothing for the route. The form surfaces that
+ * as "airfare not included" rather than quietly costing the trip at zero.
  */
 async function resolveTravelFare({ origin, arrivalCity }) {
   if (!origin || !arrivalCity) return { fare: null, mode: "", needs_airfare: false, known: false };
@@ -88,8 +133,12 @@ async function resolveTravelFare({ origin, arrivalCity }) {
   if (!international) {
     const ground = await seededFare(origin, arrivalCity);
     if (ground) return { ...ground, needs_airfare: false, known: true };
+    return { fare: null, mode: "", needs_airfare: false, known: false };
   }
-  return { fare: null, mode: international ? "flight" : "", needs_airfare: international, known: false };
+
+  const air = await seededAirFare(origin, arrivalCity);
+  if (air) return { ...air, needs_airfare: false, known: true, is_indicative: true };
+  return { fare: null, mode: "flight", needs_airfare: true, known: false };
 }
 
 function allowedTripFields(body) {

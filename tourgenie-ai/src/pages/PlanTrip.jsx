@@ -981,7 +981,13 @@ function BudgetSection({
           {travel?.counted && travel.fare > 0 && (
             <p className="text-sm text-ink-500">
               Includes the {travel.mode || "journey"} there and back
-              {travel.operator ? ` (${travel.operator})` : ""} at ৳{travel.fare.toLocaleString()} per person each way.
+              {travel.operator ? ` (${travel.operator})` : ""}
+              {travel.via ? `, connecting in ${travel.via}` : ""} at ৳{travel.fare.toLocaleString()} per person each
+              way.
+              {/* Airfares come from the seeded catalogue, not a live search —
+                  the estimate re-runs as you type and a provider call is far
+                  too slow for that. Say so rather than implying a quote. */}
+              {travel.is_indicative && " An indicative fare — real ones are searched once the trip exists."}
             </p>
           )}
           {airfareMissing && (
@@ -989,8 +995,8 @@ function BudgetSection({
               <Plane className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 <span className="font-semibold">Airfare is not in this figure.</span> You've said your budget covers
-                the flights, so leave room for them on top — real fares are searched on the Budget page once the trip
-                exists.
+                getting there and back, and there's no road route to price for this trip — so leave room for the fare
+                on top. Real fares are searched on the Budget page once the trip exists.
               </span>
             </p>
           )}
