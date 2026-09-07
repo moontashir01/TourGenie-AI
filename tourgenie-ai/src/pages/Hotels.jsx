@@ -5,7 +5,7 @@ import { NoTripState } from "../components/ui/States";
 import { CardSkeleton } from "../components/Skeleton";
 import Money from "../components/Money";
 import HotelBookingModal from "../components/HotelBookingModal";
-import { tripsApi, hotelApi, itineraryApi, destinationsApi } from "../lib/api";
+import { tripsApi, hotelApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import PlaceImage from "../components/ui/PlaceImage";
 
@@ -19,6 +19,12 @@ export default function Hotels() {
   const { currentTripId } = useCurrentTrip();
   const [trip, setTrip] = useState(null);
   const [cities, setCities] = useState([]); // multi-city trips only
+  // Every city in the country, behind the "show all" escape hatch: the picks
+  // are the sensible default, not a cage — a traveller may want a hotel in a
+  // city they didn't pre-select.
+  const [allCities, setAllCities] = useState([]);
+  const [cityScope, setCityScope] = useState(null);
+  const [showAllCities, setShowAllCities] = useState(false);
   const [activeCity, setActiveCity] = useState(null);
   const [hotelSelections, setHotelSelections] = useState([]); // [{ city, hotel_id }]
   const [hotels, setHotels] = useState([]);
@@ -67,20 +73,14 @@ export default function Hotels() {
           }));
           setHotelSelections(selections);
 
-          // Prefer the cities the AI actually routed through; fall back to
-          // every city in the country if the itinerary hasn't been generated yet.
-          let cityList = [];
-          try {
-            const { items } = await itineraryApi.get(currentTripId);
-            cityList = [...new Set((items || []).map((i) => i.city).filter(Boolean))];
-          } catch {
-            cityList = [];
-          }
-          if (cityList.length === 0) {
-            const { destinations } = await destinationsApi.list({ country_code: trip.country_code });
-            cityList = destinations.map((d) => d.name);
-          }
+          // The cities the traveller picked, resolved on the server by the
+          // same rule the itinerary planner narrows its pool with — this page
+          // used to list every city in the country regardless.
+          const scope = await tripsApi.cities(currentTripId);
+          const cityList = scope.cities || [];
           setCities(cityList);
+          setAllCities(scope.all_cities || cityList);
+          setCityScope(scope);
           const initialCity = cityList.includes(trip.entry_city) ? trip.entry_city : cityList[0];
           setActiveCity(initialCity);
           return initialCity
@@ -165,6 +165,10 @@ export default function Hotels() {
     );
   }
 
+  // The picks are the default view; "show all" widens it to the country.
+  const visibleCities = showAllCities ? allCities : cities;
+  const canShowAllCities = Boolean(cityScope?.filtered && allCities.length > cities.length);
+
   const activeSelectedHotelId = trip?.multi_city
     ? hotelSelections.find((s) => s.city.toLowerCase() === activeCity?.toLowerCase())?.hotel_id || null
     : selectedHotelId;
@@ -181,9 +185,9 @@ export default function Hotels() {
         </div>
       )}
 
-      {trip?.multi_city && cities.length > 0 && (
+      {trip?.multi_city && visibleCities.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-6">
-          {cities.map((city) => {
+          {visibleCities.map((city) => {
             const picked = hotelSelections.some((s) => s.city.toLowerCase() === city.toLowerCase());
             return (
               <button
@@ -200,6 +204,16 @@ export default function Hotels() {
               </button>
             );
           })}
+          {canShowAllCities && (
+            <button
+              onClick={() => setShowAllCities((prev) => !prev)}
+              className="text-sm font-semibold text-ink-500 hover:text-teal-dark px-2 py-2"
+            >
+              {showAllCities
+                ? "Show only my cities"
+                : `Show all cities in ${cityScope?.country || "this country"}`}
+            </button>
+          )}
         </div>
       )}
 

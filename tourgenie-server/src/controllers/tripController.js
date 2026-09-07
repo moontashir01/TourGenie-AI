@@ -540,6 +540,62 @@ export const deleteTrip = asyncHandler(async (req, res) => {
   res.json({ message: "Trip deleted" });
 });
 
+// FR-07 × FR-12 — which cities this trip actually covers.
+//
+// `preferred_cities` was written by the Plan form and then read by nothing:
+// the Hotels and Attractions pages each derived their own city list from the
+// whole country, so a Phuket + Chiang Mai trip offered Bangkok hotels. The
+// rule lives here rather than in two pages so it stays the rule the planner
+// narrows its own candidate pool with (loadAttractionContext).
+//
+// `all_cities` rides along so the pages can offer "show every city in the
+// country" — a traveller may well want a hotel somewhere they didn't pick.
+export const getTripCities = asyncHandler(async (req, res) => {
+  const trip = await Trip.findOne({ _id: req.params.id, user_id: req.user._id }).populate(
+    "destination_id",
+    DESTINATION_FIELDS
+  );
+  if (!trip) return res.status(404).json({ message: "Trip not found" });
+
+  // A single-destination trip has one city and nothing to show all of.
+  if (!trip.multi_city || !trip.country_code) {
+    const only = [trip.destination_id?.name || trip.destination].filter(Boolean);
+    return res.json({
+      cities: only,
+      all_cities: only,
+      filtered: false,
+      source: "destination",
+      country: trip.destination_id?.country || "",
+    });
+  }
+
+  const [country, catalogue] = await Promise.all([
+    Country.findOne({ code: trip.country_code }).lean(),
+    Destination.find({ country_code: trip.country_code, is_active: true }).sort({ popularity: -1 }).select("name").lean(),
+  ]);
+  const allCities = catalogue.map((c) => c.name);
+  const byName = new Map(catalogue.map((c) => [c.name.toLowerCase(), c.name]));
+  const answer = (cities, source, filtered) =>
+    res.json({ cities, all_cities: allCities, filtered, source, country: country?.name || trip.destination });
+
+  // The traveller's own picks win. They are stored as names, so one that has
+  // since left the catalogue is dropped rather than offered as a dead tab.
+  const preferred = (trip.preferred_cities || [])
+    .map((name) => byName.get(String(name).trim().toLowerCase()))
+    .filter(Boolean);
+  if (preferred.length) return answer(preferred, "preferred", preferred.length < allCities.length);
+
+  // No picks — the cities the generated plan routes through are the next best
+  // answer, and the only one available before anything was picked.
+  const items = await ItineraryItem.find({ trip_id: trip._id }).select("city day").sort({ day: 1 }).lean();
+  const routed = [...new Set(items.map((i) => i.city).filter(Boolean))]
+    .map((name) => byName.get(String(name).toLowerCase()))
+    .filter(Boolean);
+  if (routed.length) return answer(routed, "itinerary", routed.length < allCities.length);
+
+  return answer(allCities, "country", false);
+});
+
 // ── FR-03 — confirming a trip, and the email that follows ────────────
 //
 // Deliberately its own action rather than a hook on the draft → planned

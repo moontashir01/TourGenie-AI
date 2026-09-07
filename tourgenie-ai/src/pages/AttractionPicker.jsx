@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Star, Clock, CheckCircle2, Loader2, AlertCircle, Landmark } from "lucide-react";
 import AppShell from "../components/AppShell";
 import { NoTripState } from "../components/ui/States";
-import { tripsApi, attractionApi, destinationsApi } from "../lib/api";
+import { tripsApi, attractionApi } from "../lib/api";
 import { useCurrentTrip } from "../context/TripContext";
 import PlaceImage from "../components/ui/PlaceImage";
 
@@ -12,6 +12,11 @@ export default function AttractionPicker() {
   const { currentTripId } = useCurrentTrip();
   const [trip, setTrip] = useState(null);
   const [cities, setCities] = useState([]);
+  // Every city in the country, behind the "show all" escape hatch: the picks
+  // narrow the list, they don't lock it.
+  const [allCities, setAllCities] = useState([]);
+  const [cityScope, setCityScope] = useState(null);
+  const [showAllCities, setShowAllCities] = useState(false);
   const [activeCity, setActiveCity] = useState(null);
   const [attractions, setAttractions] = useState([]);
   const [category, setCategory] = useState("");
@@ -33,14 +38,15 @@ export default function AttractionPicker() {
         setTrip(trip);
         setSelected(new Set((trip.must_visit_attraction_ids || []).map((a) => a._id || a)));
 
-        let cityList = [];
-        if (trip.multi_city) {
-          const { destinations } = await destinationsApi.list({ country_code: trip.country_code });
-          cityList = destinations.map((d) => d.name);
-        } else {
-          cityList = [trip.destination];
-        }
+        // Which cities this trip actually covers. Resolved on the server by
+        // the same rule the itinerary planner narrows its candidate pool
+        // with — this page used to offer every city in the country, so a
+        // Phuket + Chiang Mai trip listed Bangkok's attractions too.
+        const scope = await tripsApi.cities(currentTripId);
+        const cityList = scope.cities || [];
         setCities(cityList);
+        setAllCities(scope.all_cities || cityList);
+        setCityScope(scope);
         setActiveCity(cityList[0]);
         return cityList[0] ? attractionApi.list({ city: cityList[0] }) : null;
       })
@@ -88,6 +94,9 @@ export default function AttractionPicker() {
     [attractions]
   );
   const visible = category ? attractions.filter((a) => a.category === category) : attractions;
+  // The picks are the default view; "show all" widens it to the country.
+  const visibleCities = showAllCities ? allCities : cities;
+  const canShowAllCities = Boolean(cityScope?.filtered && allCities.length > cities.length);
 
   if (!currentTripId) {
     return (
@@ -109,9 +118,9 @@ export default function AttractionPicker() {
         </div>
       )}
 
-      {cities.length > 1 && (
+      {visibleCities.length > 1 && (
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          {cities.map((city) => (
+          {visibleCities.map((city) => (
             <button
               key={city}
               onClick={() => changeCity(city)}
@@ -124,6 +133,16 @@ export default function AttractionPicker() {
               <MapPin className="w-3.5 h-3.5" /> {city}
             </button>
           ))}
+          {canShowAllCities && (
+            <button
+              onClick={() => setShowAllCities((prev) => !prev)}
+              className="text-sm font-semibold text-ink-500 hover:text-teal-dark px-2 py-2"
+            >
+              {showAllCities
+                ? "Show only my cities"
+                : `Show all cities in ${cityScope?.country || "this country"}`}
+            </button>
+          )}
         </div>
       )}
 

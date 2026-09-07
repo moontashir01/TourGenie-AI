@@ -162,6 +162,10 @@ export const tripsApi = {
   // FR-03 — confirms the trip and emails the plan as a PDF. Returns as soon
   // as the trip is confirmed; `email.queued` says whether a send was started.
   confirm: (id) => request(`/trips/${id}/confirm`, { method: "POST" }),
+  // The cities this trip covers — the traveller's picks where they made any,
+  // narrowed by the same rule the itinerary planner uses. `all_cities` backs
+  // the "show every city in the country" escape hatch.
+  cities: (id) => request(`/trips/${id}/cities`),
 };
 
 export const referenceApi = {
