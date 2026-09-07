@@ -46,18 +46,23 @@ export function TripProvider({ children }) {
     setCurrentTripIdState(localStorage.getItem("tourgenie_current_trip") || null);
   }, [user?.id, loadingUser]);
 
+  // Resolves to the loaded trip so a page that has just changed something can
+  // reuse this fetch for its own copy instead of asking for the same document
+  // a second time. Resolves to null when there is nothing to load or the load
+  // failed — callers check before using it.
   const loadTrip = useCallback(() => {
     if (!currentTripId || !getToken()) {
       setCurrentTrip(null);
-      return;
+      return Promise.resolve(null);
     }
     setLoadingTrip(true);
     setTripError(false);
-    tripsApi
+    return tripsApi
       .get(currentTripId)
       .then(({ trip }) => {
         setCurrentTrip(trip);
         setTripError(false);
+        return trip;
       })
       .catch((err) => {
         setCurrentTrip(null);
@@ -66,11 +71,12 @@ export function TripProvider({ children }) {
         // Clearing it turns that into an ordinary "pick a trip" state.
         if (err.status === 404) {
           setCurrentTripId(null);
-          return;
+          return null;
         }
         // Anything else (server restarting, network blip) is temporary. The
         // id is still valid, so say so rather than claiming no trip is open.
         setTripError(true);
+        return null;
       })
       .finally(() => setLoadingTrip(false));
   }, [currentTripId, setCurrentTripId]);

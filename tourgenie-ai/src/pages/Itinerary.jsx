@@ -977,24 +977,140 @@ export default function Itinerary() {
           </PageHeroPanel>
 
           <div className="card p-6">
-            <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5" /> Budget snapshot
-            </p>
-            <p className={`text-2xl font-display mb-1 ${totalCost > (trip?.budget || 0) ? "text-sunset-dark" : "text-ink-900"}`}><Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-base" /></p>
-            <p className="text-sm text-ink-500">
-              of ৳{trip?.budget?.toLocaleString()} planned budget
-              {trip?.budget > 0 && totalCost > trip.budget && (
-                <span className="text-sunset-dark font-medium"> — over by ৳{(totalCost - trip.budget).toLocaleString()}</span>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <p className="text-xs font-semibold tracking-wide uppercase text-teal flex items-center gap-1.5">
+                <Wallet className="w-3.5 h-3.5" /> Budget snapshot
+              </p>
+              {trip && !editingBudget && (
+                <button
+                  type="button"
+                  onClick={startEditingBudget}
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-ink-500 hover:text-teal-dark"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> Edit
+                </button>
               )}
-            </p>
-            {/* The bar caps at 100%, so overspend is shown by colour and the
-                line above rather than disappearing off the end. */}
-            <div className="w-full h-2 bg-paper rounded-full mt-3 overflow-hidden">
-              <div
-                className={totalCost > (trip?.budget || 0) ? "h-full bg-sunset" : "h-full bg-teal"}
-                style={{ width: `${trip?.budget ? Math.min((totalCost / trip.budget) * 100, 100) : 0}%` }}
-              />
             </div>
+            <p className={`text-2xl font-display mb-1 ${totalCost > (trip?.budget || 0) ? "text-sunset-dark" : "text-ink-900"}`}><Money bdt={totalCost} local={trip?.destination_id?.currency} localClassName="text-base" /></p>
+
+            {editingBudget ? (
+              <form onSubmit={handleSaveBudget} className="mt-3 space-y-3">
+                <div className="flex gap-2">
+                  <select
+                    className="input w-24 shrink-0"
+                    value={budgetCurrency}
+                    onChange={(e) => setBudgetCurrency(e.target.value)}
+                    aria-label="Budget currency"
+                  >
+                    {budgetCurrencies.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.symbol ? `${c.symbol} ` : ""}
+                        {c.code}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min="0"
+                    step={budgetCurrency === "BDT" ? "500" : "10"}
+                    className="input flex-1"
+                    value={budgetDraft}
+                    onChange={(e) => setBudgetDraft(e.target.value)}
+                    aria-label="Trip budget"
+                    autoFocus
+                  />
+                </div>
+                {budgetCurrency !== "BDT" && draftBdt > 0 && (
+                  <p className="text-sm text-ink-500">
+                    Stored as ৳{draftBdt.toLocaleString()} — every cost in the app is normalised to BDT.
+                  </p>
+                )}
+                {budgetError && <p className="text-sm text-sunset-dark">{budgetError}</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" variant="teal" size="sm" loading={savingBudget}>
+                    Save budget
+                  </Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setEditingBudget(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <p className="text-sm text-ink-500">
+                  of ৳{trip?.budget?.toLocaleString()} planned budget
+                  {trip?.budget > 0 && totalCost > trip.budget && (
+                    <span className="text-sunset-dark font-medium"> — over by ৳{(totalCost - trip.budget).toLocaleString()}</span>
+                  )}
+                </p>
+                {!budgetCoversTravel && travelCost > 0 && (
+                  <p className="text-sm text-ink-500 mt-2 inline-flex items-center gap-1.5">
+                    <Route className="w-3 h-3 shrink-0" /> ৳{travelCost.toLocaleString()} for getting there and back,
+                    tracked outside this budget
+                  </p>
+                )}
+                {/* The bar caps at 100%, so overspend is shown by colour and the
+                    line above rather than disappearing off the end. */}
+                <div className="w-full h-2 bg-paper rounded-full mt-3 overflow-hidden">
+                  <div
+                    className={totalCost > (trip?.budget || 0) ? "h-full bg-sunset" : "h-full bg-teal"}
+                    style={{ width: `${trip?.budget ? Math.min((totalCost / trip.budget) * 100, 100) : 0}%` }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* FR-03 — the one action that leaves the traveller holding a copy
+              of the plan outside the app. */}
+          <div className="card p-6">
+            <p className="text-xs font-semibold tracking-wide uppercase text-teal mb-3 flex items-center gap-1.5">
+              <MailCheck className="w-3.5 h-3.5" /> Confirmation
+            </p>
+            {trip?.confirmed_at ? (
+              <>
+                <p className="text-sm text-ink-900">
+                  Confirmed on {new Date(trip.confirmed_at).toLocaleDateString("en-GB", CONFIRMED_DATE)}.
+                </p>
+                <p className="text-sm text-ink-500 mt-1">
+                  {trip.confirmation_email_sent_at
+                    ? "The full plan was emailed to you as a PDF."
+                    : "The confirmation email didn't go out. Try again to have it resent."}
+                </p>
+                {!trip.confirmation_email_sent_at && (
+                  <Button
+                    onClick={handleConfirmTrip}
+                    loading={confirming}
+                    variant="secondary"
+                    fullWidth
+                    className="mt-3"
+                  >
+                    Email me the plan
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-ink-500 mb-3">
+                  Lock the plan in and have the day-by-day itinerary, reservations and budget emailed to you as
+                  a PDF.
+                </p>
+                <Button
+                  onClick={handleConfirmTrip}
+                  loading={confirming}
+                  disabled={items.length === 0}
+                  variant="teal"
+                  fullWidth
+                >
+                  Confirm trip &amp; email the plan
+                </Button>
+                {items.length === 0 && (
+                  <p className="text-xs text-ink-500 mt-2">
+                    Generate the itinerary first — the email carries the day-by-day plan.
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           <Button as={Link} to="/attractions" variant="secondary" icon={Landmark} fullWidth className="py-3">
