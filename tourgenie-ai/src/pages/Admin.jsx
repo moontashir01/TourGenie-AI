@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import {
+  ArrowLeft,
   Users,
   MapPinned,
   Building2,
@@ -18,6 +19,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { Button } from "../components/ui";
 import Overview from "./admin/Overview";
 import UsersTab from "./admin/Users";
 import Attractions from "./admin/Attractions";
@@ -110,7 +112,25 @@ export default function Admin() {
       <div className="flex-1 min-w-0">
         <header className="border-b border-sand bg-surface/40 px-6 md:px-10 py-6">
           <div className="flex flex-wrap items-start justify-between gap-4 mb-1">
-            <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
+            {/* Left of the title, the way AppShell places its own back
+                control, so the way out sits in the same spot on every screen
+                of the app. The sidebar has a "back to traveler view" link
+                too, but it is pinned below fourteen nav items and the whole
+                sidebar is hidden under `md` — on a phone this was the only
+                way out of the console short of the browser's own Back. */}
+            <div className="min-w-0 flex items-start gap-3">
+              <Button
+                as={Link}
+                to="/dashboard"
+                variant="secondary"
+                size="sm"
+                icon={ArrowLeft}
+                className="mt-1 shrink-0"
+              >
+                Dashboard
+              </Button>
+              <h1 className="font-display text-2xl text-ink-900">{activeLabel}</h1>
+            </div>
             <GlobalSearch onPickUser={setSearchedUserId} onPickTrip={setSearchedTripId} />
           </div>
           <p className="text-sm text-ink-600 mt-1">
