@@ -1,0 +1,13 @@
+{
+  "name": "tourgenie-ai-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "TourGenie AI — React client and Express API, deployed as one Vercel project.",
+  "scripts": {
+    "install:all": "npm install --prefix tourgenie-ai && npm install --prefix tourgenie-server",
+    "build": "npm run build --prefix tourgenie-ai",
+    "dev:client": "npm run dev --prefix tourgenie-ai",
+    "dev:server": "npm run dev --prefix tourgenie-server"
+  }
+}

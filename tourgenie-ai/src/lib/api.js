@@ -1,4 +1,19 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// Where the API lives.
+//
+// VITE_API_URL wins when it is set, which is what a split deployment needs —
+// client on one host, API on another. With nothing set the default depends on
+// where the page is being served from: on a developer's machine the API is a
+// separate process on port 5000, but anywhere else the client and the API are
+// the same Vercel project sharing an origin, so a relative "/api" is correct
+// and needs no configuration. Getting this wrong is invisible until deploy,
+// when every request goes to a localhost that isn't there.
+const LOCAL_HOSTS = ["localhost", "127.0.0.1", "[::1]", "::1"];
+
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && !LOCAL_HOSTS.includes(window.location.hostname)
+    ? "/api"
+    : "http://localhost:5000/api");
 
 function getToken() {
   return localStorage.getItem("tourgenie_token");

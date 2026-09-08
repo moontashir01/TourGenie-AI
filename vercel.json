@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install --prefix tourgenie-ai && npm install --prefix tourgenie-server",
+  "buildCommand": "npm run build --prefix tourgenie-ai",
+  "outputDirectory": "tourgenie-ai/dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
