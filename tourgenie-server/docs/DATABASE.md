@@ -93,7 +93,10 @@ Proposal fields: `user_id`, `hotel_id`, `origin`, `destination`,
 `budget_breakdown[]` (FR-09 result), `estimated_total`, `route_id`
 (FR-06), `transport_option_id`, `carbon{total_kg, per_person_kg, mode,
 distance_km, rating}` (FR-16 result), `interests[]`, `*_preference`,
-`cover`, `itinerary_generated_at`, `itinerary_source`.
+`cover`, `itinerary_generated_at`, `itinerary_source`, `confirmed_at`,
+`confirmation_email_sent_at` (FR-03 — the second is claimed atomically before
+the confirmation email is built, so two confirms can only produce one send,
+and cleared again if nothing was delivered).
 
 **Indexes:** `{user_id, created_at}`, `{user_id, status}`, `destination`,
 `start_date`, `{status, start_date}`.
