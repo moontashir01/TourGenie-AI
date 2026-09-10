@@ -61,7 +61,7 @@ export default function Landing() {
           <div className="scroll-fade">
           <div className="max-w-2xl stagger">
             <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-wide uppercase text-sunset bg-sunset/10 border border-sunset/20 px-3 py-1.5 rounded-full">
-              <Sparkles className="w-3.5 h-3.5" /> Powered by Claude
+              <Sparkles className="w-3.5 h-3.5" /> Powered by AI
             </span>
             <h1 className="font-display text-display-lg text-paper mt-6">
               From leaving home to
